@@ -1,0 +1,101 @@
+using System.Net;
+using System.Net.Http.Json;
+using FamilyBudget.Api.Contracts;
+using FamilyBudget.Core.Entities;
+using FamilyBudget.Infrastructure.Persistence;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace FamilyBudget.Api.Tests;
+
+public class AnnualBudgetEndpointTests : IClassFixture<FamilyBudgetApiFactory>
+{
+    private readonly FamilyBudgetApiFactory _factory;
+
+    public AnnualBudgetEndpointTests(FamilyBudgetApiFactory factory)
+    {
+        _factory = factory;
+    }
+
+    [Fact]
+    public async Task GetAnnualBudget_OrdersMonthMappedItemsFirst_GeneralItemsLast()
+    {
+        const int year = 2027;
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<FamilyBudgetDbContext>();
+            db.AnnualBudgetItems.AddRange(
+                new AnnualBudgetItem(Guid.NewGuid(), year, "Car Test", 600m, null, 0m),
+                new AnnualBudgetItem(Guid.NewGuid(), year, "Spring Trip", 2000m, 4, 0m),
+                new AnnualBudgetItem(Guid.NewGuid(), year, "December Holidays", 4000m, 12, 4000m));
+            await db.SaveChangesAsync();
+        }
+
+        var client = _factory.CreateClient();
+        var response = await client.GetFromJsonAsync<AnnualBudgetResponse>(
+            $"/api/annual-budget?year={year}");
+
+        Assert.NotNull(response);
+        Assert.Equal(new[] { "Spring Trip", "December Holidays", "Car Test" }, response!.Items.Select(i => i.Name));
+        Assert.True(response.Items.Single(i => i.Name == "December Holidays").IsFullyFunded);
+    }
+
+    [Fact]
+    public async Task GetAnnualBudget_ComputesFlatMonthlySummary_FromReserveAndTotals()
+    {
+        const int year = 2028;
+        var client = _factory.CreateClient();
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<FamilyBudgetDbContext>();
+            db.AnnualBudgetItems.AddRange(
+                new AnnualBudgetItem(Guid.NewGuid(), year, "Item A", 30000m, null, 0m),
+                new AnnualBudgetItem(Guid.NewGuid(), year, "Item B", 18000m, 6, 0m));
+            await db.SaveChangesAsync();
+        }
+
+        var setReserve = await client.PutAsJsonAsync($"/api/reserve?year={year}", new SetReserveRequest(12000m));
+        Assert.Equal(HttpStatusCode.OK, setReserve.StatusCode);
+
+        var response = await client.GetFromJsonAsync<AnnualBudgetResponse>($"/api/annual-budget?year={year}");
+
+        Assert.NotNull(response);
+        Assert.Equal(12000m, response!.ReserveOnHand);
+        Assert.Equal(48000m, response.TotalAnnualBudget);
+        Assert.Equal(36000m, response.NotYetCovered);
+        Assert.Equal(3000m, response.MonthlyAllocation); // (48000 - 12000) / 12
+    }
+
+    [Fact]
+    public async Task CreateAnnualBudgetItem_PersistsAndAppearsInSubsequentGet()
+    {
+        const int year = 2029;
+        var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/annual-budget-items",
+            new CreateAnnualBudgetItemRequest(year, "Clothing", 3600m, null));
+
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        var created = await createResponse.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
+        Assert.NotNull(created);
+        Assert.Equal("Clothing", created!.Name);
+        Assert.Equal(0m, created.AmountAlreadySetAside);
+
+        var listResponse = await client.GetFromJsonAsync<AnnualBudgetResponse>($"/api/annual-budget?year={year}");
+        Assert.Contains(listResponse!.Items, item => item.Name == "Clothing");
+    }
+
+    [Fact]
+    public async Task CreateAnnualBudgetItem_InvalidTargetMonth_ReturnsBadRequest()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/annual-budget-items",
+            new CreateAnnualBudgetItemRequest(2030, "Bad Item", 100m, 13));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+}
