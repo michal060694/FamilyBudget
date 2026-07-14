@@ -27,7 +27,7 @@ public class AnnualBudgetEndpointTests : IClassFixture<FamilyBudgetApiFactory>
             db.AnnualBudgetItems.AddRange(
                 new AnnualBudgetItem(Guid.NewGuid(), year, "Car Test", 600m, null, 0m),
                 new AnnualBudgetItem(Guid.NewGuid(), year, "Spring Trip", 2000m, 4, 0m),
-                new AnnualBudgetItem(Guid.NewGuid(), year, "December Holidays", 4000m, 12, 4000m));
+                new AnnualBudgetItem(Guid.NewGuid(), year, "December Holidays", 4000m, 12, 0m, amountUsed: 4000m));
             await db.SaveChangesAsync();
         }
 
@@ -37,7 +37,7 @@ public class AnnualBudgetEndpointTests : IClassFixture<FamilyBudgetApiFactory>
 
         Assert.NotNull(response);
         Assert.Equal(new[] { "Spring Trip", "December Holidays", "Car Test" }, response!.Items.Select(i => i.Name));
-        Assert.True(response.Items.Single(i => i.Name == "December Holidays").IsFullyFunded);
+        Assert.True(response.Items.Single(i => i.Name == "December Holidays").IsFullyUsed);
     }
 
     [Fact]
@@ -95,6 +95,59 @@ public class AnnualBudgetEndpointTests : IClassFixture<FamilyBudgetApiFactory>
         var response = await client.PostAsJsonAsync(
             "/api/annual-budget-items",
             new CreateAnnualBudgetItemRequest(2030, "Bad Item", 100m, 13));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RecordUsage_PartialThenFull_UpdatesAmountUsedAndIsFullyUsedFlag()
+    {
+        const int year = 2031;
+        var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/annual-budget-items",
+            new CreateAnnualBudgetItemRequest(year, "Dry Cleaning", 300m, null));
+        var created = await createResponse.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
+
+        var partial = await client.PatchAsJsonAsync(
+            $"/api/annual-budget-items/{created!.AnnualBudgetItemId}/usage", new RecordUsageRequest(100m));
+        Assert.Equal(HttpStatusCode.OK, partial.StatusCode);
+        var partialView = await partial.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
+        Assert.Equal(100m, partialView!.AmountUsed);
+        Assert.False(partialView.IsFullyUsed);
+
+        var rest = await client.PatchAsJsonAsync(
+            $"/api/annual-budget-items/{created.AnnualBudgetItemId}/usage", new RecordUsageRequest(200m));
+        var restView = await rest.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
+        Assert.Equal(300m, restView!.AmountUsed);
+        Assert.True(restView.IsFullyUsed);
+    }
+
+    [Fact]
+    public async Task RecordUsage_UnknownId_ReturnsNotFound()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PatchAsJsonAsync(
+            $"/api/annual-budget-items/{Guid.NewGuid()}/usage", new RecordUsageRequest(50m));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RecordUsage_NonPositiveAmount_ReturnsBadRequest()
+    {
+        const int year = 2032;
+        var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/annual-budget-items",
+            new CreateAnnualBudgetItemRequest(year, "Something", 100m, null));
+        var created = await createResponse.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
+
+        var response = await client.PatchAsJsonAsync(
+            $"/api/annual-budget-items/{created!.AnnualBudgetItemId}/usage", new RecordUsageRequest(0m));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }

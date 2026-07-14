@@ -153,9 +153,20 @@
     font-size: 0.78rem;
     padding: 2px 8px;
     border-radius: 999px;
+    white-space: nowrap;
   }
   .badge.good { color: var(--status-good); background: color-mix(in srgb, var(--status-good) 12%, transparent); }
   .badge.pending { color: var(--text-secondary); background: color-mix(in srgb, var(--text-secondary) 12%, transparent); }
+  .badge.partial { color: var(--series-1); background: color-mix(in srgb, var(--series-1) 12%, transparent); }
+
+  button.mark-usage {
+    background: transparent;
+    color: var(--series-1);
+    border: 1px solid var(--series-1);
+    padding: 3px 10px;
+    font-size: 0.78rem;
+  }
+  tr.usage-form td { background: color-mix(in srgb, var(--status-good) 5%, transparent); }
 
   .error { color: var(--status-critical); font-size: 0.88rem; margin: 8px 0; }
 </style>
@@ -201,8 +212,9 @@
         <tr>
           <th>שם</th>
           <th class="num">סכום שנתי</th>
-          <th class="num">כבר הופרש</th>
+          <th class="num">נוצל</th>
           <th>סטטוס</th>
+          <th></th>
         </tr>
       </thead>
       <tbody id="monthly-rows"></tbody>
@@ -216,7 +228,7 @@
         <tr>
           <th>שם</th>
           <th class="num">סכום שנתי</th>
-          <th class="num">כבר הופרש</th>
+          <th class="num">נוצל</th>
           <th>סטטוס</th>
           <th></th>
         </tr>
@@ -289,9 +301,81 @@
     }
 
     function statusBadge(item) {
-      return item.isFullyFunded
-        ? '<span class="badge good">✓ מומן במלואו</span>'
-        : '<span class="badge pending">בתהליך</span>';
+      if (item.amountUsed <= 0) {
+        return '<span class="badge pending">טרם מומש</span>';
+      }
+      if (item.isFullyUsed) {
+        return '<span class="badge good">✓ מומש במלואו</span>';
+      }
+      const pct = Math.round((item.amountUsed / item.totalAmount) * 100);
+      return `<span class="badge partial">מומש חלקית (${pct}%)</span>`;
+    }
+
+    function itemRowHtml(item) {
+      return `
+        <td>${item.name}</td>
+        <td class="num">${fmtMoney(item.totalAmount)}</td>
+        <td class="num">${fmtMoney(item.amountUsed)}</td>
+        <td>${statusBadge(item)}</td>
+        <td>${item.isFullyUsed ? "" : `<button class="mark-usage" data-id="${item.annualBudgetItemId}">סמן מימוש</button>`}</td>
+      `;
+    }
+
+    function attachMarkUsageHandlers(tbody, items) {
+      tbody.querySelectorAll(".mark-usage").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const item = items.find(i => i.annualBudgetItemId === btn.dataset.id);
+          toggleUsageForm(btn, item);
+        });
+      });
+    }
+
+    function toggleUsageForm(anchorBtn, item) {
+      const row = anchorBtn.closest("tr");
+      const existing = row.nextElementSibling;
+      if (existing && existing.classList.contains("usage-form")) {
+        existing.remove();
+        return;
+      }
+
+      const remaining = item.totalAmount - item.amountUsed;
+      const formRow = document.createElement("tr");
+      formRow.className = "usage-form";
+      formRow.innerHTML = `
+        <td colspan="5">
+          <div class="add-form-fields">
+            <span>סמן שנוצל עבור "${item.name}":</span>
+            <input name="amount" type="number" min="0.01" step="0.01" value="${remaining}" />
+            <button class="save-btn">שמור</button>
+            <button class="secondary cancel-btn">ביטול</button>
+          </div>
+        </td>
+      `;
+      row.after(formRow);
+
+      formRow.querySelector(".cancel-btn").addEventListener("click", () => formRow.remove());
+      formRow.querySelector(".save-btn").addEventListener("click", () =>
+        submitUsage(formRow, item.annualBudgetItemId));
+    }
+
+    async function submitUsage(formRow, itemId) {
+      const amount = parseFloat(formRow.querySelector('input[name="amount"]').value);
+      if (!(amount > 0)) {
+        showError("יש להזין סכום חיובי.");
+        return;
+      }
+
+      try {
+        await fetchJson(`/api/annual-budget-items/${itemId}/usage`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount }),
+        });
+        clearError();
+        await refresh();
+      } catch (err) {
+        showError(err.message);
+      }
     }
 
     function renderMonthlyTable(items) {
@@ -304,7 +388,7 @@
         const headerRow = document.createElement("tr");
         headerRow.className = "month-header";
         headerRow.innerHTML = `
-          <td colspan="3"><div class="month-name">${monthNames[month]}</div></td>
+          <td colspan="4"><div class="month-name">${monthNames[month]}</div></td>
           <td><button class="icon add-toggle" data-month="${month}">+</button></td>
         `;
         tbody.appendChild(headerRow);
@@ -312,17 +396,12 @@
         if (monthItems.length === 0) {
           const hintRow = document.createElement("tr");
           hintRow.className = "empty-hint";
-          hintRow.innerHTML = `<td colspan="4">אין הוצאות מוגדרות לחודש זה עדיין.</td>`;
+          hintRow.innerHTML = `<td colspan="5">אין הוצאות מוגדרות לחודש זה עדיין.</td>`;
           tbody.appendChild(hintRow);
         } else {
           for (const item of monthItems) {
             const row = document.createElement("tr");
-            row.innerHTML = `
-              <td>${item.name}</td>
-              <td class="num">${fmtMoney(item.totalAmount)}</td>
-              <td class="num">${fmtMoney(item.amountAlreadySetAside)}</td>
-              <td>${statusBadge(item)}</td>
-            `;
+            row.innerHTML = itemRowHtml(item);
             tbody.appendChild(row);
           }
         }
@@ -331,6 +410,7 @@
       tbody.querySelectorAll(".add-toggle").forEach(btn => {
         btn.addEventListener("click", () => toggleAddForm(tbody, Number(btn.dataset.month), btn));
       });
+      attachMarkUsageHandlers(tbody, items);
     }
 
     function toggleAddForm(tbody, month, anchorBtn) {
@@ -344,7 +424,7 @@
       formRow.className = "add-form";
       formRow.dataset.month = month;
       formRow.innerHTML = `
-        <td colspan="4">
+        <td colspan="5">
           <div class="add-form-fields">
             <input name="name" type="text" placeholder="שם ההוצאה" />
             <input name="amount" type="number" min="0.01" step="0.01" placeholder="סכום שנתי" />
@@ -396,20 +476,17 @@
       const generalItems = items.filter(i => i.targetMonth == null);
       if (generalItems.length === 0) {
         const hintRow = document.createElement("tr");
-        hintRow.innerHTML = `<td colspan="4" style="color: var(--text-muted); font-style: italic;">אין הוצאות כלליות עדיין.</td>`;
+        hintRow.innerHTML = `<td colspan="5" style="color: var(--text-muted); font-style: italic;">אין הוצאות כלליות עדיין.</td>`;
         tbody.appendChild(hintRow);
       } else {
         for (const item of generalItems) {
           const row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${item.name}</td>
-            <td class="num">${fmtMoney(item.totalAmount)}</td>
-            <td class="num">${fmtMoney(item.amountAlreadySetAside)}</td>
-            <td>${statusBadge(item)}</td>
-          `;
+          row.innerHTML = itemRowHtml(item);
           tbody.appendChild(row);
         }
       }
+
+      attachMarkUsageHandlers(tbody, generalItems);
     }
 
     document.getElementById("refresh").addEventListener("click", refresh);
@@ -444,7 +521,7 @@
       const formRow = document.createElement("tr");
       formRow.className = "add-form";
       formRow.innerHTML = `
-        <td colspan="4">
+        <td colspan="5">
           <div class="add-form-fields">
             <input name="name" type="text" placeholder="שם ההוצאה" />
             <input name="amount" type="number" min="0.01" step="0.01" placeholder="סכום שנתי" />

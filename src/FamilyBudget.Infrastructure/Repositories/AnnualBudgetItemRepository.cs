@@ -21,9 +21,18 @@ public class AnnualBudgetItemRepository : IAnnualBudgetItemRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<AnnualBudgetItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.AnnualBudgetItems
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+    }
+
     public async Task AddAsync(AnnualBudgetItem item, CancellationToken cancellationToken = default)
     {
         _dbContext.AnnualBudgetItems.Add(item);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
+        _dbContext.SaveChangesAsync(cancellationToken);
 }

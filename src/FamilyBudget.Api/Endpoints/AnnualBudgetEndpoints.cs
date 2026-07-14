@@ -11,23 +11,25 @@ public static class AnnualBudgetEndpoints
     {
         app.MapGet("/api/annual-budget", GetAnnualBudget);
         app.MapPost("/api/annual-budget-items", CreateAnnualBudgetItem);
+        app.MapPatch("/api/annual-budget-items/{id:guid}/usage", RecordUsage);
         app.MapPut("/api/reserve", SetReserve);
     }
+
+    private static AnnualBudgetItemView ToView(AnnualBudgetItem item) => new(
+        item.Id,
+        item.Name,
+        item.TargetMonth,
+        item.TotalAmount,
+        item.AmountAlreadySetAside,
+        item.AmountUsed,
+        item.AmountUsed >= item.TotalAmount);
 
     private static async Task<IResult> GetAnnualBudget(int year, AnnualBudgetQueryService queryService)
     {
         var items = await queryService.GetOrderedForYearAsync(year);
         var summary = await queryService.GetSummaryAsync(year);
 
-        var views = items
-            .Select(item => new AnnualBudgetItemView(
-                item.Id,
-                item.Name,
-                item.TargetMonth,
-                item.TotalAmount,
-                item.AmountAlreadySetAside,
-                item.IsFullyFunded))
-            .ToList();
+        var views = items.Select(ToView).ToList();
 
         return Results.Ok(new AnnualBudgetResponse(
             year,
@@ -67,10 +69,26 @@ public static class AnnualBudgetEndpoints
 
         await repository.AddAsync(item);
 
-        var view = new AnnualBudgetItemView(
-            item.Id, item.Name, item.TargetMonth, item.TotalAmount, item.AmountAlreadySetAside, item.IsFullyFunded);
+        return Results.Created($"/api/annual-budget-items/{item.Id}", ToView(item));
+    }
 
-        return Results.Created($"/api/annual-budget-items/{item.Id}", view);
+    private static async Task<IResult> RecordUsage(Guid id, RecordUsageRequest request, IAnnualBudgetItemRepository repository)
+    {
+        if (request.Amount <= 0)
+        {
+            return Results.BadRequest("amount must be strictly positive.");
+        }
+
+        var item = await repository.GetByIdAsync(id);
+        if (item is null)
+        {
+            return Results.NotFound();
+        }
+
+        item.RecordUsage(request.Amount);
+        await repository.SaveChangesAsync();
+
+        return Results.Ok(ToView(item));
     }
 
     private static async Task<IResult> SetReserve(int year, SetReserveRequest request, IAnnualReserveRepository repository)

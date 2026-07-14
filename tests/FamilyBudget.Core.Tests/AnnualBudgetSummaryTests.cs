@@ -54,6 +54,12 @@ public class AnnualBudgetSummaryTests
 
         public Task AddAsync(AnnualBudgetItem item, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
+
+        public Task<AnnualBudgetItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     private sealed class FakeReserveRepository : IAnnualReserveRepository

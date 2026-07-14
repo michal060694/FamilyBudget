@@ -14,8 +14,11 @@ public record AnnualBudgetItemView(
     int? TargetMonth,
     decimal TotalAmount,
     decimal AmountAlreadySetAside,
-    bool IsFullyFunded);
+    decimal AmountUsed,
+    bool IsFullyUsed);
 
 public record CreateAnnualBudgetItemRequest(int Year, string Name, decimal TotalAmount, int? TargetMonth);
 
 public record SetReserveRequest(decimal Amount);
+
+public record RecordUsageRequest(decimal Amount);
