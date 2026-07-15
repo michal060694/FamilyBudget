@@ -20,6 +20,14 @@ public class FamilyBudgetDbContext : DbContext
 
     public DbSet<MonthlyExpenseBudgetItem> MonthlyExpenseBudgetItems => Set<MonthlyExpenseBudgetItem>();
 
+    public DbSet<FixedDonationStandingOrder> FixedDonationStandingOrders => Set<FixedDonationStandingOrder>();
+
+    public DbSet<Fund> Funds => Set<Fund>();
+
+    public DbSet<FundEarmark> FundEarmarks => Set<FundEarmark>();
+
+    public DbSet<Debt> Debts => Set<Debt>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AnnualBudgetItem>(builder =>
@@ -83,6 +91,54 @@ public class FamilyBudgetDbContext : DbContext
             builder.Property(i => i.UsedAmountFormula).HasMaxLength(200);
 
             builder.HasIndex(i => new { i.Year, i.Month });
+        });
+
+        modelBuilder.Entity<FixedDonationStandingOrder>(builder =>
+        {
+            builder.ToTable("FixedDonationStandingOrders");
+            builder.HasKey(o => o.Id);
+            builder.Property(o => o.Name).IsRequired().HasMaxLength(200);
+            builder.Property(o => o.Amount).HasColumnType("decimal(18,2)").IsRequired();
+            builder.Property(o => o.AmountFormula).HasMaxLength(200);
+            builder.Property(o => o.ValidUntilYear);
+            builder.Property(o => o.ValidUntilMonth);
+        });
+
+        modelBuilder.Entity<Fund>(builder =>
+        {
+            builder.ToTable("Funds");
+            builder.HasKey(f => f.Id);
+            builder.Property(f => f.Name).IsRequired().HasMaxLength(200);
+            builder.Property(f => f.TotalBalance).HasColumnType("decimal(18,2)").IsRequired();
+        });
+
+        modelBuilder.Entity<FundEarmark>(builder =>
+        {
+            builder.ToTable("FundEarmarks");
+            builder.HasKey(e => e.Id);
+            builder.Property(e => e.PurposeLabel).IsRequired().HasMaxLength(200);
+            builder.Property(e => e.Amount).HasColumnType("decimal(18,2)").IsRequired();
+
+            builder.HasOne<Fund>()
+                .WithMany()
+                .HasForeignKey(e => e.FundId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasIndex(e => e.FundId);
+        });
+
+        modelBuilder.Entity<Debt>(builder =>
+        {
+            builder.ToTable("Debts");
+            builder.HasKey(d => d.Id);
+            builder.Property(d => d.Direction).HasConversion<string>().HasMaxLength(20).IsRequired();
+            builder.Property(d => d.CounterpartyName).IsRequired().HasMaxLength(200);
+            builder.Property(d => d.OriginalAmount).HasColumnType("decimal(18,2)").IsRequired();
+            builder.Property(d => d.CurrentBalance).HasColumnType("decimal(18,2)").IsRequired();
+            builder.Property(d => d.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            builder.Property(d => d.TargetDate);
+            builder.Property(d => d.RepaymentRate).HasColumnType("decimal(18,2)");
+            builder.Property(d => d.Notes).HasMaxLength(1000);
         });
     }
 }

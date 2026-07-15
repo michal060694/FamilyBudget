@@ -7,6 +7,13 @@ public enum TransactionType
     RegularExpense,
     FixedDonation,
     SmallCharityExpense,
+
+    /// <summary>
+    /// An outflow transaction auto-generated when a Payable debt's repayment is recorded (feature
+    /// 004). Distinguishable from FixedExpense/RegularExpense so it can be summed separately for
+    /// the Monthly Overview's debt-repayments figure.
+    /// </summary>
+    DebtRepayment,
 }
 
 public enum PaymentMethod

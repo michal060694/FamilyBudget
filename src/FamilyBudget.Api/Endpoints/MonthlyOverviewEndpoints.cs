@@ -36,6 +36,9 @@ public static class MonthlyOverviewEndpoints
         item.UsedAmountFormula,
         item.Remaining);
 
+    private static FixedDonationStandingOrderView ToView(FixedDonationStandingOrder order) => new(
+        order.Id, order.Name, order.Amount, order.AmountFormula, order.ValidUntilYear, order.ValidUntilMonth);
+
     private static async Task<IResult> GetMonthlyOverview(int year, int month, MonthlyOverviewQueryService queryService)
     {
         if (month is < 1 or > 12)
@@ -56,21 +59,21 @@ public static class MonthlyOverviewEndpoints
                 overview.TitheObligation.NonTitheApplicableIncome),
             new TitheObligationView(
                 overview.TitheObligation.GrossTitheTarget,
-                overview.TitheObligation.FixedDonationsThisMonth,
-                overview.TitheObligation.CreditCarriedIn,
-                overview.TitheObligation.SmallCharityAppliedThisMonth,
+                new FixedDonationsSection(
+                    overview.FixedDonationStandingOrders.Select(ToView).ToList(),
+                    overview.TitheObligation.FixedDonationsThisMonth),
+                new PriorMonthDonationsSection(
+                    overview.PriorMonthSmallCharityDonations.Select(ToResponse).ToList(),
+                    overview.TitheObligation.PriorMonthSmallCharityTotal),
+                overview.TitheObligation.StillToDonateAfterFixed,
                 overview.TitheObligation.NetTitheDue),
-            new SmallCharityOffsetLedgerView(
-                overview.SmallCharityLedger.SmallCharityExpenseTotal,
-                overview.SmallCharityLedger.AvailableFromPriorMonth,
-                overview.SmallCharityLedger.AppliedThisMonth,
-                overview.SmallCharityLedger.UnappliedRemainder),
-            new DonationsSection(
-                overview.DonationLines.Select(ToResponse).ToList(),
-                overview.GivenThisMonth,
-                overview.RemainingToGive),
             new ExpenseBudgetSection(overview.FixedExpenseItems.Select(ToView).ToList(), overview.FixedExpenseUsedTotal),
             new ExpenseBudgetSection(overview.RegularExpenseItems.Select(ToView).ToList(), overview.RegularExpenseUsedTotal),
+            new AnnualWithdrawalSection(
+                overview.AnnualWithdrawalItems
+                    .Select(i => new AnnualWithdrawalLine(i.Id, i.Name, i.TotalAmount))
+                    .ToList(),
+                overview.AnnualWithdrawalsTotal),
             overview.DebtRepaymentsSummary,
             overview.TotalOutflow,
             overview.TotalIncome,

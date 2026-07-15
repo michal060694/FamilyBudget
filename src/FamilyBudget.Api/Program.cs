@@ -19,11 +19,17 @@ builder.Services.AddScoped<IAnnualReserveRepository, AnnualReserveRepository>();
 builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 builder.Services.AddScoped<ITitheSettingRepository, TitheSettingRepository>();
 builder.Services.AddScoped<IMonthlyExpenseBudgetItemRepository, MonthlyExpenseBudgetItemRepository>();
+builder.Services.AddScoped<IFixedDonationStandingOrderRepository, FixedDonationStandingOrderRepository>();
+builder.Services.AddScoped<IFundRepository, FundRepository>();
+builder.Services.AddScoped<IFundEarmarkRepository, FundEarmarkRepository>();
+builder.Services.AddScoped<IDebtRepository, DebtRepository>();
 builder.Services.AddSingleton<CalendarYearCycle>();
 builder.Services.AddScoped<BudgetSmoothingEngine>();
 builder.Services.AddScoped<AnnualBudgetQueryService>();
 builder.Services.AddScoped<TitheEngine>();
 builder.Services.AddScoped<MonthlyOverviewQueryService>();
+builder.Services.AddScoped<FundSummaryQueryService>();
+builder.Services.AddScoped<DebtRepaymentService>();
 
 var app = builder.Build();
 
@@ -40,6 +46,9 @@ app.MapAnnualBudgetEndpoints();
 app.MapTransactionEndpoints();
 app.MapMonthlyOverviewEndpoints();
 app.MapMonthlyExpenseBudgetEndpoints();
+app.MapFixedDonationStandingOrderEndpoints();
+app.MapFundEndpoints();
+app.MapDebtEndpoints();
 
 app.Run();
 

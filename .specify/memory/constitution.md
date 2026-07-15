@@ -1,19 +1,29 @@
 <!--
 Sync Impact Report
+- Version change: 1.1.0 → 1.2.0
+- Modified principles: IV. Financial Data Integrity (Protected tithe calculation) — per explicit
+  user direction, simplified from an open-ended multi-month recursive carry-forward to a flat
+  one-calendar-month lookback (this month's fixed-donation standing orders + exactly the prior
+  month's ad-hoc/small-charity donations), and fixed donations now come from named recurring
+  standing orders rather than a fresh transaction re-entered every month
+- Added sections: none
+- Removed sections: none
+- Modified sections: Domain Formulas & Additional Constraints (added the simplified tithe formula
+  and the distinction between the protected NetTitheDue and the unprotected "still to donate after
+  fixed donations" display figure, which intentionally does not net out the prior-month amount)
+- Templates requiring updates:
+  - .specify/templates/plan-template.md ✅ no tithe-specific references to sync
+  - .specify/templates/spec-template.md ✅ no tithe-specific references to sync
+  - .specify/templates/tasks-template.md ✅ no tithe-specific references to sync
+- Follow-up TODOs: none
+
+Prior report (v1.1.0, superseded):
 - Version change: 1.0.0 → 1.1.0
 - Modified principles: I. Proactive Budget Smoothing (removed Hebrew-calendar-specific framing
   and worked examples; now calendar-agnostic per explicit user direction to use the Gregorian
   calendar for the annual budget cycle)
-- Added sections: none
-- Removed sections: none
 - Modified sections: Domain Formulas & Additional Constraints (MonthsRemaining is now computed
   relative to the end of the Gregorian calendar year / December, not the Hebrew year / Elul)
-- Templates requiring updates:
-  - .specify/templates/plan-template.md ✅ no calendar-specific references to sync
-  - .specify/templates/spec-template.md ✅ no calendar-specific references to sync
-  - .specify/templates/tasks-template.md ✅ no calendar-specific references to sync
-  - .claude/skills/speckit-*/SKILL.md ✅ no agent-specific renames required
-- Follow-up TODOs: none
 
 Prior report (v1.0.0, superseded):
 - Version change: [TEMPLATE] → 1.0.0 (initial ratification)
@@ -60,9 +70,14 @@ any related feature is considered done:
 
 - **Fund balance integrity**: the sum of all amounts earmarked to purposes within a given fund
   (e.g., Meitav, IBI) MUST exactly equal that fund's current recorded balance at all times.
-- **Protected tithe calculation**: the tithe (chomesh/maaser) amount due MUST be calculated only
-  after netting out (a) predefined fixed recurring donations for the month and (b) prior-month
-  small charity expenses not yet offset (`TitheOffset`).
+- **Protected tithe calculation**: the tithe (chomesh/maaser) amount due (`NetTitheDue`) MUST be
+  calculated only after netting out (a) this month's active fixed recurring donation standing
+  orders and (b) the immediately preceding calendar month's ad-hoc/small-charity donations — a
+  flat, one-month lookback (no further multi-month carry-forward). A separate, explicitly
+  unprotected display figure ("still to donate after fixed donations") MAY show the amount after
+  only deduction (a), for user-facing transparency about what a standing order alone still leaves
+  owed — but this figure MUST NOT be substituted for `NetTitheDue` anywhere the fully protected
+  obligation is required (e.g., the Monthly Dashboard, any future accounting export).
 - **Configurable tithe rate**: the tithe rate is a stored, user-configurable setting (e.g., 0.1
   for maaser or 0.2 for chomesh) — it MUST NOT be hardcoded as a constant anywhere in the
   domain logic.
@@ -89,6 +104,16 @@ to the user in plain terms, it MUST NOT ship as a single black-box figure.
 - **Budget overrun handling**: when an annual budget item is exceeded, the excess MUST become an
   internal debt of the fund and MUST be added dynamically to the allocation requirement of the
   remaining months, so the deficit is zeroed out before the end of the budget year.
+- **Tithe formula** (flat one-month lookback, per Principle IV):
+  `GrossTitheTarget = TitheApplicableIncome × TitheRate`
+  `NetTitheDue = max(0, GrossTitheTarget − FixedDonationsThisMonth − PriorMonthSmallCharityTotal)`
+  `StillToDonateAfterFixed = max(0, GrossTitheTarget − FixedDonationsThisMonth)` (unprotected
+  display figure — see Principle IV)
+  - `FixedDonationsThisMonth` is the sum of named recurring donation standing orders still active
+    (by their optional end month) during the target month — not a fresh transaction re-entered
+    each month.
+  - `PriorMonthSmallCharityTotal` is the sum of ad-hoc/small-charity donations dated in exactly
+    the immediately preceding calendar month — no further multi-month carry-forward.
 
 ## Development Workflow
 
@@ -118,4 +143,4 @@ follows semantic versioning:
 Compliance is reviewed at every `/speckit-plan` invocation via the Constitution Check gate, and
 may be re-verified at `/speckit-analyze` time for cross-artifact consistency.
 
-**Version**: 1.1.0 | **Ratified**: 2026-07-13 | **Last Amended**: 2026-07-14
+**Version**: 1.2.0 | **Ratified**: 2026-07-13 | **Last Amended**: 2026-07-15

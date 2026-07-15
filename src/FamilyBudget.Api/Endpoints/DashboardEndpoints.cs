@@ -41,11 +41,11 @@ public static class DashboardEndpoints
         var totalRequiredAllocation = lines.Sum(line => line.AllocatedMonthly);
         var freeBalance = projectedIncome - fixedExpenses - totalRequiredAllocation;
 
-        var (obligation, _) = await titheEngine.ComputeMonthAsync(year, month);
+        var obligation = await titheEngine.ComputeMonthAsync(year, month);
         var titheDue = new TitheDueView(
             obligation.GrossTitheTarget,
-            obligation.FixedDonationsThisMonth + obligation.CreditCarriedIn,
-            obligation.SmallCharityAppliedThisMonth,
+            obligation.FixedDonationsThisMonth,
+            obligation.PriorMonthSmallCharityTotal,
             obligation.NetTitheDue);
 
         return Results.Ok(new DashboardResponse(

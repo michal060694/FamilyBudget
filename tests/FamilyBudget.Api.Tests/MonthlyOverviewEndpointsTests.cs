@@ -25,7 +25,7 @@ public class MonthlyOverviewEndpointsTests : IClassFixture<FamilyBudgetApiFactor
     }
 
     [Fact]
-    public async Task GetMonthlyOverview_SplitsIncomeAndComputesRemainingToGive()
+    public async Task GetMonthlyOverview_SplitsIncomeAndComputesTitheBreakdown()
     {
         const int year = 2050;
         const int month = 3;
@@ -37,10 +37,15 @@ public class MonthlyOverviewEndpointsTests : IClassFixture<FamilyBudgetApiFactor
             db.Transactions.AddRange(
                 new Transaction(Guid.NewGuid(), new DateOnly(year, month, 1), 1000m, TransactionType.Income, PaymentMethod.BankTransfer, true, "Salary"),
                 new Transaction(Guid.NewGuid(), new DateOnly(year, month, 2), 300m, TransactionType.Income, PaymentMethod.Cash, false, "Gift"),
-                new Transaction(Guid.NewGuid(), new DateOnly(year, month, 3), 120m, TransactionType.FixedDonation, PaymentMethod.BankTransfer, null, "Standing order"));
+                // prior month (month - 1) small-charity donation — eligible to offset this month's NetTitheDue
+                new Transaction(Guid.NewGuid(), new DateOnly(year, month - 1, 20), 30m, TransactionType.SmallCharityExpense, PaymentMethod.Cash, null, "Extra charity"));
+            db.FixedDonationStandingOrders.Add(
+                new FixedDonationStandingOrder(Guid.NewGuid(), "Yeshiva", 120m, null, null));
             db.MonthlyExpenseBudgetItems.AddRange(
                 new MonthlyExpenseBudgetItem(Guid.NewGuid(), year, month, "Rent", TransactionType.FixedExpense, budgetedAmount: 400m, usedAmount: 400m),
                 new MonthlyExpenseBudgetItem(Guid.NewGuid(), year, month, "Groceries", TransactionType.RegularExpense, budgetedAmount: 200m, usedAmount: 150m));
+            db.AnnualBudgetItems.Add(
+                new AnnualBudgetItem(Guid.NewGuid(), year, "December-style Holiday", 900m, month, amountAlreadySetAside: 900m));
             await db.SaveChangesAsync();
         }
 
@@ -52,9 +57,11 @@ public class MonthlyOverviewEndpointsTests : IClassFixture<FamilyBudgetApiFactor
         Assert.Equal(1000m, response!.TitheApplicableIncome.Subtotal);
         Assert.Equal(300m, response.NonTitheApplicableIncome.Subtotal);
         Assert.Equal(200m, response.TitheObligation.GrossTitheTarget); // 1000 * 0.2
-        Assert.Equal(80m, response.TitheObligation.NetTitheDue); // 200 - 120 fixed donation
-        Assert.Equal(120m, response.Donations.GivenThisMonth);
-        Assert.Equal(0m, response.Donations.RemainingToGive); // netTitheDue(80) - given(120) floors at 0
+        Assert.Equal(120m, response.TitheObligation.FixedDonationsThisMonth.Total);
+        Assert.Equal("Yeshiva", Assert.Single(response.TitheObligation.FixedDonationsThisMonth.Items).Name);
+        Assert.Equal(30m, response.TitheObligation.PriorMonthSmallCharity.Total);
+        Assert.Equal(80m, response.TitheObligation.StillToDonateAfterFixed); // 200 - 120, ignoring the 30 prior-month offset
+        Assert.Equal(50m, response.TitheObligation.NetTitheDue); // 200 - 120 - 30, fully protected
         Assert.Equal(0m, response.DebtRepaymentsSummary);
 
         var rentLine = Assert.Single(response.FixedExpenses.Items);
@@ -68,11 +75,40 @@ public class MonthlyOverviewEndpointsTests : IClassFixture<FamilyBudgetApiFactor
         Assert.Equal(150m, groceriesLine.UsedAmount);
         Assert.Equal(50m, groceriesLine.Remaining);
 
+        var withdrawalLine = Assert.Single(response.AnnualWithdrawals.Lines);
+        Assert.Equal("December-style Holiday", withdrawalLine.Name);
+        Assert.Equal(900m, withdrawalLine.TotalAmount);
+        Assert.Equal(900m, response.AnnualWithdrawals.Total);
+
         var totalIncome = 1000m + 300m;
-        var totalOutflow = 120m + 400m + 150m; // donations + fixed used + regular used (+0 debt)
+        var totalOutflow = 120m + 400m + 150m; // fixed donations this month + fixed used + regular used (+0 debt)
         Assert.Equal(totalOutflow, response.TotalOutflow);
         Assert.Equal(totalIncome, response.TotalIncome);
         Assert.Equal(totalIncome - totalOutflow, response.RemainingToSave);
+    }
+
+    [Fact]
+    public async Task GetMonthlyOverview_DebtRepaymentTransactions_FeedDebtRepaymentsSummary()
+    {
+        const int year = 2051;
+        const int month = 4;
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<FamilyBudgetDbContext>();
+            db.Transactions.Add(new Transaction(
+                Guid.NewGuid(), new DateOnly(year, month, 10), 750m,
+                TransactionType.DebtRepayment, PaymentMethod.Cash, null, "החזר חוב - Gemach"));
+            await db.SaveChangesAsync();
+        }
+
+        var client = _factory.CreateClient();
+        var response = await client.GetFromJsonAsync<MonthlyOverviewResponse>(
+            $"/api/monthly-overview?year={year}&month={month}", JsonOptions);
+
+        Assert.NotNull(response);
+        Assert.Equal(750m, response!.DebtRepaymentsSummary);
+        Assert.Equal(750m, response.TotalOutflow); // no other outflow sources seeded for this month
     }
 
     [Fact]

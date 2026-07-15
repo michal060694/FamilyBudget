@@ -3,6 +3,7 @@ using System;
 using FamilyBudget.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyBudget.Infrastructure.Migrations
 {
     [DbContext(typeof(FamilyBudgetDbContext))]
-    partial class FamilyBudgetDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260715115249_AddFundsAndFundEarmarks")]
+    partial class AddFundsAndFundEarmarks
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.11");
@@ -69,48 +72,6 @@ namespace FamilyBudget.Infrastructure.Migrations
                     b.HasKey("Year");
 
                     b.ToTable("AnnualReserves", (string)null);
-                });
-
-            modelBuilder.Entity("FamilyBudget.Core.Entities.Debt", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("CounterpartyName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("CurrentBalance")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Direction")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("OriginalAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal?>("RepaymentRate")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateOnly?>("TargetDate")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Debts", (string)null);
                 });
 
             modelBuilder.Entity("FamilyBudget.Core.Entities.FixedDonationStandingOrder", b =>

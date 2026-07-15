@@ -118,6 +118,19 @@
     color: var(--text-primary);
     width: 110px;
   }
+  .stat-tile.clickable { cursor: pointer; }
+  .stat-tile.clickable:hover { border-color: var(--series-1); }
+  dialog.modal {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    width: min(640px, 92vw);
+  }
+  dialog.modal::backdrop { background: rgba(0, 0, 0, 0.45); }
+  dialog.modal h3 { font-size: 1rem; margin: 0 0 12px; }
+  dialog.modal .modal-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
 
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   th, td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--gridline); font-size: 0.88rem; }
@@ -158,6 +171,7 @@
   .badge.good { color: var(--status-good); background: color-mix(in srgb, var(--status-good) 12%, transparent); }
   .badge.pending { color: var(--text-secondary); background: color-mix(in srgb, var(--text-secondary) 12%, transparent); }
   .badge.partial { color: var(--series-1); background: color-mix(in srgb, var(--series-1) 12%, transparent); }
+  .badge.critical { color: var(--status-critical); background: color-mix(in srgb, var(--status-critical) 12%, transparent); }
 
   input.usage-input {
     font: inherit;
@@ -232,6 +246,8 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="annual">תקציב שנתי</button>
     <button class="tab-btn" data-tab="overview">סקירה חודשית</button>
+    <button class="tab-btn" data-tab="funds">קרנות</button>
+    <button class="tab-btn" data-tab="debts">ספר חובות</button>
   </div>
 
   <div id="tab-annual" class="tab-panel">
@@ -344,23 +360,25 @@
     </div>
 
     <div class="card">
-      <h2>חומש / מעשר</h2>
+      <h2>מעשרות</h2>
       <div class="stat-row">
         <div class="stat-tile">
-          <div class="label">יעד חומש (ברוטו)</div>
+          <div class="label">א. מעשרות לתרומה</div>
           <div class="value" id="ov-gross-target">—</div>
         </div>
-        <div class="stat-tile">
-          <div class="label">תרומות קבועות החודש</div>
+        <div class="stat-tile clickable" id="tile-fixed-donations">
+          <div class="label">ב. תרומות קבועות בחודש</div>
           <div class="value" id="ov-fixed-donations">—</div>
+          <div class="hint">לחץ לפירוט</div>
         </div>
-        <div class="stat-tile">
-          <div class="label">קיזוז שהועבר מהחודש הקודם</div>
+        <div class="stat-tile clickable" id="tile-prior-month">
+          <div class="label">ג. קיזוז שהועבר מחודש קודם</div>
           <div class="value" id="ov-carry-in">—</div>
+          <div class="hint">לחץ לפירוט</div>
         </div>
         <div class="stat-tile">
-          <div class="label">חומש לביצוע (נטו)</div>
-          <div class="value accent" id="ov-net-due">—</div>
+          <div class="label">ד. תרומות לתרומה</div>
+          <div class="value accent" id="ov-still-to-donate">—</div>
         </div>
       </div>
       <div class="hint" style="margin-top: 12px; display:flex; align-items:center; gap:8px;">
@@ -368,43 +386,40 @@
         <input id="rate-input" type="number" min="0.01" max="1" step="0.01" style="width: 70px;" />
         <button id="save-rate" class="secondary">שמור שיעור</button>
       </div>
+
     </div>
 
-    <div class="card">
-      <h2>תרומות החודש וקיזוז צדקה קטנה</h2>
+    <dialog id="modal-fixed-donations" class="modal">
+      <h3>תרומות קבועות (הוראות קבע)</h3>
       <table>
-        <thead><tr><th>תאריך</th><th>תיאור</th><th>סוג</th><th class="num">סכום</th><th></th></tr></thead>
-        <tbody id="ov-donations"></tbody>
-        <tfoot><tr><td colspan="5"><button class="icon add-row-toggle" data-target="donation">+ הוסף תרומה</button></td></tr></tfoot>
+        <thead><tr><th>שם</th><th class="num">סכום</th><th>בתוקף עד (ריק = ללא הגבלה)</th><th></th></tr></thead>
+        <tbody id="ov-standing-orders"></tbody>
+        <tfoot><tr><td colspan="4"><button class="icon" id="add-standing-order">+ הוסף תרומה קבועה</button></td></tr></tfoot>
       </table>
-      <div class="stat-row" style="margin-top: 12px;">
-        <div class="stat-tile">
-          <div class="label">ניתן החודש (תרומות)</div>
-          <div class="value" id="ov-given">—</div>
-        </div>
-        <div class="stat-tile">
-          <div class="label">עוד נותר לתת החודש</div>
-          <div class="value accent" id="ov-remaining-give">—</div>
-        </div>
+      <div class="modal-actions">
+        <button class="secondary" id="close-fixed-donations-modal">סגור</button>
       </div>
-      <div class="stat-row" style="margin-top: 12px;">
-        <div class="stat-tile">
-          <div class="label">הוצאות צדקה קטנות החודש</div>
-          <div class="value" id="ov-sc-total">—</div>
-        </div>
-        <div class="stat-tile">
-          <div class="label">זמין לקיזוז מהחודש הקודם</div>
-          <div class="value" id="ov-sc-available">—</div>
-        </div>
-        <div class="stat-tile">
-          <div class="label">קוזז בפועל החודש</div>
-          <div class="value" id="ov-sc-applied">—</div>
-        </div>
-        <div class="stat-tile">
-          <div class="label">יתרה שתעבור לחודש הבא</div>
-          <div class="value" id="ov-sc-remainder">—</div>
-        </div>
+    </dialog>
+
+    <dialog id="modal-prior-month" class="modal">
+      <h3>תרומות מעבר להו"ק (מהחודש הקודם)</h3>
+      <table>
+        <thead><tr><th>תאריך</th><th>תיאור</th><th class="num">סכום</th><th></th></tr></thead>
+        <tbody id="ov-prior-month-donations"></tbody>
+        <tfoot><tr><td colspan="4"><button class="icon" id="add-prior-month-donation">+ הוסף תרומה</button></td></tr></tfoot>
+      </table>
+      <div class="modal-actions">
+        <button class="secondary" id="close-prior-month-modal">סגור</button>
       </div>
+    </dialog>
+
+    <div class="card">
+      <h2>הוצאות שצריך להביא מהקופה השנתית</h2>
+      <p class="hint" style="margin: 0 0 12px;">פריטי תקציב שנתי (ממסך "תקציב שנתי") שהחודש הנוכחי הוא החודש היעד שלהם — צריך למשוך את הסכום מהקופה כדי לממן אותם.</p>
+      <table>
+        <thead><tr><th>שם</th><th class="num">סכום למשיכה</th></tr></thead>
+        <tbody id="ov-annual-withdrawals"></tbody>
+      </table>
     </div>
 
     <div class="card">
@@ -445,6 +460,58 @@
           <div class="label">נשאר לחיסכון</div>
           <div class="value accent" id="ov-remaining-save">—</div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-funds" class="tab-panel" hidden>
+    <div class="controls">
+      <button id="funds-refresh">רענן</button>
+      <button id="funds-add-toggle" class="secondary">+ הוסף קרן</button>
+    </div>
+
+    <div id="funds-error" class="error" hidden></div>
+
+    <div id="funds-add-form" class="card" hidden>
+      <h2>הוספת קרן</h2>
+      <div class="add-form-fields">
+        <input id="new-fund-name" type="text" placeholder="שם הקרן (למשל: מיטב)" />
+        <input id="new-fund-balance" type="number" min="0" step="0.01" placeholder="יתרה כוללת" />
+        <button id="new-fund-save">שמור</button>
+        <button id="new-fund-cancel" class="secondary">ביטול</button>
+      </div>
+    </div>
+
+    <div id="funds-list"></div>
+  </div>
+
+  <div id="tab-debts" class="tab-panel" hidden>
+    <div class="controls">
+      <button id="debts-refresh">רענן</button>
+    </div>
+
+    <div id="debts-error" class="error" hidden></div>
+
+    <div class="overview-columns">
+      <div class="card">
+        <h2>חייבים לנו</h2>
+        <table>
+          <thead>
+            <tr><th>שם</th><th class="num">יתרה</th><th>תאריך יעד</th><th>הערות</th><th>סטטוס</th><th>החזר</th><th></th></tr>
+          </thead>
+          <tbody id="debts-receivables"></tbody>
+          <tfoot><tr><td colspan="7"><button class="icon" id="add-receivable-toggle">+ הוסף חוב</button></td></tr></tfoot>
+        </table>
+      </div>
+      <div class="card">
+        <h2>אנחנו חייבים</h2>
+        <table>
+          <thead>
+            <tr><th>שם</th><th class="num">יתרה</th><th>קצב החזר</th><th>סטטוס</th><th>החזר</th><th></th></tr>
+          </thead>
+          <tbody id="debts-payables"></tbody>
+          <tfoot><tr><td colspan="6"><button class="icon" id="add-payable-toggle">+ הוסף חוב</button></td></tr></tfoot>
+        </table>
       </div>
     </div>
   </div>
@@ -747,8 +814,14 @@
         btn.classList.add("active");
         document.getElementById("tab-annual").hidden = btn.dataset.tab !== "annual";
         document.getElementById("tab-overview").hidden = btn.dataset.tab !== "overview";
+        document.getElementById("tab-funds").hidden = btn.dataset.tab !== "funds";
+        document.getElementById("tab-debts").hidden = btn.dataset.tab !== "debts";
         if (btn.dataset.tab === "overview") {
           refreshOverview();
+        } else if (btn.dataset.tab === "funds") {
+          refreshFunds();
+        } else if (btn.dataset.tab === "debts") {
+          refreshDebts();
         }
       });
     });
@@ -990,42 +1063,169 @@
       }
     }
 
-    function donationTypeLabel(type) {
-      return type === "FixedDonation" ? "קבועה" : "צדקה קטנה";
+    // Parses a plain number or a simple arithmetic formula; throws on invalid input.
+    function parseAmountText(text) {
+      if (isPlainNumber(text)) {
+        return { amount: parseFloat(text), formula: null };
+      }
+      return { amount: evaluateFormula(text), formula: text };
     }
 
-    function promptForAmount(label) {
-      const text = prompt(`${label} (אפשר גם נוסחה, למשל 600-200):`, "");
-      if (text === null) return null;
-      try {
-        if (isPlainNumber(text)) return { amount: parseFloat(text), formula: null };
-        return { amount: evaluateFormula(text), formula: text };
-      } catch (err) {
-        ovShowError(err.message);
+    // Payment method is tracked on the backend (required by the transaction ledger) but is not a
+    // meaningful distinction for this household, so the UI no longer asks for it — every
+    // auto-generated transaction just uses this fixed default.
+    const DEFAULT_PAYMENT_METHOD = "BankTransfer";
+
+    // Toggles an inline "add row" at the end of tbody — a real <tr> with input fields, not a
+    // popup — matching the annual-budget screen's existing add-row pattern.
+    function toggleAddRow(tbody, colCount, fieldsHtml) {
+      const existing = tbody.querySelector("tr.add-form");
+      if (existing) {
+        existing.remove();
         return null;
       }
+
+      const row = document.createElement("tr");
+      row.className = "add-form";
+      row.innerHTML = `
+        <td colspan="${colCount}">
+          <div class="add-form-fields">
+            ${fieldsHtml}
+            <button class="save-btn">שמור</button>
+            <button class="secondary cancel-btn">ביטול</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(row);
+      row.querySelector(".cancel-btn").addEventListener("click", () => row.remove());
+      return row;
     }
 
-    async function submitNewIncome(isTitheApplicable) {
-      const parsed = promptForAmount("סכום ההכנסה");
-      if (!parsed || !(parsed.amount > 0)) {
-        if (parsed) ovShowError("הסכום חייב להיות חיובי.");
+    function toggleIncomeAddRow(tbodyId, isTitheApplicable) {
+      const tbody = document.getElementById(tbodyId);
+      const row = toggleAddRow(tbody, 4, `
+        <input type="date" class="new-date" value="${dateInputValue()}" />
+        <input type="text" class="new-desc" placeholder="תיאור" />
+        <input type="text" class="new-amount" placeholder="סכום (או נוסחה)" />
+      `);
+      if (!row) return;
+
+      row.querySelector(".save-btn").addEventListener("click", async () => {
+        const date = row.querySelector(".new-date").value;
+        const description = row.querySelector(".new-desc").value.trim() || null;
+        const paymentMethod = DEFAULT_PAYMENT_METHOD;
+        const amountText = row.querySelector(".new-amount").value.trim();
+
+        let parsed;
+        try {
+          parsed = parseAmountText(amountText);
+        } catch (err) {
+          ovShowError(err.message);
+          return;
+        }
+        if (!date || !(parsed.amount > 0)) {
+          ovShowError("יש להזין תאריך וסכום חיובי.");
+          return;
+        }
+
+        try {
+          await fetchJson("/api/transactions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              date, amount: parsed.amount, amountFormula: parsed.formula,
+              type: "Income", paymentMethod, isTitheApplicable, description,
+            }),
+          });
+          ovClearError();
+          await refreshOverview();
+        } catch (err) {
+          ovShowError(err.message);
+        }
+      });
+    }
+
+    // ---- Fixed donation standing orders (bullet ב) ----
+
+    function parseValidUntil(text) {
+      const trimmed = text.trim();
+      if (trimmed === "") {
+        return { year: null, month: null };
+      }
+      const match = /^(\d{4})-(\d{1,2})$/.exec(trimmed);
+      if (!match || Number(match[2]) < 1 || Number(match[2]) > 12) {
+        throw new Error('פורמט תוקף לא תקין. השתמשי ב-YYYY-MM או השאירי ריק.');
+      }
+      return { year: Number(match[1]), month: Number(match[2]) };
+    }
+
+    function formatValidUntil(year, month) {
+      if (year == null) return "";
+      return `${year}-${String(month).padStart(2, "0")}`;
+    }
+
+    function renderStandingOrders(items) {
+      const tbody = document.getElementById("ov-standing-orders");
+      tbody.innerHTML = "";
+      if (!items || items.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td colspan="4" style="color: var(--text-muted); font-style: italic;">אין תרומות קבועות מוגדרות.</td>`;
+        tbody.appendChild(row);
         return;
       }
-      const description = prompt("תיאור (לא חובה):", "") || null;
+      for (const item of items) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><input class="name-input" type="text" value="${item.name}" /></td>
+          <td class="num"><input class="amount-input usage-input" type="text" /></td>
+          <td><input class="valid-until-input desc-input" type="month" value="${formatValidUntil(item.validUntilYear, item.validUntilMonth)}" /></td>
+          <td><button class="delete-row" title="מחק">✕</button></td>
+        `;
+        tbody.appendChild(row);
 
+        const nameInput = row.querySelector(".name-input");
+        const amountInput = row.querySelector(".amount-input");
+        const validUntilInput = row.querySelector(".valid-until-input");
+
+        attachFormulaInput(amountInput, item.amount, item.amountFormula, (amount, formula) =>
+          saveStandingOrder(item, { amount, amountFormula: formula }));
+
+        nameInput.addEventListener("blur", () => {
+          if (nameInput.value && nameInput.value !== item.name) {
+            saveStandingOrder(item, { name: nameInput.value });
+          }
+        });
+        nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
+
+        validUntilInput.addEventListener("blur", () => {
+          try {
+            const parsed = parseValidUntil(validUntilInput.value);
+            if (parsed.year !== item.validUntilYear || parsed.month !== item.validUntilMonth) {
+              saveStandingOrder(item, { validUntilYear: parsed.year, validUntilMonth: parsed.month });
+            }
+          } catch (err) {
+            ovShowError(err.message);
+            validUntilInput.value = formatValidUntil(item.validUntilYear, item.validUntilMonth);
+          }
+        });
+        validUntilInput.addEventListener("keydown", (e) => { if (e.key === "Enter") validUntilInput.blur(); });
+
+        row.querySelector(".delete-row").addEventListener("click", () => deleteStandingOrder(item));
+      }
+    }
+
+    async function saveStandingOrder(item, patch) {
       try {
-        await fetchJson("/api/transactions", {
-          method: "POST",
+        await fetchJson(`/api/fixed-donation-standing-orders/${item.id}`, {
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            date: dateInputValue(),
-            amount: parsed.amount,
-            amountFormula: parsed.formula,
-            type: "Income",
-            paymentMethod: "BankTransfer",
-            isTitheApplicable,
-            description,
+            name: item.name,
+            amount: item.amount,
+            amountFormula: item.amountFormula,
+            validUntilYear: item.validUntilYear,
+            validUntilMonth: item.validUntilMonth,
+            ...patch,
           }),
         });
         ovClearError();
@@ -1035,33 +1235,111 @@
       }
     }
 
-    async function submitNewDonation(type) {
-      const parsed = promptForAmount("סכום התרומה");
-      if (!parsed || !(parsed.amount > 0)) {
-        if (parsed) ovShowError("הסכום חייב להיות חיובי.");
-        return;
-      }
-      const description = prompt("תיאור (לא חובה):", "") || null;
-
+    async function deleteStandingOrder(item) {
       try {
-        await fetchJson("/api/transactions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            date: dateInputValue(),
-            amount: parsed.amount,
-            amountFormula: parsed.formula,
-            type,
-            paymentMethod: "BankTransfer",
-            isTitheApplicable: null,
-            description,
-          }),
-        });
+        await fetchJson(`/api/fixed-donation-standing-orders/${item.id}`, { method: "DELETE" });
         ovClearError();
         await refreshOverview();
       } catch (err) {
         ovShowError(err.message);
       }
+    }
+
+    function toggleStandingOrderAddRow() {
+      const tbody = document.getElementById("ov-standing-orders");
+      const row = toggleAddRow(tbody, 4, `
+        <input type="text" class="new-name" placeholder="שם" />
+        <input type="text" class="new-amount" placeholder="סכום (או נוסחה)" />
+        <input type="month" class="new-valid-until" title="בתוקף עד (ריק = ללא הגבלה)" />
+      `);
+      if (!row) return;
+
+      row.querySelector(".save-btn").addEventListener("click", async () => {
+        const name = row.querySelector(".new-name").value.trim();
+        const amountText = row.querySelector(".new-amount").value.trim();
+        const validUntilText = row.querySelector(".new-valid-until").value;
+
+        let parsed, validUntil;
+        try {
+          parsed = parseAmountText(amountText);
+          validUntil = parseValidUntil(validUntilText);
+        } catch (err) {
+          ovShowError(err.message);
+          return;
+        }
+        if (!name || !(parsed.amount > 0)) {
+          ovShowError("יש להזין שם וסכום חיובי.");
+          return;
+        }
+
+        try {
+          await fetchJson("/api/fixed-donation-standing-orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name, amount: parsed.amount, amountFormula: parsed.formula,
+              validUntilYear: validUntil.year, validUntilMonth: validUntil.month,
+            }),
+          });
+          ovClearError();
+          await refreshOverview();
+        } catch (err) {
+          ovShowError(err.message);
+        }
+      });
+    }
+
+    // ---- Prior-month small-charity donations (bullet ג) ----
+
+    function previousMonthOf(year, month) {
+      return month === 1 ? [year - 1, 12] : [year, month - 1];
+    }
+
+    function toggleNewPriorMonthDonationRow() {
+      const tbody = document.getElementById("ov-prior-month-donations");
+      const [priorYear, priorMonth] = previousMonthOf(Number(ovYear()), Number(ovMonth()));
+      const defaultDate = `${priorYear}-${String(priorMonth).padStart(2, "0")}-01`;
+
+      const row = toggleAddRow(tbody, 4, `
+        <input type="date" class="new-date" value="${defaultDate}" />
+        <input type="text" class="new-desc" placeholder="תיאור" />
+        <input type="text" class="new-amount" placeholder="סכום (או נוסחה)" />
+      `);
+      if (!row) return;
+
+      row.querySelector(".save-btn").addEventListener("click", async () => {
+        const date = row.querySelector(".new-date").value;
+        const description = row.querySelector(".new-desc").value.trim() || null;
+        const paymentMethod = DEFAULT_PAYMENT_METHOD;
+        const amountText = row.querySelector(".new-amount").value.trim();
+
+        let parsed;
+        try {
+          parsed = parseAmountText(amountText);
+        } catch (err) {
+          ovShowError(err.message);
+          return;
+        }
+        if (!date || !(parsed.amount > 0)) {
+          ovShowError("יש להזין תאריך וסכום חיובי.");
+          return;
+        }
+
+        try {
+          await fetchJson("/api/transactions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              date, amount: parsed.amount, amountFormula: parsed.formula,
+              type: "SmallCharityExpense", paymentMethod, isTitheApplicable: null, description,
+            }),
+          });
+          ovClearError();
+          await refreshOverview();
+        } catch (err) {
+          ovShowError(err.message);
+        }
+      });
     }
 
     // ---- Fixed / Regular expense budget lines ----
@@ -1141,32 +1419,62 @@
       }
     }
 
-    async function submitNewBudgetItem(type) {
-      const name = prompt("שם הקטגוריה (למשל: ארנונה):", "");
-      if (!name) return;
-      const parsed = promptForAmount("כמה מתוכנן לחודש");
-      if (!parsed || !(parsed.amount >= 0)) {
-        if (parsed) ovShowError("הסכום חייב להיות אי-שלילי.");
+    function toggleBudgetItemAddRow(tbodyId, type) {
+      const tbody = document.getElementById(tbodyId);
+      const row = toggleAddRow(tbody, 5, `
+        <input type="text" class="new-name" placeholder="שם הקטגוריה (למשל: ארנונה)" />
+        <input type="text" class="new-amount" placeholder="מתוכנן לחודש (או נוסחה)" />
+      `);
+      if (!row) return;
+
+      row.querySelector(".save-btn").addEventListener("click", async () => {
+        const name = row.querySelector(".new-name").value.trim();
+        const amountText = row.querySelector(".new-amount").value.trim();
+
+        let parsed;
+        try {
+          parsed = parseAmountText(amountText);
+        } catch (err) {
+          ovShowError(err.message);
+          return;
+        }
+        if (!name || !(parsed.amount >= 0)) {
+          ovShowError("יש להזין שם וסכום אי-שלילי.");
+          return;
+        }
+
+        try {
+          await fetchJson("/api/monthly-expense-budgets", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              year: Number(ovYear()), month: Number(ovMonth()),
+              name, type, budgetedAmount: parsed.amount, budgetedAmountFormula: parsed.formula,
+            }),
+          });
+          ovClearError();
+          await refreshOverview();
+        } catch (err) {
+          ovShowError(err.message);
+        }
+      });
+    }
+
+    // ---- Annual kupa withdrawals (read-only, sourced from the Annual Budget screen) ----
+
+    function renderAnnualWithdrawals(lines) {
+      const tbody = document.getElementById("ov-annual-withdrawals");
+      tbody.innerHTML = "";
+      if (!lines || lines.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td colspan="2" style="color: var(--text-muted); font-style: italic;">אין פריטי תקציב שנתי שהיעד שלהם הוא החודש הזה.</td>`;
+        tbody.appendChild(row);
         return;
       }
-
-      try {
-        await fetchJson("/api/monthly-expense-budgets", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            year: Number(ovYear()),
-            month: Number(ovMonth()),
-            name,
-            type,
-            budgetedAmount: parsed.amount,
-            budgetedAmountFormula: parsed.formula,
-          }),
-        });
-        ovClearError();
-        await refreshOverview();
-      } catch (err) {
-        ovShowError(err.message);
+      for (const line of lines) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td>${line.name}</td><td class="num">${fmtMoney(line.totalAmount)}</td>`;
+        tbody.appendChild(row);
       }
     }
 
@@ -1182,24 +1490,19 @@
 
         renderTransactionRows("ov-income-tithe", overview.titheApplicableIncome.lines, 4, saveTransactionPatch, deleteTransaction);
         renderTransactionRows("ov-income-exempt", overview.nonTitheApplicableIncome.lines, 4, saveTransactionPatch, deleteTransaction);
-        renderTransactionRows("ov-donations", overview.donations.lines, 5, saveTransactionPatch, deleteTransaction,
-          (line) => `<td>${donationTypeLabel(line.type)}</td>`);
+
+        renderStandingOrders(overview.titheObligation.fixedDonationsThisMonth.items);
+        renderTransactionRows("ov-prior-month-donations", overview.titheObligation.priorMonthSmallCharity.lines, 4, saveTransactionPatch, deleteTransaction);
 
         renderBudgetRows("ov-fixed-expenses", overview.fixedExpenses.items, saveBudgetItemPatch, deleteBudgetItem);
         renderBudgetRows("ov-regular-expenses", overview.regularExpenses.items, saveBudgetItemPatch, deleteBudgetItem);
 
+        renderAnnualWithdrawals(overview.annualWithdrawals.lines);
+
         document.getElementById("ov-gross-target").textContent = fmtMoney(overview.titheObligation.grossTitheTarget);
-        document.getElementById("ov-fixed-donations").textContent = fmtMoney(overview.titheObligation.fixedDonationsThisMonth);
-        document.getElementById("ov-carry-in").textContent = fmtMoney(overview.titheObligation.creditCarriedIn);
-        document.getElementById("ov-net-due").textContent = fmtMoney(overview.titheObligation.netTitheDue);
-
-        document.getElementById("ov-given").textContent = fmtMoney(overview.donations.givenThisMonth);
-        document.getElementById("ov-remaining-give").textContent = fmtMoney(overview.donations.remainingToGive);
-
-        document.getElementById("ov-sc-total").textContent = fmtMoney(overview.smallCharityOffsetLedger.smallCharityExpenseTotal);
-        document.getElementById("ov-sc-available").textContent = fmtMoney(overview.smallCharityOffsetLedger.availableFromPriorMonth);
-        document.getElementById("ov-sc-applied").textContent = fmtMoney(overview.smallCharityOffsetLedger.appliedThisMonth);
-        document.getElementById("ov-sc-remainder").textContent = fmtMoney(overview.smallCharityOffsetLedger.unappliedRemainder);
+        document.getElementById("ov-fixed-donations").textContent = fmtMoney(overview.titheObligation.fixedDonationsThisMonth.total);
+        document.getElementById("ov-carry-in").textContent = fmtMoney(overview.titheObligation.priorMonthSmallCharity.total);
+        document.getElementById("ov-still-to-donate").textContent = fmtMoney(overview.titheObligation.stillToDonateAfterFixed);
 
         document.getElementById("ov-total-income").textContent = fmtMoney(overview.totalIncome);
         document.getElementById("ov-debt-summary").textContent = fmtMoney(overview.debtRepaymentsSummary);
@@ -1237,12 +1540,548 @@
     document.querySelectorAll(".add-row-toggle").forEach(btn => {
       btn.addEventListener("click", () => {
         const target = btn.dataset.target;
-        if (target === "income-tithe") submitNewIncome(true);
-        else if (target === "income-exempt") submitNewIncome(false);
-        else if (target === "donation") submitNewDonation("FixedDonation");
-        else if (target === "fixed-expense") submitNewBudgetItem("FixedExpense");
-        else if (target === "regular-expense") submitNewBudgetItem("RegularExpense");
+        if (target === "income-tithe") toggleIncomeAddRow("ov-income-tithe", true);
+        else if (target === "income-exempt") toggleIncomeAddRow("ov-income-exempt", false);
+        else if (target === "fixed-expense") toggleBudgetItemAddRow("ov-fixed-expenses", "FixedExpense");
+        else if (target === "regular-expense") toggleBudgetItemAddRow("ov-regular-expenses", "RegularExpense");
       });
+    });
+
+    document.getElementById("tile-fixed-donations").addEventListener("click", () => {
+      document.getElementById("modal-fixed-donations").showModal();
+    });
+
+    document.getElementById("tile-prior-month").addEventListener("click", () => {
+      document.getElementById("modal-prior-month").showModal();
+    });
+
+    document.getElementById("close-fixed-donations-modal").addEventListener("click", () => {
+      document.getElementById("modal-fixed-donations").close();
+    });
+
+    document.getElementById("close-prior-month-modal").addEventListener("click", () => {
+      document.getElementById("modal-prior-month").close();
+    });
+
+    document.getElementById("add-standing-order").addEventListener("click", () => {
+      toggleStandingOrderAddRow();
+    });
+
+    document.getElementById("add-prior-month-donation").addEventListener("click", () => {
+      toggleNewPriorMonthDonationRow();
+    });
+
+    // ---- Funds (savings/investment accounts) ----
+
+    function fundsShowError(message) {
+      const el = document.getElementById("funds-error");
+      el.textContent = "שגיאה: " + message;
+      el.hidden = false;
+    }
+
+    function fundsClearError() {
+      document.getElementById("funds-error").hidden = true;
+    }
+
+    function discrepancyBadgeHtml(discrepancy) {
+      if (discrepancy === 0) {
+        return '<span class="badge good">✓ מאוזן</span>';
+      }
+      if (discrepancy > 0) {
+        return `<span class="badge partial">נותר לצבוע ${fmtMoney(discrepancy)}</span>`;
+      }
+      return `<span class="badge critical">חריגה של ${fmtMoney(-discrepancy)}</span>`;
+    }
+
+    function fundCardHtml(fund) {
+      return `
+        <div class="card" data-fund-id="${fund.fundId}">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+            <input class="fund-name-input" type="text" value="${fund.name}" style="font-size:1.05rem; font-weight:600; border:1px solid transparent; background:transparent; color:var(--text-primary); padding:4px;" />
+            <button class="delete-row fund-delete-btn" title="מחק קרן">✕ מחק קרן</button>
+          </div>
+          <div class="stat-row" style="margin-top:12px;">
+            <div class="stat-tile">
+              <div class="label">יתרה כוללת</div>
+              <input class="fund-balance-input usage-input" type="number" min="0" step="0.01" value="${fund.totalBalance}" style="font-size:1.3rem; width:140px;" />
+            </div>
+            <div class="stat-tile">
+              <div class="label">סה"כ צבוע</div>
+              <div class="value">${fmtMoney(fund.earmarkedTotal)}</div>
+            </div>
+            <div class="stat-tile">
+              <div class="label">איזון</div>
+              <div class="value">${discrepancyBadgeHtml(fund.discrepancy)}</div>
+            </div>
+          </div>
+          <table style="margin-top:16px;">
+            <thead><tr><th>מטרה</th><th class="num">סכום</th><th></th></tr></thead>
+            <tbody class="fund-earmarks-body"></tbody>
+            <tfoot><tr><td colspan="3"><button class="icon fund-add-earmark-toggle">+ הוסף ייעוד</button></td></tr></tfoot>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderEarmarkRows(tbody, fundId, earmarks) {
+      tbody.innerHTML = "";
+      if (!earmarks || earmarks.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td colspan="3" style="color: var(--text-muted); font-style: italic;">אין ייעודים מוגדרים עדיין — כל היתרה טרם צבועה.</td>`;
+        tbody.appendChild(row);
+        return;
+      }
+      for (const earmark of earmarks) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><input class="name-input" type="text" value="${earmark.purposeLabel}" /></td>
+          <td class="num"><input class="amount-input usage-input" type="number" min="0.01" step="0.01" value="${earmark.amount}" /></td>
+          <td><button class="delete-row" title="מחק">✕</button></td>
+        `;
+        tbody.appendChild(row);
+
+        const nameInput = row.querySelector(".name-input");
+        const amountInput = row.querySelector(".amount-input");
+
+        const saveEdit = async () => {
+          const purposeLabel = nameInput.value.trim();
+          const amount = parseFloat(amountInput.value);
+          if (!purposeLabel || !(amount > 0)) {
+            fundsShowError("יש להזין מטרה וסכום חיובי.");
+            return;
+          }
+          if (purposeLabel === earmark.purposeLabel && amount === earmark.amount) {
+            return;
+          }
+          try {
+            await fetchJson(`/api/funds/earmarks/${earmark.id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ purposeLabel, amount }),
+            });
+            fundsClearError();
+            await refreshFunds();
+          } catch (err) {
+            fundsShowError(err.message);
+          }
+        };
+
+        nameInput.addEventListener("blur", saveEdit);
+        nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
+        amountInput.addEventListener("blur", saveEdit);
+        amountInput.addEventListener("keydown", (e) => { if (e.key === "Enter") amountInput.blur(); });
+
+        row.querySelector(".delete-row").addEventListener("click", async () => {
+          try {
+            await fetchJson(`/api/funds/earmarks/${earmark.id}`, { method: "DELETE" });
+            fundsClearError();
+            await refreshFunds();
+          } catch (err) {
+            fundsShowError(err.message);
+          }
+        });
+      }
+    }
+
+    function toggleEarmarkAddRow(tbody, fundId) {
+      const existing = tbody.querySelector("tr.add-form");
+      if (existing) {
+        existing.remove();
+        return;
+      }
+
+      const row = document.createElement("tr");
+      row.className = "add-form";
+      row.innerHTML = `
+        <td colspan="3">
+          <div class="add-form-fields">
+            <input type="text" class="new-earmark-name" placeholder="מטרה (למשל: פאה)" />
+            <input type="number" class="new-earmark-amount" min="0.01" step="0.01" placeholder="סכום" />
+            <button class="save-btn">שמור</button>
+            <button class="secondary cancel-btn">ביטול</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(row);
+
+      row.querySelector(".cancel-btn").addEventListener("click", () => row.remove());
+      row.querySelector(".save-btn").addEventListener("click", async () => {
+        const purposeLabel = row.querySelector(".new-earmark-name").value.trim();
+        const amount = parseFloat(row.querySelector(".new-earmark-amount").value);
+        if (!purposeLabel || !(amount > 0)) {
+          fundsShowError("יש להזין מטרה וסכום חיובי.");
+          return;
+        }
+        try {
+          await fetchJson(`/api/funds/${fundId}/earmarks`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ purposeLabel, amount }),
+          });
+          fundsClearError();
+          await refreshFunds();
+        } catch (err) {
+          fundsShowError(err.message);
+        }
+      });
+    }
+
+    async function refreshFunds() {
+      fundsClearError();
+      try {
+        const data = await fetchJson("/api/funds");
+        const container = document.getElementById("funds-list");
+        container.innerHTML = "";
+
+        if (!data.funds || data.funds.length === 0) {
+          const empty = document.createElement("p");
+          empty.className = "hint";
+          empty.textContent = "אין קרנות מוגדרות עדיין. לחצי על \"+ הוסף קרן\" כדי להתחיל.";
+          container.appendChild(empty);
+          return;
+        }
+
+        for (const fund of data.funds) {
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = fundCardHtml(fund);
+          const card = wrapper.firstElementChild;
+          container.appendChild(card);
+
+          const nameInput = card.querySelector(".fund-name-input");
+          const balanceInput = card.querySelector(".fund-balance-input");
+          const earmarksBody = card.querySelector(".fund-earmarks-body");
+
+          renderEarmarkRows(earmarksBody, fund.fundId, fund.earmarks);
+
+          const saveFund = async () => {
+            const name = nameInput.value.trim();
+            const totalBalance = parseFloat(balanceInput.value);
+            if (!name || !(totalBalance >= 0)) {
+              fundsShowError("יש להזין שם ויתרה אי-שלילית.");
+              return;
+            }
+            if (name === fund.name && totalBalance === fund.totalBalance) {
+              return;
+            }
+            try {
+              await fetchJson(`/api/funds/${fund.fundId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, totalBalance }),
+              });
+              fundsClearError();
+              await refreshFunds();
+            } catch (err) {
+              fundsShowError(err.message);
+            }
+          };
+
+          nameInput.addEventListener("blur", saveFund);
+          nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
+          balanceInput.addEventListener("blur", saveFund);
+          balanceInput.addEventListener("keydown", (e) => { if (e.key === "Enter") balanceInput.blur(); });
+
+          card.querySelector(".fund-delete-btn").addEventListener("click", async () => {
+            if (!confirm(`למחוק את הקרן "${fund.name}"? כל הייעודים שלה יימחקו גם הם.`)) {
+              return;
+            }
+            try {
+              await fetchJson(`/api/funds/${fund.fundId}`, { method: "DELETE" });
+              fundsClearError();
+              await refreshFunds();
+            } catch (err) {
+              fundsShowError(err.message);
+            }
+          });
+
+          card.querySelector(".fund-add-earmark-toggle").addEventListener("click", () =>
+            toggleEarmarkAddRow(earmarksBody, fund.fundId));
+        }
+      } catch (err) {
+        fundsShowError(err.message);
+      }
+    }
+
+    document.getElementById("funds-refresh").addEventListener("click", refreshFunds);
+
+    document.getElementById("funds-add-toggle").addEventListener("click", () => {
+      const form = document.getElementById("funds-add-form");
+      form.hidden = !form.hidden;
+    });
+
+    document.getElementById("new-fund-cancel").addEventListener("click", () => {
+      document.getElementById("funds-add-form").hidden = true;
+    });
+
+    document.getElementById("new-fund-save").addEventListener("click", async () => {
+      const name = document.getElementById("new-fund-name").value.trim();
+      const totalBalance = parseFloat(document.getElementById("new-fund-balance").value);
+      if (!name || !(totalBalance >= 0)) {
+        fundsShowError("יש להזין שם ויתרה אי-שלילית.");
+        return;
+      }
+      try {
+        await fetchJson("/api/funds", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, totalBalance }),
+        });
+        fundsClearError();
+        document.getElementById("funds-add-form").hidden = true;
+        document.getElementById("new-fund-name").value = "";
+        document.getElementById("new-fund-balance").value = "";
+        await refreshFunds();
+      } catch (err) {
+        fundsShowError(err.message);
+      }
+    });
+
+    // ---- Debts Ledger ----
+
+    function debtsShowError(message) {
+      const el = document.getElementById("debts-error");
+      el.textContent = "שגיאה: " + message;
+      el.hidden = false;
+    }
+
+    function debtsClearError() {
+      document.getElementById("debts-error").hidden = true;
+    }
+
+    function debtStatusBadgeHtml(status) {
+      return status === "Closed"
+        ? '<span class="badge good">✓ סגור</span>'
+        : '<span class="badge pending">פתוח</span>';
+    }
+
+    function repayCellHtml(debt) {
+      if (debt.status === "Closed") {
+        return "—";
+      }
+      return `
+        <div style="display:flex; gap:4px; align-items:center;">
+          <input type="number" class="repay-amount usage-input" min="0.01" step="0.01" style="width:80px;" placeholder="סכום" />
+          <button class="secondary repay-btn">שלם</button>
+        </div>
+      `;
+    }
+
+    async function saveDebtPatch(debt, patch) {
+      try {
+        await fetchJson(`/api/debts/${debt.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            counterpartyName: debt.counterpartyName,
+            originalAmount: debt.originalAmount,
+            targetDate: debt.targetDate,
+            repaymentRate: debt.repaymentRate,
+            notes: debt.notes,
+            ...patch,
+          }),
+        });
+        debtsClearError();
+        await refreshDebts();
+      } catch (err) {
+        debtsShowError(err.message);
+      }
+    }
+
+    async function deleteDebt(debt) {
+      if (!confirm(`למחוק את החוב עם "${debt.counterpartyName}"?`)) {
+        return;
+      }
+      try {
+        await fetchJson(`/api/debts/${debt.id}`, { method: "DELETE" });
+        debtsClearError();
+        await refreshDebts();
+      } catch (err) {
+        debtsShowError(err.message);
+      }
+    }
+
+    function attachRepayHandler(row, debt) {
+      const btn = row.querySelector(".repay-btn");
+      if (!btn) return;
+      btn.addEventListener("click", async () => {
+        const amount = parseFloat(row.querySelector(".repay-amount").value);
+        const paymentMethod = DEFAULT_PAYMENT_METHOD;
+        if (!(amount > 0)) {
+          debtsShowError("יש להזין סכום חיובי.");
+          return;
+        }
+        try {
+          await fetchJson(`/api/debts/${debt.id}/repayments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount, paymentMethod }),
+          });
+          debtsClearError();
+          await refreshDebts();
+        } catch (err) {
+          debtsShowError(err.message);
+        }
+      });
+    }
+
+    function renderReceivableRows(tbody, debts) {
+      tbody.innerHTML = "";
+      if (!debts || debts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="color: var(--text-muted); font-style: italic;">אין חובות כאלה עדיין.</td></tr>`;
+        return;
+      }
+      for (const debt of debts) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><input class="name-input" type="text" value="${debt.counterpartyName}" /></td>
+          <td class="num">${fmtMoney(debt.currentBalance)}</td>
+          <td><input class="date-input desc-input" type="date" value="${debt.targetDate ?? ""}" /></td>
+          <td><input class="notes-input desc-input" type="text" value="${debt.notes ?? ""}" /></td>
+          <td>${debtStatusBadgeHtml(debt.status)}</td>
+          <td>${repayCellHtml(debt)}</td>
+          <td><button class="delete-row" title="מחק">✕</button></td>
+        `;
+        tbody.appendChild(row);
+
+        const nameInput = row.querySelector(".name-input");
+        const dateInput = row.querySelector(".date-input");
+        const notesInput = row.querySelector(".notes-input");
+
+        nameInput.addEventListener("blur", () => {
+          if (nameInput.value.trim() && nameInput.value !== debt.counterpartyName) {
+            saveDebtPatch(debt, { counterpartyName: nameInput.value.trim() });
+          }
+        });
+        dateInput.addEventListener("change", () => saveDebtPatch(debt, { targetDate: dateInput.value || null }));
+        notesInput.addEventListener("blur", () => {
+          if (notesInput.value !== (debt.notes ?? "")) {
+            saveDebtPatch(debt, { notes: notesInput.value || null });
+          }
+        });
+
+        row.querySelector(".delete-row").addEventListener("click", () => deleteDebt(debt));
+        attachRepayHandler(row, debt);
+      }
+    }
+
+    function renderPayableRows(tbody, debts) {
+      tbody.innerHTML = "";
+      if (!debts || debts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="color: var(--text-muted); font-style: italic;">אין חובות כאלה עדיין.</td></tr>`;
+        return;
+      }
+      for (const debt of debts) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><input class="name-input" type="text" value="${debt.counterpartyName}" /></td>
+          <td class="num">${fmtMoney(debt.currentBalance)}</td>
+          <td><input class="rate-input usage-input" type="number" min="0" step="0.01" value="${debt.repaymentRate ?? ""}" placeholder="—" /></td>
+          <td>${debtStatusBadgeHtml(debt.status)}</td>
+          <td>${repayCellHtml(debt)}</td>
+          <td><button class="delete-row" title="מחק">✕</button></td>
+        `;
+        tbody.appendChild(row);
+
+        const nameInput = row.querySelector(".name-input");
+        const rateInput = row.querySelector(".rate-input");
+
+        nameInput.addEventListener("blur", () => {
+          if (nameInput.value.trim() && nameInput.value !== debt.counterpartyName) {
+            saveDebtPatch(debt, { counterpartyName: nameInput.value.trim() });
+          }
+        });
+        rateInput.addEventListener("blur", () => {
+          const rate = rateInput.value === "" ? null : parseFloat(rateInput.value);
+          if (rate !== (debt.repaymentRate ?? null)) {
+            saveDebtPatch(debt, { repaymentRate: rate });
+          }
+        });
+        rateInput.addEventListener("keydown", (e) => { if (e.key === "Enter") rateInput.blur(); });
+
+        row.querySelector(".delete-row").addEventListener("click", () => deleteDebt(debt));
+        attachRepayHandler(row, debt);
+      }
+    }
+
+    function toggleAddDebtRow(tbody, colCount, fieldsHtml, direction) {
+      const existing = tbody.querySelector("tr.add-form");
+      if (existing) {
+        existing.remove();
+        return;
+      }
+
+      const row = document.createElement("tr");
+      row.className = "add-form";
+      row.innerHTML = `
+        <td colspan="${colCount}">
+          <div class="add-form-fields">
+            ${fieldsHtml}
+            <button class="save-btn">שמור</button>
+            <button class="secondary cancel-btn">ביטול</button>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(row);
+      row.querySelector(".cancel-btn").addEventListener("click", () => row.remove());
+
+      row.querySelector(".save-btn").addEventListener("click", async () => {
+        const name = row.querySelector(".new-name").value.trim();
+        const amount = parseFloat(row.querySelector(".new-amount").value);
+        if (!name || !(amount > 0)) {
+          debtsShowError("יש להזין שם וסכום חיובי.");
+          return;
+        }
+
+        const body = { direction, counterpartyName: name, originalAmount: amount };
+        if (direction === "Receivable") {
+          const targetDate = row.querySelector(".new-target-date").value;
+          body.targetDate = targetDate || null;
+        } else {
+          const rateInput = row.querySelector(".new-rate").value;
+          body.repaymentRate = rateInput === "" ? null : parseFloat(rateInput);
+        }
+
+        try {
+          await fetchJson("/api/debts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          debtsClearError();
+          await refreshDebts();
+        } catch (err) {
+          debtsShowError(err.message);
+        }
+      });
+    }
+
+    async function refreshDebts() {
+      debtsClearError();
+      try {
+        const data = await fetchJson("/api/debts");
+        renderReceivableRows(document.getElementById("debts-receivables"), data.receivables);
+        renderPayableRows(document.getElementById("debts-payables"), data.payables);
+      } catch (err) {
+        debtsShowError(err.message);
+      }
+    }
+
+    document.getElementById("debts-refresh").addEventListener("click", refreshDebts);
+
+    document.getElementById("add-receivable-toggle").addEventListener("click", () => {
+      toggleAddDebtRow(document.getElementById("debts-receivables"), 7, `
+        <input type="text" class="new-name" placeholder="שם" />
+        <input type="number" class="new-amount" min="0.01" step="0.01" placeholder="סכום" />
+        <input type="date" class="new-target-date" title="תאריך יעד (לא חובה)" />
+      `, "Receivable");
+    });
+
+    document.getElementById("add-payable-toggle").addEventListener("click", () => {
+      toggleAddDebtRow(document.getElementById("debts-payables"), 6, `
+        <input type="text" class="new-name" placeholder="שם" />
+        <input type="number" class="new-amount" min="0.01" step="0.01" placeholder="סכום" />
+        <input type="number" class="new-rate" min="0" step="0.01" placeholder="קצב החזר (לא חובה)" />
+      `, "Payable");
     });
   </script>
 </body>

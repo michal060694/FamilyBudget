@@ -278,6 +278,49 @@ the monthly and annual screens accept a persisted arithmetic formula (FR-019–F
 
 ---
 
+## Phase 8: Recurring Donations, Simplified Tithe Lookback & Annual Withdrawals (post-implementation user request)
+
+**Purpose**: Per explicit user direction, replace the multi-month recursive tithe carry-forward
+with a flat one-month lookback, model fixed donations as recurring standing orders instead of
+monthly transaction re-entry, redesign the "מעשרות" (tithes) section around four traceable
+figures with editable drill-downs, and surface annual budget items due this month as a read-only
+"withdraw from the kupa" table (FR-008–FR-012, FR-015, FR-023–FR-025). This is a constitution
+amendment (v1.1.0 → v1.2.0, Principle IV) — see constitution.md's Sync Impact Report.
+
+- [X] T050 Create `FixedDonationStandingOrder` entity (name, amount + formula, optional
+      `ValidUntilYear`/`ValidUntilMonth`, `AppliesTo(year, month)`) in
+      `src/FamilyBudget.Core/Entities/FixedDonationStandingOrder.cs`, with repository, EF Core
+      migration, contracts, and full CRUD endpoints
+      (`src/FamilyBudget.Api/Endpoints/FixedDonationStandingOrderEndpoints.cs`) (FR-023)
+- [X] T051 Rewrite `TitheEngine` as a pure, non-recursive per-month calculation — gross target,
+      this month's active standing-order sum, the immediately preceding month's ad-hoc-donation
+      sum, protected `NetTitheDue`, and the separate unprotected `StillToDonateAfterFixed` — in
+      `src/FamilyBudget.Core/Services/TitheEngine.cs` (FR-008, FR-009, FR-015); removed the
+      obsolete recursive multi-month walk and generic credit carry-forward
+- [X] T052 Update `MonthlyOverviewQueryService`/`MonthlyOverviewResponse` for the new
+      `TitheObligationView` (four bullets with drill-down `Items`/`Lines`), and add an
+      `AnnualWithdrawalSection` sourced from `IAnnualBudgetItemRepository` filtered to
+      `TargetMonth == month`, explicitly excluded from `TotalOutflow` (FR-025)
+- [X] T053 Update `DashboardEndpoints`'s `titheDue` view to the simplified engine's fields
+- [X] T054 [P] Replace obsolete Core tests (`TitheCreditCarryForwardTests.cs`,
+      `SmallCharityOffsetCarryForwardTests.cs` — deleted) with `TitheEngineTests.cs` (rewritten for
+      the pure per-month signature) and `FixedDonationStandingOrderTests.cs`
+      (`AppliesTo` end-month logic)
+- [X] T055 [P] Update `MonthlyOverviewEndpointsTests.cs` for the new response shape and add
+      `FixedDonationStandingOrderEndpointsTests.cs` (CRUD + end-month expiry behavior)
+- [X] T056 Redesign the Monthly Overview client: rename the tithe card to "מעשרות" with four stat
+      tiles (א–ד), two clickable drill-downs (standing orders; prior-month ad-hoc donations) with
+      inline add/edit/delete, and a read-only "annual kupa withdrawals" table
+- [X] T057 Update `constitution.md` Principle IV and the Domain Formulas section for the
+      simplified tithe model (v1.1.0 → v1.2.0)
+- [X] T058 Update `spec.md` (User Stories 2–3, edge cases, FR-008–FR-025, Key Entities, Success
+      Criteria, Assumptions) to describe the simplified lookback, standing-order model, and
+      annual-withdrawals table
+- [X] T059 Re-run the full test suite (79/79 passing) and validate end-to-end against a running
+      instance
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

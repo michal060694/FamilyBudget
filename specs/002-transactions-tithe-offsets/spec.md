@@ -62,10 +62,14 @@ type, and payment method, and appears correctly in the month's transaction list.
 
 The user opens a single monthly overview screen that lays out the full financial picture for the
 current calendar month, top to bottom: an income section split into tithe-applicable and
-non-tithe-applicable income; a donations section showing every donation given this month and how
-much more is still owed toward the month's tithe target; then expense sections (fixed/standing-
-order expenses and regular monthly expenses) plus a debt-repayments summary line; and finally an
-overall summary of total outflow and the amount remaining to save for the month.
+non-tithe-applicable income; a "מעשרות" (tithes) section showing four figures — the gross tithe
+target, this month's active fixed-donation standing orders (drillable into a table the user can
+add/edit/delete), the immediately preceding month's ad-hoc/small-charity donations (also drillable
+and editable), and the amount still to donate after fixed donations; a read-only table of annual
+budget items whose target month is the current month (money that needs to be withdrawn from the
+annual reserve to cover them); budgeted-vs-used expense category tables (fixed/standing-order and
+regular); a debt-repayments summary line; and finally an overall summary of total outflow and the
+amount remaining to save for the month.
 
 **Why this priority**: This is the primary screen where the household actually reviews its month —
 it is the user-facing payoff of recording transactions (User Story 1) and of the protected tithe
@@ -84,49 +88,57 @@ reconciles total income against total outflow and savings.
    **When** the user opens the monthly overview screen, **Then** the income section shows two
    separate tables — one for tithe-applicable income and one for non-tithe-applicable income —
    each with its own subtotal, and only the tithe-applicable subtotal feeds the tithe calculation.
-2. **Given** a month's donation transactions and its computed net tithe due, **When** the user
-   views the donations section, **Then** it lists every donation given that month and shows a
-   "remaining to give" figure equal to the net tithe due minus the total already given, floored at
-   zero.
-3. **Given** a month's donations meet or exceed the net tithe due, **When** the user views the
-   donations section, **Then** the "remaining to give" figure shows zero (the obligation is fully
-   met) rather than a negative number.
-4. **Given** a month's recorded transactions, **When** the user views the screen below the
-   donations section, **Then** fixed/standing-order expenses and regular monthly expenses are each
-   shown in their own table, and a debt-repayments amount is shown as a single summary line.
-5. **Given** all of the above sections for a month, **When** the user views the bottom of the
-   screen, **Then** a summary shows the total amount going out (donations given + fixed expenses +
-   regular expenses + debt repayments) and the resulting amount remaining to save for the month.
-6. **Given** a displayed tithe-related figure anywhere on the screen, **When** the user inspects
-   it, **Then** the gross target, the fixed-donations deduction, and the prior-month-offset
-   deduction remain individually traceable rather than only the final net number (per the
-   underlying protected tithe calculation).
+2. **Given** a month's active fixed-donation standing orders and its computed gross tithe target,
+   **When** the user views the "מעשרות" section, **Then** it shows the gross target, the sum of
+   this month's active standing orders, the sum of the immediately preceding month's ad-hoc/
+   small-charity donations, and the amount still to donate after fixed donations (gross target
+   minus standing orders only, not also netting out the prior-month amount).
+3. **Given** the user clicks the fixed-donations or prior-month-donations figure, **When** the
+   drill-down opens, **Then** it shows an editable table (name/description, amount, and — for
+   standing orders — an optional end month) that the user can add to, edit, or delete from, and
+   the figure shown outside the drill-down always equals the sum of that table.
+4. **Given** an annual budget item (feature 001) whose target month is the currently viewed
+   month, **When** the user views the monthly overview screen, **Then** it appears in a read-only
+   table of amounts that need to be withdrawn from the annual reserve this month, together with
+   its total amount.
+5. **Given** a month's recorded budget categories, **When** the user views the screen below the
+   annual-withdrawals table, **Then** fixed/standing-order expenses and regular monthly expenses
+   are each shown in their own budgeted-vs-used table, and a debt-repayments amount is shown as a
+   single summary line.
+6. **Given** all of the above sections for a month, **When** the user views the bottom of the
+   screen, **Then** a summary shows the total amount going out (this month's fixed donations +
+   fixed expenses used + regular expenses used + debt repayments) and the resulting amount
+   remaining to save for the month.
 
 ---
 
-### User Story 3 - Small-Charity Offset Carry-Forward Visibility (Priority: P3)
+### User Story 3 - Recurring Fixed Donations & Prior-Month Offset Management (Priority: P3)
 
-The user reviews, for any given month, how much was spent on small ad-hoc charity/donation
-expenses, how much of that was already applied as an offset against a tithe obligation, and how
-much remains unapplied and will carry forward to reduce next month's tithe target.
+The user manages fixed donations as named, recurring standing orders (with an optional end month)
+instead of re-entering the same donation every month, and separately manages the ad-hoc/
+small-charity donations that count toward next month's tithe deduction — both directly from the
+"מעשרות" section's drill-down tables.
 
-**Why this priority**: This refines and makes auditable a mechanism that User Story 2 already
-depends on internally; it is valuable for trust and troubleshooting but the core calculation in
-User Story 2 works correctly without a dedicated visibility view.
+**Why this priority**: This refines and makes directly editable a mechanism that User Story 2
+already depends on internally (the fixed-donations and prior-month-offset figures); it is valuable
+for day-to-day upkeep but the core calculation in User Story 2 already works correctly with
+whatever standing orders and donations exist.
 
-**Independent Test**: Can be fully tested by recording small-charity expenses across two
-consecutive months and verifying the unoffset remainder from the first month appears correctly as
-the carried-forward amount reducing the second month's tithe target, with the running total shown
-per month.
+**Independent Test**: Can be fully tested by creating a standing order with no end month and
+verifying it applies to every future month; creating one with an end month and verifying it stops
+applying the month after; and recording an ad-hoc donation in one month and verifying it appears
+as next month's prior-month offset, editable there.
 
 **Acceptance Scenarios**:
 
-1. **Given** small-charity expenses recorded in a month that exceed the amount applied as offset
-   that same month, **When** the user views that month's offset summary, **Then** the unapplied
-   remainder is shown and is the exact amount that reduces the following month's tithe target.
-2. **Given** a small-charity remainder was fully applied as an offset in the following month,
-   **When** the user views the month after that, **Then** no further carry-forward from the
-   original month remains outstanding.
+1. **Given** a fixed-donation standing order with no end month set, **When** the user views any
+   future month's "מעשרות" section, **Then** that standing order's amount is included in the
+   month's fixed-donations total.
+2. **Given** a fixed-donation standing order with an end month set, **When** the user views a
+   month after that end month, **Then** the standing order's amount is no longer included.
+3. **Given** an ad-hoc/small-charity donation recorded in month M, **When** the user views month
+   M+1's prior-month-donations drill-down, **Then** that donation appears there (not in month M's
+   own calculation, per the edge case below), editable and deletable.
 
 ---
 
@@ -135,17 +147,21 @@ per month.
 - What happens when a month's total net income is zero or the tithe rate produces a target smaller
   than the sum of that month's deductions? → The tithe due MUST be floored at zero for that month;
   it MUST NOT go negative or automatically create a refund.
-- What happens when fixed donations and the prior-month offset together exceed the gross tithe
-  target for the month? → The excess amount MUST carry forward as a credit that reduces the
-  following month's gross tithe target (before applying that month's own deductions), consistent
-  with the same "never bypassed, never lost" protected-deduction principle.
-- What happens when a transaction is edited or deleted after a month's tithe-due figure has already
-  been viewed? → The tithe-due figure MUST be recomputed from current transaction data on demand,
-  the same way the annual budget allocation recomputes when its inputs change.
-- What happens when a small-charity expense is recorded in the same month whose tithe is being
-  calculated? → It MUST NOT reduce that same month's tithe target; only the prior month's
-  not-yet-offset small-charity amount is eligible, so this month's small-charity expenses become
-  eligible to offset next month's target.
+- What happens when fixed donations and the prior-month donations together exceed the gross tithe
+  target for the month? → `NetTitheDue` is simply floored at zero for that month; per explicit user
+  direction, no further multi-month credit is carried forward — the lookback is exactly one
+  calendar month, not recursive.
+- What happens when a transaction, standing order, or budget category is edited or deleted after a
+  month's tithe-due figure has already been viewed? → The tithe-due figure MUST be recomputed from
+  current data on demand, the same way the annual budget allocation recomputes when its inputs
+  change.
+- What happens when a small-charity/ad-hoc donation is recorded in the same month whose tithe is
+  being calculated? → It MUST NOT reduce that same month's tithe target; only the immediately
+  preceding calendar month's ad-hoc donations are eligible, so this month's own ad-hoc donations
+  become eligible only for next month's calculation.
+- What happens to a fixed-donation standing order with no end month set? → It MUST be treated as
+  applying to every calendar month, including months before it was created, for the purpose of
+  computing whether it applies to a given target month (no separate "start month" is tracked).
 - What happens when no payment method or type is selected for a transaction? → The system MUST
   require both a type and a payment method before a transaction can be saved.
 - What happens when an Income transaction is not marked as tithe-applicable or not? → The system
@@ -182,30 +198,35 @@ per month.
 - **FR-007**: The system MUST compute each month's gross tithe target as the month's total
   tithe-applicable income (FR-005) multiplied by the configured tithe rate; non-tithe-applicable
   income MUST NOT contribute to the gross tithe target.
-- **FR-008**: The system MUST deduct from the gross tithe target, before presenting the tithe due
-  for the month: (a) the sum of that month's Fixed Donation transactions, and (b) the not-yet-
-  offset Small Charity Expense amount carried forward from the prior month.
-- **FR-009**: The system MUST floor the net tithe due at zero for any month where deductions meet
-  or exceed the gross tithe target, and MUST carry the excess forward as a credit reducing the
-  following month's gross tithe target.
-- **FR-010**: The system MUST track, per calendar month, the total Small Charity Expense amount
-  recorded, the portion applied as an offset to a tithe obligation, and the unapplied remainder
-  carried forward to the following month.
-- **FR-011**: The system MUST NOT allow the tithe-due figure to be presented or exported without
-  the protected deductions applied — a gross (pre-deduction) figure MUST never be treated as the
-  final tithe due.
-- **FR-012**: The system MUST display the tithe-due calculation as separate, traceable components
-  (gross target, fixed-donations deduction, prior-month-offset deduction, net due) rather than a
-  single opaque number.
+- **FR-008**: The system MUST deduct from the gross tithe target, before presenting the protected
+  tithe due (`NetTitheDue`) for the month: (a) the sum of that month's active fixed-donation
+  standing orders (FR-023), and (b) the sum of ad-hoc/small-charity donations dated in exactly the
+  immediately preceding calendar month.
+- **FR-009**: The system MUST floor `NetTitheDue` at zero for any month where deductions meet or
+  exceed the gross tithe target. Per explicit user direction, no further carry-forward of any
+  excess is tracked beyond this one-month lookback (this is a deliberate simplification of the
+  originally-specified multi-month recursive carry).
+- **FR-010**: *(superseded by FR-023's standing-order model and the flat one-month lookback in
+  FR-008/FR-009 — no separate small-charity ledger/carry-forward tracking is maintained beyond the
+  immediately preceding month.)*
+- **FR-011**: The system MUST NOT allow the protected tithe-due figure (`NetTitheDue`) to be
+  presented or exported without both deductions applied — a gross (pre-deduction) figure MUST
+  never be treated as the final tithe due wherever the protected obligation is required (e.g., the
+  Monthly Dashboard).
+- **FR-012**: The system MUST display the tithe breakdown as separate, traceable components (gross
+  target, this month's fixed-donations total, the prior month's ad-hoc-donations total, the
+  unprotected "still to donate after fixed donations" figure, and the protected net due) rather
+  than a single opaque number.
 - **FR-013**: The system MUST expose the computed monthly net tithe-due figure for consumption by
   the Monthly Dashboard (feature 001), replacing the previous placeholder assumption that this
   figure is an external input.
 - **FR-014**: The system MUST display a monthly overview screen with an income section containing
   two separate tables — tithe-applicable income and non-tithe-applicable income — each with its
   own subtotal.
-- **FR-015**: The system MUST display, on the monthly overview screen, a donations section listing
-  the month's donation transactions together with a "remaining to give" figure equal to the net
-  tithe due (FR-008/FR-009) minus the total donations given so far that month, floored at zero.
+- **FR-015**: The system MUST display, on the monthly overview screen, an unprotected "still to
+  donate after fixed donations" figure equal to the gross tithe target minus this month's active
+  fixed-donation standing orders only (deliberately not also netting out the prior-month amount),
+  floored at zero — distinct from the protected `NetTitheDue` (FR-008/FR-009/FR-011).
 - **FR-016**: The system MUST display, on the monthly overview screen, a Fixed/Standing-Order
   Expenses table and a separate Regular Monthly Expenses table, each listing that month's named
   expense budget categories with the amount budgeted for the month, the amount used so far, and
@@ -214,14 +235,14 @@ per month.
   line as a single aggregate amount; until a dedicated Debts Ledger feature exists, this line MUST
   default to zero rather than block the rest of the screen.
 - **FR-018**: The system MUST display, at the bottom of the monthly overview screen, a summary of
-  total outflow (donations given + fixed expenses used + regular expenses used + debt repayments)
-  and the resulting amount remaining to save for the month.
+  total outflow (this month's active fixed-donation standing orders + fixed expenses used +
+  regular expenses used + debt repayments) and the resulting amount remaining to save for the
+  month.
 - **FR-019**: The system MUST let the user add, edit (description and amount), and delete
   individual income transactions directly from the monthly overview screen's income tables,
   without leaving the screen.
-- **FR-020**: The system MUST let the user add, edit (description/name and amount), and delete
-  individual donation transactions (fixed or small-charity) directly from the monthly overview
-  screen's donations table.
+- **FR-020**: *(superseded by FR-023 for fixed donations, now managed as recurring standing
+  orders, and FR-024 for ad-hoc/small-charity donations, managed via the prior-month drill-down.)*
 - **FR-021**: The system MUST let the user add, rename, delete, and set the budgeted amount and
   used amount for named Fixed/Regular expense budget categories, scoped to a specific calendar
   month (no automatic carry-over from month to month); the remaining balance for the category
@@ -231,6 +252,19 @@ per month.
   result MUST be what all calculations use; the raw formula text MUST be persisted and redisplayed
   whenever the field is focused again, while the computed result is shown when the field is not
   focused.
+- **FR-023**: The system MUST let the user define a named fixed-donation standing order (recurring
+  monthly donation) with an amount and an optional end month; a standing order with no end month
+  MUST apply to every calendar month (past and future), and one with an end month MUST apply only
+  up to and including that month. The system MUST let the user add, edit (name, amount, end month),
+  and delete standing orders.
+- **FR-024**: The system MUST let the user add, edit, and delete individual ad-hoc/small-charity
+  donations for a given calendar month directly from the "מעשרות" section's prior-month drill-down.
+- **FR-025**: The system MUST display, on the monthly overview screen, a read-only table of every
+  annual budget item (feature 001) whose target month is the currently viewed calendar month,
+  together with each item's total amount, so the user knows what needs to be withdrawn from the
+  annual reserve this month; this table MUST NOT be added into the monthly outflow/savings summary
+  (FR-018), since it reflects reallocating already-saved money rather than new spending from this
+  month's income.
 
 ### Key Entities
 
@@ -249,11 +283,14 @@ per month.
   (budgeted minus used).
 - **TitheSetting**: The user-configurable tithe rate applied to net income each month (e.g., 0.1 or
   0.2).
-- **MonthlyTitheObligation**: The computed result for a given calendar month — total net income,
-  gross tithe target, fixed-donations deduction, prior-month-offset deduction applied, net tithe
-  due, and any excess credit carried forward.
-- **SmallCharityOffsetLedger**: Per calendar month, the total Small Charity Expense amount
-  recorded, the amount applied as an offset, and the unapplied remainder carried to the next month.
+- **FixedDonationStandingOrder**: A named recurring monthly donation (e.g. "Yeshiva"). Key
+  attributes: name, amount (plus optional formula), and an optional end year/month — no end date
+  means it applies indefinitely; an end date means it stops applying after that calendar month.
+  Replaces the need to re-enter the same Fixed Donation transaction every month.
+- **MonthlyTitheObligation**: The computed result for a given calendar month — tithe-applicable and
+  non-tithe-applicable income, gross tithe target, this month's fixed-donations total (from active
+  standing orders), the immediately preceding month's ad-hoc-donations total, the protected net
+  tithe due, and the separate unprotected "still to donate after fixed donations" figure.
 
 ## Success Criteria *(mandatory)*
 
@@ -262,12 +299,13 @@ per month.
 - **SC-001**: A user can record a new transaction (type, amount, payment method) in under 15
   seconds.
 - **SC-002**: For any calendar month, the displayed net tithe due always reflects the protected
-  deductions (fixed donations and prior-month offset) with zero manual recalculation by the user.
-- **SC-003**: Across any sequence of consecutive months, 100% of small-charity expense amounts are
-  accounted for as either "applied as offset" or "carried forward" — none are ever lost or double
-  counted.
-- **SC-004**: A user can view the full breakdown of any month's tithe-due calculation (gross
-  target, each deduction, net due) within 10 seconds of opening the relevant screen.
+  deductions (this month's fixed-donation standing orders and the immediately preceding month's
+  ad-hoc donations) with zero manual recalculation by the user.
+- **SC-003**: A user can add a recurring fixed-donation standing order once and have it correctly
+  apply to every subsequent month without re-entry, until its end month (if any) has passed.
+- **SC-004**: A user can view the full breakdown of any month's tithe calculation (gross target,
+  each deduction, the protected net due, and the unprotected still-to-donate figure) within 10
+  seconds of opening the relevant screen.
 - **SC-005**: From the monthly overview screen alone, a user can determine, without opening any
   other screen, how much of this month's income counted toward the tithe, how much is still owed
   to charity this month, and how much is left to save — within 10 seconds.
@@ -280,8 +318,14 @@ per month.
   tithe-applicable for the month (FR-001a/FR-005/FR-007); non-tithe-applicable income still counts
   toward the household's total income in the bottom-line savings summary. Netting against expenses
   (beyond the described fixed-donation and small-charity offsets) is out of scope.
-- Recurring Fixed Donation transactions must be entered for the specific month they apply to
-  (no automatic month-to-month recurrence/scheduling engine is included in this feature).
+- Fixed donations are managed as named recurring standing orders (FR-023), not re-entered as
+  transactions each month; a standing order with no end month is assumed to apply retroactively to
+  any month (no separate "start month" is tracked), which is an acceptable simplification for a
+  single-household personal tool where the user controls their own data entry.
+- Per explicit user direction, the prior-month small-charity/ad-hoc-donation offset looks back
+  exactly one calendar month with no further multi-month carry-forward — a deliberate
+  simplification from the feature's original multi-month recursive design (see constitution.md
+  v1.2.0 amendment).
 - Only one household/user context exists (no multi-user permissions model is required for this
   feature), consistent with feature 001.
 - Fund/investment account balances and the mechanics of "earmarking" money within a fund are out of
