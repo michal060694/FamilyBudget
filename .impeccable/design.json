@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-15T20:00:00Z",
+  "title": "Design System: FamilyBudget",
+  "extensions": {
+    "colorMeta": {
+      "dusk-slate": { "role": "primary", "displayName": "Dusk Slate", "canonical": "#1d3f60", "darkModeValue": "#4675a4", "tonalRamp": ["#000a27", "#001b39", "#0d2f4f", "#1d3f60", "#36587b", "#527599", "#779cc2", "#a2c8f0"] },
+      "gold": { "role": "board-money-in", "displayName": "Gold", "canonical": "#a06200", "darkModeValue": "#ba8416" },
+      "sage": { "role": "board-money-in", "displayName": "Sage", "canonical": "#196632", "darkModeValue": "#488055" },
+      "berry": { "role": "board-money-out", "displayName": "Berry", "canonical": "#912061", "darkModeValue": "#ab4a7d" },
+      "text-primary": { "role": "neutral", "displayName": "Ink", "canonical": "#120b0a", "darkModeValue": "#f7f0ee" },
+      "text-secondary": { "role": "neutral", "displayName": "Warm Slate", "canonical": "#524440", "darkModeValue": "#c7b2ad" },
+      "text-muted": { "role": "neutral", "displayName": "Warm Ember Gray", "canonical": "#6b5550", "darkModeValue": "#9b8782" },
+      "surface-1": { "role": "neutral", "displayName": "Paper", "canonical": "#fef9f7", "darkModeValue": "#211816" },
+      "page-plane": { "role": "neutral", "displayName": "Hearth Floor", "canonical": "#faf3f1", "darkModeValue": "#0e0806" },
+      "gridline": { "role": "neutral", "displayName": "Hairline", "canonical": "#e6dbd9", "darkModeValue": "#322927" },
+      "baseline": { "role": "neutral", "displayName": "Baseline Gray", "canonical": "#bdada9", "darkModeValue": "#524440" },
+      "status-good": { "role": "success", "displayName": "Good", "canonical": "#036819", "darkModeValue": "#0ca30c" },
+      "status-critical": { "role": "danger", "displayName": "Critical", "canonical": "#b00a1d", "darkModeValue": "#e66767" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero numeric figures only (reserve, monthly allocation, remaining-to-save, fund balance)." },
+      "headline": { "displayName": "Headline", "purpose": "Page title." },
+      "title": { "displayName": "Title", "purpose": "Card header bars (700, white), tab bar, fund name field." },
+      "body": { "displayName": "Body", "purpose": "Table cells and form values." },
+      "label": { "displayName": "Label", "purpose": "Field labels, table headers, stat-tile captions." }
+    },
+    "shadows": [
+      { "name": "shadow-card", "value": "0 1px 2px rgba(18,11,10,0.06), 0 4px 12px rgba(18,11,10,0.08)", "purpose": "At-rest elevation for every card, stat-tile — the board's constant soft lift, not a hover-only effect." },
+      { "name": "shadow-modal", "value": "0 8px 40px rgba(18,11,10,0.25)", "purpose": "Modal dialog elevation, on top of the backdrop dim." }
+    ],
+    "motion": [
+      { "name": "button-lift", "value": "transform 0.15s ease-out", "purpose": "1px hover lift on buttons; disabled under prefers-reduced-motion." },
+      { "name": "chevron-rotate", "value": "transform 0.15s ease-out", "purpose": "180° rotation on a collapsible section's chevron when it opens." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Card with Board Header",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Section container with a full-bleed colored header bar (the signature board move). Swap --card-accent for gold/sage/berry via the card-gold/card-sage/card-berry modifier classes.",
+      "html": "<div class=\"ds-card ds-card-berry\"><h2 class=\"ds-card-header\">הוצאות לפי חודש</h2><p style=\"margin:0;\">Card body content.</p></div>",
+      "css": ".ds-card { position: relative; --card-accent: #1d3f60; background: #fef9f7; border: 1px solid rgba(18,11,10,0.10); border-radius: 16px; box-shadow: 0 1px 2px rgba(18,11,10,0.06), 0 4px 12px rgba(18,11,10,0.08); padding: 20px; } .ds-card-berry { --card-accent: #912061; } .ds-card-gold { --card-accent: #a06200; } .ds-card-sage { --card-accent: #196632; } .ds-card-header { font-size: 1rem; font-weight: 700; color: #fff; background: var(--card-accent); margin: -20px -20px 16px -20px; padding: 14px 20px; border-radius: 15px 15px 0 0; }"
+    },
+    {
+      "name": "Collapsible Card (details/summary)",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Progressive-disclosure variant of the board header: native <details>/<summary> with the same colored bar styling plus a rotating chevron. Open by default for content checked every time; closed by default for sections usually empty.",
+      "html": "<details class=\"ds-card ds-card-sage\" open><summary>מעשרות <span class=\"ds-chevron\">▾</span></summary><p style=\"margin:0;\">Card body content.</p></details>",
+      "css": ".ds-card > summary, details.ds-card > summary { display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; font-size: 1rem; font-weight: 700; color: #fff; background: var(--card-accent); margin: -20px -20px 16px -20px; padding: 14px 20px; border-radius: 15px 15px 0 0; } details.ds-card > summary::-webkit-details-marker { display: none; } details.ds-card:not([open]) > summary { margin-bottom: -20px; border-radius: 15px; } .ds-chevron { transition: transform 0.15s ease-out; } details[open] .ds-chevron { transform: rotate(180deg); }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main call-to-action (save, refresh). Chunkier radius and bold weight vs. the pre-board system.",
+      "html": "<button class=\"ds-btn-primary\">שמור</button>",
+      "css": ".ds-btn-primary { background: #1d3f60; color: #fff; border: none; border-radius: 10px; padding: 10px 20px; font: inherit; font-weight: 600; cursor: pointer; transition: filter 0.15s, transform 0.15s; } .ds-btn-primary:hover { filter: brightness(0.92); transform: translateY(-1px); } .ds-btn-primary:focus-visible { outline: 2px solid #1d3f60; outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Ghost/cancel action.",
+      "html": "<button class=\"ds-btn-secondary\">ביטול</button>",
+      "css": ".ds-btn-secondary { background: transparent; color: #524440; border: 1px solid #bdada9; border-radius: 10px; padding: 10px 20px; font: inherit; font-weight: 600; cursor: pointer; } .ds-btn-secondary:hover { filter: brightness(0.96); } .ds-btn-secondary:focus-visible { outline: 2px solid #1d3f60; outline-offset: 2px; }"
+    },
+    {
+      "name": "Stat Tile",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Hero-figure card: label + large tabular-nums value, colored by the surrounding card's board accent.",
+      "html": "<div class=\"ds-stat-tile\"><div class=\"ds-stat-label\">הפרשה נדרשת לכל חודש</div><div class=\"ds-stat-value\">₪1,250</div></div>",
+      "css": ".ds-stat-tile { background: #fef9f7; border: 1px solid rgba(18,11,10,0.10); border-radius: 14px; box-shadow: 0 1px 2px rgba(18,11,10,0.06), 0 4px 12px rgba(18,11,10,0.08); padding: 16px; min-width: 220px; } .ds-stat-label { font-size: 0.78rem; color: #524440; margin-bottom: 4px; } .ds-stat-value { font-size: 1.6rem; font-variant-numeric: tabular-nums; color: var(--card-accent, #1d3f60); }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-good",
+      "description": "Solid-fill status chip (white text) — deliberately not a tinted pill, matching monday's solid status-cell look. Universal across all board colors.",
+      "html": "<span class=\"ds-badge ds-badge-good\">✓ מומש במלואו</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 700; color: #fff; padding: 4px 12px; border-radius: 999px; white-space: nowrap; } .ds-badge-good { background: #036819; } .ds-badge-critical { background: #b00a1d; }"
+    },
+    {
+      "name": "Segmented Pill Tabs",
+      "kind": "nav",
+      "refersTo": "tab",
+      "description": "Filled segmented-pill tab bar; active tab is a solid Dusk Slate pill.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab ds-tab-active\">תקציב שנתי</button><button class=\"ds-tab\">סקירה חודשית</button></div>",
+      "css": ".ds-tabs { display: inline-flex; gap: 4px; padding: 4px; background: #faf3f1; border: 1px solid rgba(18,11,10,0.10); border-radius: 999px; } .ds-tab { background: transparent; color: #524440; border: none; border-radius: 999px; padding: 8px 18px; font-weight: 600; cursor: pointer; } .ds-tab:hover { background: color-mix(in srgb, #1d3f60 10%, transparent); } .ds-tab-active { background: #1d3f60; color: #fff; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Bordered field, focus shifts border and background to the universal Dusk Slate accent (not the card's board color).",
+      "html": "<input class=\"ds-input\" type=\"text\" value=\"1200\" />",
+      "css": ".ds-input { font: inherit; padding: 8px 12px; border: 1px solid #bdada9; border-radius: 10px; background: #fef9f7; color: #120b0a; } .ds-input:focus { border-color: #1d3f60; background: #faf3f1; outline: none; }"
+    },
+    {
+      "name": "Delete Button (arm-then-confirm)",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Text-only delete affordance; first click arms a warning label, second click within 3s commits.",
+      "html": "<button class=\"ds-delete-row\">✕</button>",
+      "css": ".ds-delete-row { background: transparent; color: #6b5550; border: none; padding: 2px 8px; font-size: 0.9rem; cursor: pointer; } .ds-delete-row:hover { color: #b00a1d; } .ds-delete-row.confirming { color: #b00a1d; font-weight: 600; } .ds-delete-row:focus-visible { outline: 2px solid #1d3f60; outline-offset: 2px; }"
+    },
+    {
+      "name": "Collapsible Month Row",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Annual Budget's per-month toggle: a fixed-width name button (so the '+' add button lines up in a straight column regardless of Hebrew month-name length) plus an item count and rotating chevron. Empty months collapse by default.",
+      "html": "<button class=\"ds-month-toggle\" aria-expanded=\"true\"><span class=\"ds-chevron\">▾</span> יוני <span class=\"ds-count\">(3)</span></button>",
+      "css": ".ds-month-toggle { background: transparent; color: #120b0a; font: inherit; font-weight: 600; padding: 0; border: none; display: inline-flex; align-items: center; gap: 6px; width: 120px; justify-content: flex-start; cursor: pointer; } .ds-month-toggle:hover { color: #1d3f60; } .ds-month-toggle[aria-expanded=\"true\"] .ds-chevron { transform: rotate(180deg); } .ds-count { font-weight: 400; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Steady Home, Board Edition",
+    "overview": "FamilyBudget is one household's private ledger, not a fintech product for strangers — but the household explicitly asked for a bolder, livelier, more structured feel, naming monday.com's board view: chunky rounded shapes and a table/board structure with colored group headers (revision 2). Revision 3 added progressive disclosure after the household found the Annual Budget and Monthly Overview screens tedious and hard to hold in their head: the Monthly Summary moved to sit right after Income, and secondary detail sections became collapsible <details>, closed by default where usually empty. Revision 4 replaced the primary accent: the household found the terracotta orange too warm, so the primary/hero role moved to Dusk Slate, a deep muted slate-blue — not the bright corporate blue the very first revision moved away from. The underlying neutrals stayed warm (hue 35) on purpose, so the system reads as a warm structure carrying one cool, deep accent.",
+    "keyCharacteristics": [
+      "Every card has a full-bleed colored header bar (white bold text on solid color), like a monday board group header",
+      "Four board colors, each with a fixed meaning: Dusk Slate (hero/default, deep muted slate-blue), Gold (money in), Sage (tithe & receivables), Berry (expenses & payables)",
+      "Warm hue-35 neutrals are decoupled from the primary accent's hue on purpose — an intentional warm-structure / cool-accent contrast",
+      "Chunkier, rounder shapes throughout: 10px button/input radius, 16px card radius, bold 600-weight labels",
+      "Soft card elevation (layered box-shadow) replaces the earlier flat-only system",
+      "Status badges are solid-fill chips (white text), not tinted pills",
+      "Tabs are a filled segmented-pill control, not an underline",
+      "Secondary detail sections are collapsible (native details/summary styled as the board header); the payoff card surfaces first",
+      "The Annual Budget's month rows collapse when empty, and their name buttons hold a fixed width so the add ('+') button aligns in a straight column",
+      "Tabular numerals everywhere money appears; RTL Hebrew native"
+    ],
+    "rules": [
+      { "name": "The Card-Owns-One-Color Rule", "body": "Every card gets exactly one board color via --card-accent, applied to its header bar, tinted table rows, and hero figures. Never mixed within one card; the same card type always gets the same color.", "section": "colors" },
+      { "name": "The Status-Is-Universal Rule", "body": "Badge/status colors never change with the card's board color. Board color = wayfinding by section; status color = meaning. The two must never be confused.", "section": "colors" },
+      { "name": "The Warm-Neutral Rule", "body": "Every neutral carries a small chroma tint toward a fixed warm hue (35), independent of the primary accent's own hue (now Dusk Slate's cool 250). Neutrals are never re-tinted to chase whatever the primary happens to be.", "section": "colors" },
+      { "name": "The Tabular Numerals Rule", "body": "Any element displaying money or a count uses font-variant-numeric: tabular-nums.", "section": "typography" },
+      { "name": "The One Ramp Rule", "body": "Every text element maps to one of the five documented type sizes; no one-off inline font-size values.", "section": "typography" },
+      { "name": "The Soft-Lift Rule", "body": "Every card-like surface casts a soft, tinted shadow at rest, never a hard or pure-black shadow, and never hover-only.", "section": "elevation" },
+      { "name": "Answer-Before-Detail Rule", "body": "A screen's one summary/hero card stays a plain, always-visible .card near the top; supporting detail sections become collapsible <details>, closed by default when usually empty.", "section": "components" }
+    ],
+    "dos": [
+      "Do keep the household scale: no multi-user chrome, no permissions UI, no team-oriented navigation — the board look is borrowed, not the team-collaboration function.",
+      "Do use tabular numerals for every monetary or count value.",
+      "Do give every card exactly one board color, assigned by money-direction meaning.",
+      "Do keep status chip colors identical everywhere regardless of the card's board color.",
+      "Do apply the soft card shadow to every card-like surface at rest.",
+      "Do tint every neutral toward hue 35, independent of the primary accent's hue.",
+      "Do put the answer before the detail: the summary card stays plain and visible; supporting sections collapse."
+    ],
+    "donts": [
+      "Don't let a screen's total visible content grow unbounded just because the data model has room for it — collapse what's usually empty or already-reviewed.",
+      "Don't flatten cards back to borderless-and-shadowless; the shadow is load-bearing for the board feel now.",
+      "Don't make this feel like a corporate SaaS admin panel or an anxious finance app.",
+      "Don't add a fifth board color, or assign board colors arbitrarily instead of by money-direction meaning.",
+      "Don't let a board color leak into status-chip meaning.",
+      "Don't brighten or saturate Dusk Slate back toward a vivid sky/corporate blue — stay deep and low-chroma.",
+      "Don't re-tint the neutrals to follow the primary accent's hue.",
+      "Don't use border-left/border-right colored stripes as a card or row accent (the fund-card top-border is the one sanctioned exception).",
+      "Don't default to LTR layouts or English-first copy."
+    ]
+  }
+}

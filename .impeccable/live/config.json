@@ -1,0 +1,6 @@
+{
+  "files": ["src/FamilyBudget.Api/wwwroot/index.html"],
+  "insertBefore": "</body>",
+  "commentSyntax": "html",
+  "cspChecked": true
+}

@@ -3,34 +3,42 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>תקציב שנתי — בדיקת API</title>
+<title>תקציב הבית</title>
 <style>
   :root {
-    --surface-1:      #fcfcfb;
-    --page-plane:     #f9f9f7;
-    --text-primary:   #0b0b0b;
-    --text-secondary: #52514e;
-    --text-muted:     #898781;
-    --gridline:       #e1e0d9;
-    --baseline:       #c3c2b7;
-    --border:         rgba(11,11,11,0.10);
-    --series-1:       #2a78d6; /* blue: primary hero figures */
-    --status-good:    #0ca30c;
-    --status-critical:#d03b3b;
+    --surface-1:      #fef9f7;
+    --page-plane:     #faf3f1;
+    --text-primary:   #120b0a;
+    --text-secondary: #524440;
+    --text-muted:     #6b5550; /* 6.6:1 on --surface-1 */
+    --gridline:       #e6dbd9;
+    --baseline:       #bdada9;
+    --border:         rgba(18,11,10,0.10);
+    --series-1:       #1d3f60; /* dusk slate: primary hero figures, deep cool household accent */
+    --gold:           #a06200; /* board-header accent: income / money-in cards */
+    --sage:           #196632; /* board-header accent: tithe & receivables cards */
+    --berry:          #912061; /* board-header accent: expense & payables cards */
+    --status-good:    #036819; /* 6.7:1 on --surface-1 */
+    --status-critical:#b00a1d; /* 6.9:1 on --surface-1 */
+    --shadow-card:    0 1px 2px rgba(18,11,10,0.06), 0 4px 12px rgba(18,11,10,0.08);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --surface-1:      #1a1a19;
-      --page-plane:     #0d0d0d;
-      --text-primary:   #ffffff;
-      --text-secondary: #c3c2b7;
-      --text-muted:     #898781;
-      --gridline:       #2c2c2a;
-      --baseline:       #383835;
-      --border:         rgba(255,255,255,0.10);
-      --series-1:       #3987e5;
+      --surface-1:      #211816;
+      --page-plane:     #0e0806;
+      --text-primary:   #f7f0ee;
+      --text-secondary: #c7b2ad;
+      --text-muted:     #9b8782;
+      --gridline:       #322927;
+      --baseline:       #524440;
+      --border:         rgba(247,240,238,0.10);
+      --series-1:       #4675a4;
+      --gold:           #ba8416;
+      --sage:           #488055;
+      --berry:          #ab4a7d;
       --status-good:    #0ca30c;
       --status-critical:#e66767;
+      --shadow-card:    0 1px 2px rgba(0,0,0,0.25), 0 4px 14px rgba(0,0,0,0.35);
     }
   }
 
@@ -56,43 +64,94 @@
   .field label { font-size: 0.78rem; color: var(--text-secondary); }
   .field input {
     font: inherit;
-    padding: 6px 8px;
+    padding: 8px 12px;
     border: 1px solid var(--baseline);
-    border-radius: 6px;
+    border-radius: 10px;
     background: var(--surface-1);
     color: var(--text-primary);
     width: 120px;
   }
   button {
     font: inherit;
-    padding: 7px 16px;
+    font-weight: 600;
+    padding: 10px 20px;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--series-1);
     color: white;
     cursor: pointer;
+    transition: filter 0.15s ease-out, transform 0.15s ease-out;
   }
-  button:hover { filter: brightness(0.92); }
+  button:hover { filter: brightness(0.92); transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+  button:focus-visible {
+    outline: 2px solid var(--series-1);
+    outline-offset: 2px;
+  }
   button.secondary {
     background: transparent;
     color: var(--text-secondary);
     border: 1px solid var(--baseline);
   }
   button.icon {
-    padding: 2px 10px;
+    padding: 4px 12px;
     font-size: 1rem;
     line-height: 1.4;
   }
+  @media (prefers-reduced-motion: reduce) {
+    button { transition: filter 0.15s ease-out; }
+    button:hover { transform: none; }
+  }
 
   .card {
+    position: relative;
+    --card-accent: var(--series-1);
     background: var(--surface-1);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
     padding: 20px;
     margin-bottom: 20px;
     overflow-x: auto;
   }
-  .card h2 { font-size: 1rem; margin: 0 0 16px; }
+  .card-gold  { --card-accent: var(--gold); }
+  .card-sage  { --card-accent: var(--sage); }
+  .card-berry { --card-accent: var(--berry); }
+  .card h2,
+  details.card > summary {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--card-accent);
+    margin: -20px -20px 16px -20px;
+    padding: 14px 20px;
+    border-radius: 15px 15px 0 0;
+  }
+  details.card > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+  details.card > summary::-webkit-details-marker { display: none; }
+  details.card:not([open]) > summary {
+    margin-bottom: -20px;
+    border-radius: 15px;
+  }
+  details.card > summary:focus-visible {
+    outline: 2px solid var(--series-1);
+    outline-offset: 2px;
+  }
+  .chevron { display: inline-block; font-weight: 400; transition: transform 0.15s ease-out; }
+  details[open] > summary .chevron { transform: rotate(180deg); }
+  @media (prefers-reduced-motion: reduce) {
+    .chevron { transition: none; }
+  }
+
+  [data-fund-id] { border-top: 4px solid var(--card-accent); }
 
   .stat-row { display: flex; gap: 16px; flex-wrap: wrap; }
   .stat-tile {
@@ -100,29 +159,44 @@
     min-width: 220px;
     background: var(--surface-1);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 14px;
+    box-shadow: var(--shadow-card);
     padding: 16px;
   }
   .stat-tile .label { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 4px; }
   .stat-tile .value { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
-  .stat-tile .value.accent { color: var(--series-1); }
+  .stat-tile .value.accent { color: var(--card-accent, var(--series-1)); }
+  .fund-name-input {
+    font-size: 1rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-primary);
+    padding: 4px;
+  }
+  .fund-balance-input { font-size: 1.6rem; width: 140px; }
   .stat-tile .hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
   .stat-tile .edit-row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
   .stat-tile .edit-row input {
     font: inherit;
     font-variant-numeric: tabular-nums;
-    padding: 5px 8px;
+    padding: 6px 10px;
     border: 1px solid var(--baseline);
-    border-radius: 6px;
+    border-radius: 8px;
     background: var(--page-plane);
     color: var(--text-primary);
     width: 110px;
   }
   .stat-tile.clickable { cursor: pointer; }
-  .stat-tile.clickable:hover { border-color: var(--series-1); }
+  .stat-tile.clickable:hover { border-color: var(--card-accent, var(--series-1)); }
+  .stat-tile.clickable:focus-visible {
+    outline: 2px solid var(--series-1);
+    outline-offset: 2px;
+  }
   dialog.modal {
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 16px;
+    box-shadow: 0 8px 40px rgba(18,11,10,0.25);
     padding: 20px;
     background: var(--surface-1);
     color: var(--text-primary);
@@ -138,21 +212,38 @@
   td.num { text-align: left; }
 
   tr.month-header td {
-    background: color-mix(in srgb, var(--series-1) 6%, transparent);
+    background: color-mix(in srgb, var(--card-accent) 8%, transparent);
     font-weight: 600;
     border-bottom: 1px solid var(--gridline);
   }
   tr.month-header .month-name { display: flex; align-items: center; gap: 10px; }
+  .month-toggle {
+    background: transparent;
+    color: var(--text-primary);
+    font: inherit;
+    font-weight: 600;
+    padding: 0;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: 120px;
+    justify-content: flex-start;
+    cursor: pointer;
+  }
+  .month-toggle:hover { color: var(--card-accent, var(--series-1)); transform: none; }
+  .month-toggle .hint { font-weight: 400; }
+  .month-toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
 
   tr.empty-hint td { color: var(--text-muted); font-size: 0.82rem; font-style: italic; }
 
-  tr.add-form td { background: color-mix(in srgb, var(--series-1) 4%, transparent); }
+  tr.add-form td { background: color-mix(in srgb, var(--card-accent) 6%, transparent); }
   .add-form-fields { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .add-form-fields input {
     font: inherit;
-    padding: 5px 8px;
+    padding: 6px 10px;
     border: 1px solid var(--baseline);
-    border-radius: 6px;
+    border-radius: 8px;
     background: var(--page-plane);
     color: var(--text-primary);
   }
@@ -164,14 +255,16 @@
     align-items: center;
     gap: 4px;
     font-size: 0.78rem;
-    padding: 2px 8px;
+    font-weight: 700;
+    color: #fff;
+    padding: 4px 12px;
     border-radius: 999px;
     white-space: nowrap;
   }
-  .badge.good { color: var(--status-good); background: color-mix(in srgb, var(--status-good) 12%, transparent); }
-  .badge.pending { color: var(--text-secondary); background: color-mix(in srgb, var(--text-secondary) 12%, transparent); }
-  .badge.partial { color: var(--series-1); background: color-mix(in srgb, var(--series-1) 12%, transparent); }
-  .badge.critical { color: var(--status-critical); background: color-mix(in srgb, var(--status-critical) 12%, transparent); }
+  .badge.good { background: var(--status-good); }
+  .badge.pending { background: var(--text-secondary); }
+  .badge.partial { background: var(--series-1); }
+  .badge.critical { background: var(--status-critical); }
 
   input.usage-input {
     font: inherit;
@@ -180,7 +273,7 @@
     width: 100px;
     padding: 4px 8px;
     border: 1px solid transparent;
-    border-radius: 6px;
+    border-radius: 8px;
     background: transparent;
     color: var(--text-primary);
   }
@@ -197,7 +290,7 @@
     min-width: 120px;
     padding: 4px 8px;
     border: 1px solid transparent;
-    border-radius: 6px;
+    border-radius: 8px;
     background: transparent;
     color: var(--text-primary);
   }
@@ -219,19 +312,42 @@
 
   .error { color: var(--status-critical); font-size: 0.88rem; margin: 8px 0; }
 
-  .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  button.is-pending { opacity: 0.6; cursor: default; }
+  button.delete-row.confirming { color: var(--status-critical); font-weight: 600; }
+  .save-flash {
+    display: inline-block;
+    margin-inline-start: 6px;
+    color: var(--status-good);
+    opacity: 0;
+    transition: opacity 0.15s ease-out;
+    font-size: 0.85rem;
+  }
+  .save-flash-visible { opacity: 1; }
+
+  .tabs {
+    display: inline-flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    padding: 4px;
+    background: var(--page-plane);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+  }
   .tab-btn {
     background: transparent;
     color: var(--text-secondary);
     border: none;
-    border-bottom: 2px solid transparent;
-    border-radius: 0;
-    padding: 8px 4px;
-    margin-left: 20px;
+    border-radius: 999px;
+    padding: 8px 18px;
+    margin: 0;
     cursor: pointer;
     font-size: 0.95rem;
+    font-weight: 600;
+    transition: background 0.15s ease-out, color 0.15s ease-out, transform 0.15s ease-out;
   }
-  .tab-btn.active { color: var(--text-primary); border-bottom-color: var(--series-1); font-weight: 600; }
+  .tab-btn:hover { background: color-mix(in srgb, var(--series-1) 10%, transparent); transform: none; }
+  .tab-btn.active { background: var(--series-1); color: #fff; }
+  .tab-btn.active:hover { filter: brightness(0.95); }
   .tab-panel[hidden] { display: none; }
 
   .overview-columns { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -240,8 +356,8 @@
 </style>
 </head>
 <body>
-  <h1>תקציב שנתי וחומש</h1>
-  <p class="subtitle">קליינט בדיקה ידני מול FamilyBudget.Api</p>
+  <h1>תקציב הבית</h1>
+  <p class="subtitle">תקציב שנתי, מעשרות, קרנות וחובות — הכל במקום אחד</p>
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="annual">תקציב שנתי</button>
@@ -281,7 +397,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card card-berry">
       <h2>הוצאות לפי חודש</h2>
       <table>
         <thead>
@@ -297,7 +413,7 @@
       </table>
     </div>
 
-    <div class="card">
+    <div class="card card-berry">
       <h2>הוצאות כלליות (לא תלויות חודש)</h2>
       <table>
         <thead>
@@ -336,8 +452,8 @@
 
     <div id="ov-error" class="error" hidden></div>
 
-    <div class="card">
-      <h2>הכנסות</h2>
+    <details class="card card-gold" open>
+      <summary>הכנסות <span class="chevron">▾</span></summary>
       <p class="hint" style="margin: 0 0 12px;">סכום אפשר להזין גם כנוסחה, למשל <code>600-200</code> — הערך המחושב הוא שמשמש לחישובים, והנוסחה נשמרת ומוצגת שוב בכניסה לשדה.</p>
       <div class="overview-columns">
         <div>
@@ -357,21 +473,43 @@
           </table>
         </div>
       </div>
-    </div>
+    </details>
 
     <div class="card">
-      <h2>מעשרות</h2>
+      <h2>סיכום חודשי</h2>
+      <div class="stat-row">
+        <div class="stat-tile">
+          <div class="label">סה"כ הכנסות</div>
+          <div class="value" id="ov-total-income">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">החזרי חובות (בקרוב — ספר חובות)</div>
+          <div class="value" id="ov-debt-summary">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">סה"כ יוצא (תרומות + הוצאות + חובות)</div>
+          <div class="value" id="ov-total-outflow">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">נשאר לחיסכון</div>
+          <div class="value accent" id="ov-remaining-save">—</div>
+        </div>
+      </div>
+    </div>
+
+    <details class="card card-sage" open>
+      <summary>מעשרות <span class="chevron">▾</span></summary>
       <div class="stat-row">
         <div class="stat-tile">
           <div class="label">א. מעשרות לתרומה</div>
           <div class="value" id="ov-gross-target">—</div>
         </div>
-        <div class="stat-tile clickable" id="tile-fixed-donations">
+        <div class="stat-tile clickable" id="tile-fixed-donations" role="button" tabindex="0">
           <div class="label">ב. תרומות קבועות בחודש</div>
           <div class="value" id="ov-fixed-donations">—</div>
           <div class="hint">לחץ לפירוט</div>
         </div>
-        <div class="stat-tile clickable" id="tile-prior-month">
+        <div class="stat-tile clickable" id="tile-prior-month" role="button" tabindex="0">
           <div class="label">ג. קיזוז שהועבר מחודש קודם</div>
           <div class="value" id="ov-carry-in">—</div>
           <div class="hint">לחץ לפירוט</div>
@@ -387,7 +525,7 @@
         <button id="save-rate" class="secondary">שמור שיעור</button>
       </div>
 
-    </div>
+    </details>
 
     <dialog id="modal-fixed-donations" class="modal">
       <h3>תרומות קבועות (הוראות קבע)</h3>
@@ -413,55 +551,33 @@
       </div>
     </dialog>
 
-    <div class="card">
-      <h2>הוצאות שצריך להביא מהקופה השנתית</h2>
+    <details class="card">
+      <summary>הוצאות שצריך להביא מהקופה השנתית <span class="chevron">▾</span></summary>
       <p class="hint" style="margin: 0 0 12px;">פריטי תקציב שנתי (ממסך "תקציב שנתי") שהחודש הנוכחי הוא החודש היעד שלהם — צריך למשוך את הסכום מהקופה כדי לממן אותם.</p>
       <table>
         <thead><tr><th>שם</th><th class="num">סכום למשיכה</th></tr></thead>
         <tbody id="ov-annual-withdrawals"></tbody>
       </table>
-    </div>
+    </details>
 
-    <div class="card">
-      <h2>הוצאות בהוראת קבע (הו"ק)</h2>
+    <details class="card card-berry" open>
+      <summary>הוצאות בהוראת קבע (הו"ק) <span class="chevron">▾</span></summary>
       <p class="hint" style="margin: 0 0 12px;">לכל שורה: כמה מתוכנן לחודש, כמה כבר נוצל, והיתרה הפנויה — כמו בטבלת התקציב השנתי.</p>
       <table>
         <thead><tr><th>שם</th><th class="num">מתוכנן</th><th class="num">נוצל</th><th class="num">יתרה</th><th></th></tr></thead>
         <tbody id="ov-fixed-expenses"></tbody>
         <tfoot><tr><td colspan="5"><button class="icon add-row-toggle" data-target="fixed-expense">+ הוסף קטגוריית הוצאה</button></td></tr></tfoot>
       </table>
-    </div>
+    </details>
 
-    <div class="card">
-      <h2>הוצאות שוטפות</h2>
+    <details class="card card-berry" open>
+      <summary>הוצאות שוטפות <span class="chevron">▾</span></summary>
       <table>
         <thead><tr><th>שם</th><th class="num">מתוכנן</th><th class="num">נוצל</th><th class="num">יתרה</th><th></th></tr></thead>
         <tbody id="ov-regular-expenses"></tbody>
         <tfoot><tr><td colspan="5"><button class="icon add-row-toggle" data-target="regular-expense">+ הוסף קטגוריית הוצאה</button></td></tr></tfoot>
       </table>
-    </div>
-
-    <div class="card">
-      <h2>סיכום חודשי</h2>
-      <div class="stat-row">
-        <div class="stat-tile">
-          <div class="label">סה"כ הכנסות</div>
-          <div class="value" id="ov-total-income">—</div>
-        </div>
-        <div class="stat-tile">
-          <div class="label">החזרי חובות (בקרוב — ספר חובות)</div>
-          <div class="value" id="ov-debt-summary">—</div>
-        </div>
-        <div class="stat-tile">
-          <div class="label">סה"כ יוצא (תרומות + הוצאות + חובות)</div>
-          <div class="value" id="ov-total-outflow">—</div>
-        </div>
-        <div class="stat-tile">
-          <div class="label">נשאר לחיסכון</div>
-          <div class="value accent" id="ov-remaining-save">—</div>
-        </div>
-      </div>
-    </div>
+    </details>
   </div>
 
   <div id="tab-funds" class="tab-panel" hidden>
@@ -493,7 +609,7 @@
     <div id="debts-error" class="error" hidden></div>
 
     <div class="overview-columns">
-      <div class="card">
+      <div class="card card-sage">
         <h2>חייבים לנו</h2>
         <table>
           <thead>
@@ -503,7 +619,7 @@
           <tfoot><tr><td colspan="7"><button class="icon" id="add-receivable-toggle">+ הוסף חוב</button></td></tr></tfoot>
         </table>
       </div>
-      <div class="card">
+      <div class="card card-berry">
         <h2>אנחנו חייבים</h2>
         <table>
           <thead>
@@ -525,6 +641,96 @@
 
     function fmtNum(n) {
       return new Intl.NumberFormat("he-IL", { maximumFractionDigits: 0 }).format(n);
+    }
+
+    // ---- Hardening utilities: escaping, pending state, save acknowledgment, delete confirmation ----
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+      }[ch]));
+    }
+
+    // Disables a button and adds a pending style for the duration of an async task,
+    // so a rapid double-click can't double-submit a save/repay/add and the user sees
+    // the request is in flight instead of nothing happening.
+    async function withPending(button, task) {
+      if (button.disabled) return;
+      button.disabled = true;
+      button.classList.add("is-pending");
+      try {
+        await task();
+      } finally {
+        button.disabled = false;
+        button.classList.remove("is-pending");
+      }
+    }
+
+    const savingElements = new Set();
+
+    // Prevents a blur-triggered save from firing twice concurrently for the same field
+    // (Enter then blur can otherwise fire in quick succession) and flashes a brief "saved"
+    // mark on success, since these inline edits otherwise give no feedback that they landed.
+    async function guardedSave(el, task) {
+      if (savingElements.has(el)) return;
+      savingElements.add(el);
+      try {
+        await task();
+        flashSaved(el);
+      } finally {
+        savingElements.delete(el);
+      }
+    }
+
+    function flashSaved(el) {
+      const parent = el.parentElement;
+      const existing = parent && parent.querySelector(".save-flash");
+      if (existing) existing.remove();
+      const flash = document.createElement("span");
+      flash.className = "save-flash";
+      flash.textContent = "✓";
+      flash.setAttribute("aria-hidden", "true");
+      el.insertAdjacentElement("afterend", flash);
+      requestAnimationFrame(() => flash.classList.add("save-flash-visible"));
+      setTimeout(() => flash.remove(), 1400);
+    }
+
+    // Replaces native confirm() with an inline arm-then-confirm interaction: the first click
+    // turns the button into a "לאשר מחיקה?" warning for a few seconds, a second click within
+    // that window commits the delete (and shows a pending state while the request is in flight).
+    // Used for every delete affordance in the app so the confirmation policy is uniform.
+    function attachConfirmDelete(button, onConfirmed) {
+      const originalLabel = button.textContent;
+      let armed = false;
+      let revertTimer = null;
+
+      button.addEventListener("click", async () => {
+        if (!armed) {
+          armed = true;
+          button.textContent = "לאשר מחיקה?";
+          button.classList.add("confirming");
+          revertTimer = setTimeout(() => {
+            armed = false;
+            button.textContent = originalLabel;
+            button.classList.remove("confirming");
+          }, 3000);
+          return;
+        }
+
+        clearTimeout(revertTimer);
+        armed = false;
+        button.textContent = originalLabel;
+        button.classList.remove("confirming");
+
+        button.disabled = true;
+        button.classList.add("is-pending");
+        try {
+          await onConfirmed();
+        } finally {
+          button.disabled = false;
+          button.classList.remove("is-pending");
+        }
+      });
     }
 
     function showError(message) {
@@ -585,25 +791,21 @@
 
     function itemRowHtml(item) {
       return `
-        <td>${item.name}</td>
+        <td>${escapeHtml(item.name)}</td>
         <td class="num">${fmtMoney(item.totalAmount)}</td>
         <td class="num"><input class="usage-input" type="text" /></td>
         <td>${statusBadge(item)}</td>
-        <td><button class="delete-row" title="מחק שורה">✕</button></td>
+        <td><button class="delete-row" title="מחק שורה" aria-label="מחק את ${escapeHtml(item.name)}">✕</button></td>
       `;
     }
 
     function attachItemRowHandlers(row, item) {
       attachFormulaInput(row.querySelector(".usage-input"), item.amountUsed, item.amountUsedFormula,
         (amount, formula) => saveUsage(item, amount, formula));
-      row.querySelector(".delete-row").addEventListener("click", () => deleteItem(item.annualBudgetItemId, item.name));
+      attachConfirmDelete(row.querySelector(".delete-row"), () => deleteItem(item.annualBudgetItemId));
     }
 
-    async function deleteItem(id, name) {
-      if (!confirm(`למחוק את "${name}"?`)) {
-        return;
-      }
-
+    async function deleteItem(id) {
       try {
         await fetchJson(`/api/annual-budget-items/${id}`, { method: "DELETE" });
         clearError();
@@ -627,42 +829,67 @@
       }
     }
 
+    // Months with no items collapse to a single header row by default (the household usually
+    // only has expenses in a handful of the 12 months); clicking the month name toggles it.
     function renderMonthlyTable(items) {
       const tbody = document.getElementById("monthly-rows");
       tbody.innerHTML = "";
 
       for (let month = 1; month <= 12; month++) {
         const monthItems = items.filter(i => i.targetMonth === month);
+        const hasItems = monthItems.length > 0;
 
         const headerRow = document.createElement("tr");
         headerRow.className = "month-header";
+        headerRow.dataset.month = month;
         headerRow.innerHTML = `
           <td colspan="5">
             <div class="month-name">
-              ${monthNames[month]}
+              <button class="month-toggle" data-month="${month}" aria-expanded="${hasItems}">
+                <span class="chevron">▾</span> ${monthNames[month]}
+                ${hasItems ? `<span class="hint">(${monthItems.length})</span>` : ""}
+              </button>
               <button class="icon add-toggle" data-month="${month}">+</button>
             </div>
           </td>
         `;
         tbody.appendChild(headerRow);
 
-        if (monthItems.length === 0) {
+        const contentRows = [];
+        if (!hasItems) {
           const hintRow = document.createElement("tr");
           hintRow.className = "empty-hint";
           hintRow.innerHTML = `<td colspan="5">אין הוצאות מוגדרות לחודש זה עדיין.</td>`;
+          hintRow.hidden = true;
           tbody.appendChild(hintRow);
+          contentRows.push(hintRow);
         } else {
           for (const item of monthItems) {
             const row = document.createElement("tr");
             row.innerHTML = itemRowHtml(item);
             tbody.appendChild(row);
             attachItemRowHandlers(row, item);
+            contentRows.push(row);
           }
         }
+
+        headerRow.querySelector(".month-toggle").addEventListener("click", () => {
+          const btn = headerRow.querySelector(".month-toggle");
+          const expanded = btn.getAttribute("aria-expanded") === "true";
+          btn.setAttribute("aria-expanded", String(!expanded));
+          contentRows.forEach(r => { r.hidden = expanded; });
+        });
       }
 
       tbody.querySelectorAll(".add-toggle").forEach(btn => {
-        btn.addEventListener("click", () => toggleAddForm(tbody, Number(btn.dataset.month), btn));
+        btn.addEventListener("click", () => {
+          const month = Number(btn.dataset.month);
+          const toggleBtn = tbody.querySelector(`.month-toggle[data-month="${month}"]`);
+          if (toggleBtn.getAttribute("aria-expanded") !== "true") {
+            toggleBtn.click();
+          }
+          toggleAddForm(tbody, month, btn);
+        });
       });
     }
 
@@ -691,8 +918,8 @@
       headerRow.after(formRow);
 
       formRow.querySelector(".cancel-btn").addEventListener("click", () => formRow.remove());
-      formRow.querySelector(".save-btn").addEventListener("click", () =>
-        submitNewItem(formRow, month));
+      const monthSaveBtn = formRow.querySelector(".save-btn");
+      monthSaveBtn.addEventListener("click", () => withPending(monthSaveBtn, () => submitNewItem(formRow, month)));
     }
 
     async function submitNewItem(formRow, targetMonth) {
@@ -758,7 +985,7 @@
 
     document.getElementById("refresh").addEventListener("click", refresh);
 
-    document.getElementById("save-reserve").addEventListener("click", async () => {
+    document.getElementById("save-reserve").addEventListener("click", (e) => withPending(e.currentTarget, async () => {
       const amount = parseFloat(document.getElementById("reserve-input").value);
       if (!(amount >= 0)) {
         showError("סכום הקופה חייב להיות מספר אי-שלילי.");
@@ -775,7 +1002,7 @@
       } catch (err) {
         showError(err.message);
       }
-    });
+    }));
 
     document.getElementById("general-add-toggle").addEventListener("click", () => {
       const tbody = document.getElementById("general-rows");
@@ -800,8 +1027,8 @@
       tbody.prepend(formRow);
 
       formRow.querySelector(".cancel-btn").addEventListener("click", () => formRow.remove());
-      formRow.querySelector(".save-btn").addEventListener("click", () =>
-        submitNewItem(formRow, null));
+      const generalSaveBtn = formRow.querySelector(".save-btn");
+      generalSaveBtn.addEventListener("click", () => withPending(generalSaveBtn, () => submitNewItem(formRow, null)));
     });
 
     refresh();
@@ -983,7 +1210,7 @@
 
         input.dataset.amount = newAmount;
         input.dataset.formula = newFormula || "";
-        await onCommit(newAmount, newFormula);
+        await guardedSave(input, () => onCommit(newAmount, newFormula));
       });
     }
 
@@ -1005,11 +1232,11 @@
       for (const line of lines) {
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td>${line.date}</td>
-          <td><input class="desc-input" type="text" value="${line.description ?? ""}" /></td>
+          <td>${escapeHtml(line.date)}</td>
+          <td><input class="desc-input" type="text" value="${escapeHtml(line.description ?? "")}" /></td>
           ${extraCellHtml ? extraCellHtml(line) : ""}
           <td class="num"><input class="amount-input usage-input" type="text" /></td>
-          <td><button class="delete-row" title="מחק">✕</button></td>
+          <td><button class="delete-row" title="מחק" aria-label="מחק תנועה מ-${escapeHtml(line.date)}">✕</button></td>
         `;
         tbody.appendChild(row);
 
@@ -1021,12 +1248,12 @@
 
         descInput.addEventListener("blur", () => {
           if (descInput.value !== (line.description ?? "")) {
-            onSave(line, { description: descInput.value || null });
+            guardedSave(descInput, () => onSave(line, { description: descInput.value || null }));
           }
         });
         descInput.addEventListener("keydown", (e) => { if (e.key === "Enter") descInput.blur(); });
 
-        row.querySelector(".delete-row").addEventListener("click", () => onDelete(line));
+        attachConfirmDelete(row.querySelector(".delete-row"), () => onDelete(line));
       }
     }
 
@@ -1110,7 +1337,8 @@
       `);
       if (!row) return;
 
-      row.querySelector(".save-btn").addEventListener("click", async () => {
+      const saveBtn = row.querySelector(".save-btn");
+      saveBtn.addEventListener("click", () => withPending(saveBtn, async () => {
         const date = row.querySelector(".new-date").value;
         const description = row.querySelector(".new-desc").value.trim() || null;
         const paymentMethod = DEFAULT_PAYMENT_METHOD;
@@ -1142,7 +1370,7 @@
         } catch (err) {
           ovShowError(err.message);
         }
-      });
+      }));
     }
 
     // ---- Fixed donation standing orders (bullet ב) ----
@@ -1176,10 +1404,10 @@
       for (const item of items) {
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td><input class="name-input" type="text" value="${item.name}" /></td>
+          <td><input class="name-input" type="text" value="${escapeHtml(item.name)}" /></td>
           <td class="num"><input class="amount-input usage-input" type="text" /></td>
-          <td><input class="valid-until-input desc-input" type="month" value="${formatValidUntil(item.validUntilYear, item.validUntilMonth)}" /></td>
-          <td><button class="delete-row" title="מחק">✕</button></td>
+          <td><input class="valid-until-input desc-input" type="month" value="${escapeHtml(formatValidUntil(item.validUntilYear, item.validUntilMonth))}" /></td>
+          <td><button class="delete-row" title="מחק" aria-label="מחק את ${escapeHtml(item.name)}">✕</button></td>
         `;
         tbody.appendChild(row);
 
@@ -1192,7 +1420,7 @@
 
         nameInput.addEventListener("blur", () => {
           if (nameInput.value && nameInput.value !== item.name) {
-            saveStandingOrder(item, { name: nameInput.value });
+            guardedSave(nameInput, () => saveStandingOrder(item, { name: nameInput.value }));
           }
         });
         nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
@@ -1201,7 +1429,7 @@
           try {
             const parsed = parseValidUntil(validUntilInput.value);
             if (parsed.year !== item.validUntilYear || parsed.month !== item.validUntilMonth) {
-              saveStandingOrder(item, { validUntilYear: parsed.year, validUntilMonth: parsed.month });
+              guardedSave(validUntilInput, () => saveStandingOrder(item, { validUntilYear: parsed.year, validUntilMonth: parsed.month }));
             }
           } catch (err) {
             ovShowError(err.message);
@@ -1210,7 +1438,7 @@
         });
         validUntilInput.addEventListener("keydown", (e) => { if (e.key === "Enter") validUntilInput.blur(); });
 
-        row.querySelector(".delete-row").addEventListener("click", () => deleteStandingOrder(item));
+        attachConfirmDelete(row.querySelector(".delete-row"), () => deleteStandingOrder(item));
       }
     }
 
@@ -1254,7 +1482,8 @@
       `);
       if (!row) return;
 
-      row.querySelector(".save-btn").addEventListener("click", async () => {
+      const saveBtn = row.querySelector(".save-btn");
+      saveBtn.addEventListener("click", () => withPending(saveBtn, async () => {
         const name = row.querySelector(".new-name").value.trim();
         const amountText = row.querySelector(".new-amount").value.trim();
         const validUntilText = row.querySelector(".new-valid-until").value;
@@ -1286,7 +1515,7 @@
         } catch (err) {
           ovShowError(err.message);
         }
-      });
+      }));
     }
 
     // ---- Prior-month small-charity donations (bullet ג) ----
@@ -1307,7 +1536,8 @@
       `);
       if (!row) return;
 
-      row.querySelector(".save-btn").addEventListener("click", async () => {
+      const saveBtn = row.querySelector(".save-btn");
+      saveBtn.addEventListener("click", () => withPending(saveBtn, async () => {
         const date = row.querySelector(".new-date").value;
         const description = row.querySelector(".new-desc").value.trim() || null;
         const paymentMethod = DEFAULT_PAYMENT_METHOD;
@@ -1339,7 +1569,7 @@
         } catch (err) {
           ovShowError(err.message);
         }
-      });
+      }));
     }
 
     // ---- Fixed / Regular expense budget lines ----
@@ -1356,11 +1586,11 @@
       for (const item of items) {
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td><input class="name-input" type="text" value="${item.name}" /></td>
+          <td><input class="name-input" type="text" value="${escapeHtml(item.name)}" /></td>
           <td class="num"><input class="budgeted-input usage-input" type="text" /></td>
           <td class="num"><input class="used-input usage-input" type="text" /></td>
           <td class="num">${fmtMoney(item.remaining)}</td>
-          <td><button class="delete-row" title="מחק">✕</button></td>
+          <td><button class="delete-row" title="מחק" aria-label="מחק את ${escapeHtml(item.name)}">✕</button></td>
         `;
         tbody.appendChild(row);
 
@@ -1375,16 +1605,12 @@
 
         nameInput.addEventListener("blur", () => {
           if (nameInput.value && nameInput.value !== item.name) {
-            onSave(item, { name: nameInput.value });
+            guardedSave(nameInput, () => onSave(item, { name: nameInput.value }));
           }
         });
         nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
 
-        row.querySelector(".delete-row").addEventListener("click", () => onDeleteBudgetItem(item));
-      }
-
-      async function onDeleteBudgetItem(item) {
-        await onDelete(item);
+        attachConfirmDelete(row.querySelector(".delete-row"), () => onDelete(item));
       }
     }
 
@@ -1427,7 +1653,8 @@
       `);
       if (!row) return;
 
-      row.querySelector(".save-btn").addEventListener("click", async () => {
+      const saveBtn = row.querySelector(".save-btn");
+      saveBtn.addEventListener("click", () => withPending(saveBtn, async () => {
         const name = row.querySelector(".new-name").value.trim();
         const amountText = row.querySelector(".new-amount").value.trim();
 
@@ -1457,7 +1684,7 @@
         } catch (err) {
           ovShowError(err.message);
         }
-      });
+      }));
     }
 
     // ---- Annual kupa withdrawals (read-only, sourced from the Annual Budget screen) ----
@@ -1473,7 +1700,7 @@
       }
       for (const line of lines) {
         const row = document.createElement("tr");
-        row.innerHTML = `<td>${line.name}</td><td class="num">${fmtMoney(line.totalAmount)}</td>`;
+        row.innerHTML = `<td>${escapeHtml(line.name)}</td><td class="num">${fmtMoney(line.totalAmount)}</td>`;
         tbody.appendChild(row);
       }
     }
@@ -1518,7 +1745,7 @@
 
     document.getElementById("ov-refresh").addEventListener("click", refreshOverview);
 
-    document.getElementById("save-rate").addEventListener("click", async () => {
+    document.getElementById("save-rate").addEventListener("click", (e) => withPending(e.currentTarget, async () => {
       const rate = parseFloat(document.getElementById("rate-input").value);
       if (!(rate > 0) || rate > 1) {
         ovShowError("שיעור המעשר חייב להיות מספר בין 0 ל-1.");
@@ -1535,7 +1762,7 @@
       } catch (err) {
         ovShowError(err.message);
       }
-    });
+    }));
 
     document.querySelectorAll(".add-row-toggle").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -1553,6 +1780,16 @@
 
     document.getElementById("tile-prior-month").addEventListener("click", () => {
       document.getElementById("modal-prior-month").showModal();
+    });
+
+    // Lets keyboard users activate the clickable stat-tiles (role="button") with Enter/Space.
+    document.querySelectorAll('[role="button"]').forEach(el => {
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          el.click();
+        }
+      });
     });
 
     document.getElementById("close-fixed-donations-modal").addEventListener("click", () => {
@@ -1593,17 +1830,18 @@
       return `<span class="badge critical">חריגה של ${fmtMoney(-discrepancy)}</span>`;
     }
 
-    function fundCardHtml(fund) {
+    function fundCardHtml(fund, accentIndex) {
+      const accentClass = ["", "card-gold", "card-sage", "card-berry"][accentIndex % 4];
       return `
-        <div class="card" data-fund-id="${fund.fundId}">
+        <div class="card ${accentClass}" data-fund-id="${fund.fundId}">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-            <input class="fund-name-input" type="text" value="${fund.name}" style="font-size:1.05rem; font-weight:600; border:1px solid transparent; background:transparent; color:var(--text-primary); padding:4px;" />
-            <button class="delete-row fund-delete-btn" title="מחק קרן">✕ מחק קרן</button>
+            <input class="fund-name-input" type="text" value="${escapeHtml(fund.name)}" />
+            <button class="delete-row fund-delete-btn" title="מחק קרן" aria-label="מחק את הקרן ${escapeHtml(fund.name)}">✕ מחק קרן</button>
           </div>
           <div class="stat-row" style="margin-top:12px;">
             <div class="stat-tile">
               <div class="label">יתרה כוללת</div>
-              <input class="fund-balance-input usage-input" type="number" min="0" step="0.01" value="${fund.totalBalance}" style="font-size:1.3rem; width:140px;" />
+              <input class="fund-balance-input usage-input" type="number" min="0" step="0.01" value="${fund.totalBalance}" />
             </div>
             <div class="stat-tile">
               <div class="label">סה"כ צבוע</div>
@@ -1634,9 +1872,9 @@
       for (const earmark of earmarks) {
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td><input class="name-input" type="text" value="${earmark.purposeLabel}" /></td>
+          <td><input class="name-input" type="text" value="${escapeHtml(earmark.purposeLabel)}" /></td>
           <td class="num"><input class="amount-input usage-input" type="number" min="0.01" step="0.01" value="${earmark.amount}" /></td>
-          <td><button class="delete-row" title="מחק">✕</button></td>
+          <td><button class="delete-row" title="מחק" aria-label="מחק את הייעוד ${escapeHtml(earmark.purposeLabel)}">✕</button></td>
         `;
         tbody.appendChild(row);
 
@@ -1666,12 +1904,12 @@
           }
         };
 
-        nameInput.addEventListener("blur", saveEdit);
+        nameInput.addEventListener("blur", () => guardedSave(nameInput, saveEdit));
         nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
-        amountInput.addEventListener("blur", saveEdit);
+        amountInput.addEventListener("blur", () => guardedSave(amountInput, saveEdit));
         amountInput.addEventListener("keydown", (e) => { if (e.key === "Enter") amountInput.blur(); });
 
-        row.querySelector(".delete-row").addEventListener("click", async () => {
+        attachConfirmDelete(row.querySelector(".delete-row"), async () => {
           try {
             await fetchJson(`/api/funds/earmarks/${earmark.id}`, { method: "DELETE" });
             fundsClearError();
@@ -1705,7 +1943,8 @@
       tbody.appendChild(row);
 
       row.querySelector(".cancel-btn").addEventListener("click", () => row.remove());
-      row.querySelector(".save-btn").addEventListener("click", async () => {
+      const saveBtn = row.querySelector(".save-btn");
+      saveBtn.addEventListener("click", () => withPending(saveBtn, async () => {
         const purposeLabel = row.querySelector(".new-earmark-name").value.trim();
         const amount = parseFloat(row.querySelector(".new-earmark-amount").value);
         if (!purposeLabel || !(amount > 0)) {
@@ -1723,7 +1962,7 @@
         } catch (err) {
           fundsShowError(err.message);
         }
-      });
+      }));
     }
 
     async function refreshFunds() {
@@ -1741,9 +1980,9 @@
           return;
         }
 
-        for (const fund of data.funds) {
+        data.funds.forEach((fund, index) => {
           const wrapper = document.createElement("div");
-          wrapper.innerHTML = fundCardHtml(fund);
+          wrapper.innerHTML = fundCardHtml(fund, index);
           const card = wrapper.firstElementChild;
           container.appendChild(card);
 
@@ -1776,15 +2015,12 @@
             }
           };
 
-          nameInput.addEventListener("blur", saveFund);
+          nameInput.addEventListener("blur", () => guardedSave(nameInput, saveFund));
           nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
-          balanceInput.addEventListener("blur", saveFund);
+          balanceInput.addEventListener("blur", () => guardedSave(balanceInput, saveFund));
           balanceInput.addEventListener("keydown", (e) => { if (e.key === "Enter") balanceInput.blur(); });
 
-          card.querySelector(".fund-delete-btn").addEventListener("click", async () => {
-            if (!confirm(`למחוק את הקרן "${fund.name}"? כל הייעודים שלה יימחקו גם הם.`)) {
-              return;
-            }
+          attachConfirmDelete(card.querySelector(".fund-delete-btn"), async () => {
             try {
               await fetchJson(`/api/funds/${fund.fundId}`, { method: "DELETE" });
               fundsClearError();
@@ -1796,7 +2032,7 @@
 
           card.querySelector(".fund-add-earmark-toggle").addEventListener("click", () =>
             toggleEarmarkAddRow(earmarksBody, fund.fundId));
-        }
+        });
       } catch (err) {
         fundsShowError(err.message);
       }
@@ -1813,7 +2049,7 @@
       document.getElementById("funds-add-form").hidden = true;
     });
 
-    document.getElementById("new-fund-save").addEventListener("click", async () => {
+    document.getElementById("new-fund-save").addEventListener("click", (e) => withPending(e.currentTarget, async () => {
       const name = document.getElementById("new-fund-name").value.trim();
       const totalBalance = parseFloat(document.getElementById("new-fund-balance").value);
       if (!name || !(totalBalance >= 0)) {
@@ -1834,7 +2070,7 @@
       } catch (err) {
         fundsShowError(err.message);
       }
-    });
+    }));
 
     // ---- Debts Ledger ----
 
@@ -1888,9 +2124,6 @@
     }
 
     async function deleteDebt(debt) {
-      if (!confirm(`למחוק את החוב עם "${debt.counterpartyName}"?`)) {
-        return;
-      }
       try {
         await fetchJson(`/api/debts/${debt.id}`, { method: "DELETE" });
         debtsClearError();
@@ -1903,7 +2136,7 @@
     function attachRepayHandler(row, debt) {
       const btn = row.querySelector(".repay-btn");
       if (!btn) return;
-      btn.addEventListener("click", async () => {
+      btn.addEventListener("click", () => withPending(btn, async () => {
         const amount = parseFloat(row.querySelector(".repay-amount").value);
         const paymentMethod = DEFAULT_PAYMENT_METHOD;
         if (!(amount > 0)) {
@@ -1921,7 +2154,7 @@
         } catch (err) {
           debtsShowError(err.message);
         }
-      });
+      }));
     }
 
     function renderReceivableRows(tbody, debts) {
@@ -1933,13 +2166,13 @@
       for (const debt of debts) {
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td><input class="name-input" type="text" value="${debt.counterpartyName}" /></td>
+          <td><input class="name-input" type="text" value="${escapeHtml(debt.counterpartyName)}" /></td>
           <td class="num">${fmtMoney(debt.currentBalance)}</td>
-          <td><input class="date-input desc-input" type="date" value="${debt.targetDate ?? ""}" /></td>
-          <td><input class="notes-input desc-input" type="text" value="${debt.notes ?? ""}" /></td>
+          <td><input class="date-input desc-input" type="date" value="${escapeHtml(debt.targetDate ?? "")}" /></td>
+          <td><input class="notes-input desc-input" type="text" value="${escapeHtml(debt.notes ?? "")}" /></td>
           <td>${debtStatusBadgeHtml(debt.status)}</td>
           <td>${repayCellHtml(debt)}</td>
-          <td><button class="delete-row" title="מחק">✕</button></td>
+          <td><button class="delete-row" title="מחק" aria-label="מחק את החוב עם ${escapeHtml(debt.counterpartyName)}">✕</button></td>
         `;
         tbody.appendChild(row);
 
@@ -1949,17 +2182,17 @@
 
         nameInput.addEventListener("blur", () => {
           if (nameInput.value.trim() && nameInput.value !== debt.counterpartyName) {
-            saveDebtPatch(debt, { counterpartyName: nameInput.value.trim() });
+            guardedSave(nameInput, () => saveDebtPatch(debt, { counterpartyName: nameInput.value.trim() }));
           }
         });
-        dateInput.addEventListener("change", () => saveDebtPatch(debt, { targetDate: dateInput.value || null }));
+        dateInput.addEventListener("change", () => guardedSave(dateInput, () => saveDebtPatch(debt, { targetDate: dateInput.value || null })));
         notesInput.addEventListener("blur", () => {
           if (notesInput.value !== (debt.notes ?? "")) {
-            saveDebtPatch(debt, { notes: notesInput.value || null });
+            guardedSave(notesInput, () => saveDebtPatch(debt, { notes: notesInput.value || null }));
           }
         });
 
-        row.querySelector(".delete-row").addEventListener("click", () => deleteDebt(debt));
+        attachConfirmDelete(row.querySelector(".delete-row"), () => deleteDebt(debt));
         attachRepayHandler(row, debt);
       }
     }
@@ -1973,12 +2206,12 @@
       for (const debt of debts) {
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td><input class="name-input" type="text" value="${debt.counterpartyName}" /></td>
+          <td><input class="name-input" type="text" value="${escapeHtml(debt.counterpartyName)}" /></td>
           <td class="num">${fmtMoney(debt.currentBalance)}</td>
           <td><input class="rate-input usage-input" type="number" min="0" step="0.01" value="${debt.repaymentRate ?? ""}" placeholder="—" /></td>
           <td>${debtStatusBadgeHtml(debt.status)}</td>
           <td>${repayCellHtml(debt)}</td>
-          <td><button class="delete-row" title="מחק">✕</button></td>
+          <td><button class="delete-row" title="מחק" aria-label="מחק את החוב עם ${escapeHtml(debt.counterpartyName)}">✕</button></td>
         `;
         tbody.appendChild(row);
 
@@ -1987,18 +2220,18 @@
 
         nameInput.addEventListener("blur", () => {
           if (nameInput.value.trim() && nameInput.value !== debt.counterpartyName) {
-            saveDebtPatch(debt, { counterpartyName: nameInput.value.trim() });
+            guardedSave(nameInput, () => saveDebtPatch(debt, { counterpartyName: nameInput.value.trim() }));
           }
         });
         rateInput.addEventListener("blur", () => {
           const rate = rateInput.value === "" ? null : parseFloat(rateInput.value);
           if (rate !== (debt.repaymentRate ?? null)) {
-            saveDebtPatch(debt, { repaymentRate: rate });
+            guardedSave(rateInput, () => saveDebtPatch(debt, { repaymentRate: rate }));
           }
         });
         rateInput.addEventListener("keydown", (e) => { if (e.key === "Enter") rateInput.blur(); });
 
-        row.querySelector(".delete-row").addEventListener("click", () => deleteDebt(debt));
+        attachConfirmDelete(row.querySelector(".delete-row"), () => deleteDebt(debt));
         attachRepayHandler(row, debt);
       }
     }
@@ -2024,7 +2257,8 @@
       tbody.appendChild(row);
       row.querySelector(".cancel-btn").addEventListener("click", () => row.remove());
 
-      row.querySelector(".save-btn").addEventListener("click", async () => {
+      const saveBtn = row.querySelector(".save-btn");
+      saveBtn.addEventListener("click", () => withPending(saveBtn, async () => {
         const name = row.querySelector(".new-name").value.trim();
         const amount = parseFloat(row.querySelector(".new-amount").value);
         if (!name || !(amount > 0)) {
@@ -2052,7 +2286,7 @@
         } catch (err) {
           debtsShowError(err.message);
         }
-      });
+      }));
     }
 
     async function refreshDebts() {
