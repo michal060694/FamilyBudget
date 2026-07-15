@@ -351,7 +351,8 @@
   .tab-panel[hidden] { display: none; }
 
   .overview-columns { display: flex; gap: 16px; flex-wrap: wrap; }
-  .overview-columns > div { flex: 1; min-width: 280px; }
+  .overview-columns > div,
+  .overview-columns > .card { flex: 1; min-width: 280px; }
   .overview-columns h3 { font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 8px; }
 </style>
 </head>
@@ -397,43 +398,45 @@
       </div>
     </div>
 
-    <div class="card card-berry">
-      <h2>הוצאות לפי חודש</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>שם</th>
-            <th class="num">סכום שנתי</th>
-            <th class="num">נוצל</th>
-            <th>סטטוס</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="monthly-rows"></tbody>
-      </table>
-    </div>
+    <div class="overview-columns">
+      <details class="card card-berry" open>
+        <summary>הוצאות לפי חודש <span class="chevron">▾</span></summary>
+        <table>
+          <thead>
+            <tr>
+              <th>שם</th>
+              <th class="num">סכום שנתי</th>
+              <th class="num">נוצל</th>
+              <th>סטטוס</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="monthly-rows"></tbody>
+        </table>
+      </details>
 
-    <div class="card card-berry">
-      <h2>הוצאות כלליות (לא תלויות חודש)</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>שם</th>
-            <th class="num">סכום שנתי</th>
-            <th class="num">נוצל</th>
-            <th>סטטוס</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="general-rows"></tbody>
-        <tfoot>
-          <tr>
-            <td colspan="5">
-              <button id="general-add-toggle" class="icon">+ הוסף הוצאה כללית</button>
-            </td>
-          </tr>
-        </tfoot>
-      </table>
+      <details class="card card-berry" open>
+        <summary>הוצאות כלליות (לא תלויות חודש) <span class="chevron">▾</span></summary>
+        <table>
+          <thead>
+            <tr>
+              <th>שם</th>
+              <th class="num">סכום שנתי</th>
+              <th class="num">נוצל</th>
+              <th>סטטוס</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="general-rows"></tbody>
+          <tfoot>
+            <tr>
+              <td colspan="5">
+                <button id="general-add-toggle" class="icon">+ הוסף הוצאה כללית</button>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </details>
     </div>
   </div>
 
