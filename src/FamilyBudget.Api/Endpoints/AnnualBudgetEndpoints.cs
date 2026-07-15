@@ -11,7 +11,8 @@ public static class AnnualBudgetEndpoints
     {
         app.MapGet("/api/annual-budget", GetAnnualBudget);
         app.MapPost("/api/annual-budget-items", CreateAnnualBudgetItem);
-        app.MapPatch("/api/annual-budget-items/{id:guid}/usage", RecordUsage);
+        app.MapPatch("/api/annual-budget-items/{id:guid}/usage", SetUsage);
+        app.MapDelete("/api/annual-budget-items/{id:guid}", DeleteAnnualBudgetItem);
         app.MapPut("/api/reserve", SetReserve);
     }
 
@@ -20,8 +21,10 @@ public static class AnnualBudgetEndpoints
         item.Name,
         item.TargetMonth,
         item.TotalAmount,
+        item.TotalAmountFormula,
         item.AmountAlreadySetAside,
         item.AmountUsed,
+        item.AmountUsedFormula,
         item.AmountUsed >= item.TotalAmount);
 
     private static async Task<IResult> GetAnnualBudget(int year, AnnualBudgetQueryService queryService)
@@ -65,18 +68,19 @@ public static class AnnualBudgetEndpoints
             request.Name,
             request.TotalAmount,
             request.TargetMonth,
-            amountAlreadySetAside: 0m);
+            amountAlreadySetAside: 0m,
+            totalAmountFormula: request.TotalAmountFormula);
 
         await repository.AddAsync(item);
 
         return Results.Created($"/api/annual-budget-items/{item.Id}", ToView(item));
     }
 
-    private static async Task<IResult> RecordUsage(Guid id, RecordUsageRequest request, IAnnualBudgetItemRepository repository)
+    private static async Task<IResult> SetUsage(Guid id, SetUsageRequest request, IAnnualBudgetItemRepository repository)
     {
-        if (request.Amount <= 0)
+        if (request.Amount < 0)
         {
-            return Results.BadRequest("amount must be strictly positive.");
+            return Results.BadRequest("amount must be >= 0.");
         }
 
         var item = await repository.GetByIdAsync(id);
@@ -85,10 +89,16 @@ public static class AnnualBudgetEndpoints
             return Results.NotFound();
         }
 
-        item.RecordUsage(request.Amount);
+        item.SetAmountUsed(request.Amount, request.AmountFormula);
         await repository.SaveChangesAsync();
 
         return Results.Ok(ToView(item));
+    }
+
+    private static async Task<IResult> DeleteAnnualBudgetItem(Guid id, IAnnualBudgetItemRepository repository)
+    {
+        var deleted = await repository.DeleteAsync(id);
+        return deleted ? Results.NoContent() : Results.NotFound();
     }
 
     private static async Task<IResult> SetReserve(int year, SetReserveRequest request, IAnnualReserveRepository repository)

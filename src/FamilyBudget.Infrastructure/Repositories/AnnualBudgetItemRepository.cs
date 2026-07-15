@@ -33,6 +33,19 @@ public class AnnualBudgetItemRepository : IAnnualBudgetItemRepository
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var item = await GetByIdAsync(id, cancellationToken);
+        if (item is null)
+        {
+            return false;
+        }
+
+        _dbContext.AnnualBudgetItems.Remove(item);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
         _dbContext.SaveChangesAsync(cancellationToken);
 }

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using FamilyBudget.Api.Endpoints;
 using FamilyBudget.Core.Abstractions;
 using FamilyBudget.Core.Services;
@@ -7,14 +8,22 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
 builder.Services.AddDbContext<FamilyBudgetDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("FamilyBudget")));
 
 builder.Services.AddScoped<IAnnualBudgetItemRepository, AnnualBudgetItemRepository>();
 builder.Services.AddScoped<IAnnualReserveRepository, AnnualReserveRepository>();
+builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+builder.Services.AddScoped<ITitheSettingRepository, TitheSettingRepository>();
+builder.Services.AddScoped<IMonthlyExpenseBudgetItemRepository, MonthlyExpenseBudgetItemRepository>();
 builder.Services.AddSingleton<CalendarYearCycle>();
 builder.Services.AddScoped<BudgetSmoothingEngine>();
 builder.Services.AddScoped<AnnualBudgetQueryService>();
+builder.Services.AddScoped<TitheEngine>();
+builder.Services.AddScoped<MonthlyOverviewQueryService>();
 
 var app = builder.Build();
 
@@ -28,6 +37,9 @@ app.UseStaticFiles();
 
 app.MapDashboardEndpoints();
 app.MapAnnualBudgetEndpoints();
+app.MapTransactionEndpoints();
+app.MapMonthlyOverviewEndpoints();
+app.MapMonthlyExpenseBudgetEndpoints();
 
 app.Run();
 

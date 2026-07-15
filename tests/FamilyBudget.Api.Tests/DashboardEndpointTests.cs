@@ -48,6 +48,31 @@ public class DashboardEndpointTests : IClassFixture<FamilyBudgetApiFactory>
 
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GetDashboard_IncludesTitheDue_MatchingMonthlyOverview()
+    {
+        const int year = 2051;
+        const int month = 4;
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<FamilyBudgetDbContext>();
+            db.TitheSettings.Add(new FamilyBudget.Core.Entities.TitheSetting(0.2m));
+            db.Transactions.Add(new FamilyBudget.Core.Entities.Transaction(
+                Guid.NewGuid(), new DateOnly(year, month, 1), 1000m,
+                FamilyBudget.Core.Entities.TransactionType.Income,
+                FamilyBudget.Core.Entities.PaymentMethod.BankTransfer, true, "Salary"));
+            await db.SaveChangesAsync();
+        }
+
+        var client = _factory.CreateClient();
+        var dashboard = await client.GetFromJsonAsync<DashboardResponse>($"/api/dashboard?year={year}&month={month}");
+
+        Assert.NotNull(dashboard);
+        Assert.Equal(200m, dashboard!.TitheDue.GrossTitheTarget); // 1000 * 0.2
+        Assert.Equal(200m, dashboard.TitheDue.NetTitheDue); // no deductions this month
+    }
 }
 
 public class FamilyBudgetApiFactory : WebApplicationFactory<Program>

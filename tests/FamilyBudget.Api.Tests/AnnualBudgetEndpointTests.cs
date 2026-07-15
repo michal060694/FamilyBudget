@@ -100,7 +100,7 @@ public class AnnualBudgetEndpointTests : IClassFixture<FamilyBudgetApiFactory>
     }
 
     [Fact]
-    public async Task RecordUsage_PartialThenFull_UpdatesAmountUsedAndIsFullyUsedFlag()
+    public async Task SetUsage_OverwritesToExactValue_UpdatesAmountUsedAndIsFullyUsedFlag()
     {
         const int year = 2031;
         var client = _factory.CreateClient();
@@ -111,32 +111,33 @@ public class AnnualBudgetEndpointTests : IClassFixture<FamilyBudgetApiFactory>
         var created = await createResponse.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
 
         var partial = await client.PatchAsJsonAsync(
-            $"/api/annual-budget-items/{created!.AnnualBudgetItemId}/usage", new RecordUsageRequest(100m));
+            $"/api/annual-budget-items/{created!.AnnualBudgetItemId}/usage", new SetUsageRequest(100m));
         Assert.Equal(HttpStatusCode.OK, partial.StatusCode);
         var partialView = await partial.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
         Assert.Equal(100m, partialView!.AmountUsed);
         Assert.False(partialView.IsFullyUsed);
 
-        var rest = await client.PatchAsJsonAsync(
-            $"/api/annual-budget-items/{created.AnnualBudgetItemId}/usage", new RecordUsageRequest(200m));
-        var restView = await rest.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
-        Assert.Equal(300m, restView!.AmountUsed);
-        Assert.True(restView.IsFullyUsed);
+        // Setting again overwrites the previous value rather than adding to it.
+        var full = await client.PatchAsJsonAsync(
+            $"/api/annual-budget-items/{created.AnnualBudgetItemId}/usage", new SetUsageRequest(300m));
+        var fullView = await full.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
+        Assert.Equal(300m, fullView!.AmountUsed);
+        Assert.True(fullView.IsFullyUsed);
     }
 
     [Fact]
-    public async Task RecordUsage_UnknownId_ReturnsNotFound()
+    public async Task SetUsage_UnknownId_ReturnsNotFound()
     {
         var client = _factory.CreateClient();
 
         var response = await client.PatchAsJsonAsync(
-            $"/api/annual-budget-items/{Guid.NewGuid()}/usage", new RecordUsageRequest(50m));
+            $"/api/annual-budget-items/{Guid.NewGuid()}/usage", new SetUsageRequest(50m));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task RecordUsage_NonPositiveAmount_ReturnsBadRequest()
+    public async Task SetUsage_NegativeAmount_ReturnsBadRequest()
     {
         const int year = 2032;
         var client = _factory.CreateClient();
@@ -147,8 +148,55 @@ public class AnnualBudgetEndpointTests : IClassFixture<FamilyBudgetApiFactory>
         var created = await createResponse.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
 
         var response = await client.PatchAsJsonAsync(
-            $"/api/annual-budget-items/{created!.AnnualBudgetItemId}/usage", new RecordUsageRequest(0m));
+            $"/api/annual-budget-items/{created!.AnnualBudgetItemId}/usage", new SetUsageRequest(-1m));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SetUsage_ZeroAmount_IsAllowed()
+    {
+        const int year = 2033;
+        var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/annual-budget-items",
+            new CreateAnnualBudgetItemRequest(year, "Something Else", 100m, null));
+        var created = await createResponse.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
+
+        var response = await client.PatchAsJsonAsync(
+            $"/api/annual-budget-items/{created!.AnnualBudgetItemId}/usage", new SetUsageRequest(0m));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var view = await response.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
+        Assert.Equal(0m, view!.AmountUsed);
+    }
+
+    [Fact]
+    public async Task DeleteAnnualBudgetItem_RemovesItFromSubsequentGet()
+    {
+        const int year = 2034;
+        var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/annual-budget-items",
+            new CreateAnnualBudgetItemRequest(year, "To Be Deleted", 100m, null));
+        var created = await createResponse.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
+
+        var deleteResponse = await client.DeleteAsync($"/api/annual-budget-items/{created!.AnnualBudgetItemId}");
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        var listResponse = await client.GetFromJsonAsync<AnnualBudgetResponse>($"/api/annual-budget?year={year}");
+        Assert.DoesNotContain(listResponse!.Items, item => item.AnnualBudgetItemId == created.AnnualBudgetItemId);
+    }
+
+    [Fact]
+    public async Task DeleteAnnualBudgetItem_UnknownId_ReturnsNotFound()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.DeleteAsync($"/api/annual-budget-items/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }

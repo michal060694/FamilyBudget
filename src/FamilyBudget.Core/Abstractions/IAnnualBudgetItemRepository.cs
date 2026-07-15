@@ -10,6 +10,9 @@ public interface IAnnualBudgetItemRepository
 
     Task AddAsync(AnnualBudgetItem item, CancellationToken cancellationToken = default);
 
-    /// <summary>Persists in-place mutations made to an already-tracked entity (e.g. via <see cref="AnnualBudgetItem.RecordUsage"/>).</summary>
+    /// <summary>Returns false if no item with the given id exists.</summary>
+    Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Persists in-place mutations made to an already-tracked entity (e.g. via <see cref="AnnualBudgetItem.SetAmountUsed"/>).</summary>
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

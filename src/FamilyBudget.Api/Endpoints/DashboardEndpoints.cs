@@ -16,6 +16,7 @@ public static class DashboardEndpoints
         int month,
         IAnnualBudgetItemRepository repository,
         BudgetSmoothingEngine engine,
+        TitheEngine titheEngine,
         decimal projectedIncome = 0m,
         decimal fixedExpenses = 0m)
     {
@@ -40,6 +41,13 @@ public static class DashboardEndpoints
         var totalRequiredAllocation = lines.Sum(line => line.AllocatedMonthly);
         var freeBalance = projectedIncome - fixedExpenses - totalRequiredAllocation;
 
+        var (obligation, _) = await titheEngine.ComputeMonthAsync(year, month);
+        var titheDue = new TitheDueView(
+            obligation.GrossTitheTarget,
+            obligation.FixedDonationsThisMonth + obligation.CreditCarriedIn,
+            obligation.SmallCharityAppliedThisMonth,
+            obligation.NetTitheDue);
+
         return Results.Ok(new DashboardResponse(
             year,
             month,
@@ -47,6 +55,7 @@ public static class DashboardEndpoints
             fixedExpenses,
             totalRequiredAllocation,
             freeBalance,
-            lines));
+            lines,
+            titheDue));
     }
 }

@@ -58,6 +58,9 @@ public class AnnualBudgetSummaryTests
         public Task<AnnualBudgetItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
 
+        public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
         public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }

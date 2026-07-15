@@ -10,6 +10,9 @@ public class AnnualBudgetItem
     public string Name { get; private set; }
     public decimal TotalAmount { get; private set; }
 
+    /// <summary>Raw formula the user typed for <see cref="TotalAmount"/> (e.g. "600-200"), or null if entered as a plain number.</summary>
+    public string? TotalAmountFormula { get; private set; }
+
     /// <summary>1-12 Gregorian month (January=1), or null for general/month-independent items.</summary>
     public int? TargetMonth { get; private set; }
 
@@ -18,6 +21,9 @@ public class AnnualBudgetItem
 
     /// <summary>Actual amount spent against this item so far. Overrun (FR-006) is AmountUsed &gt; TotalAmount.</summary>
     public decimal AmountUsed { get; private set; }
+
+    /// <summary>Raw formula the user typed for <see cref="AmountUsed"/>, or null if entered as a plain number.</summary>
+    public string? AmountUsedFormula { get; private set; }
 
     private AnnualBudgetItem()
     {
@@ -31,7 +37,9 @@ public class AnnualBudgetItem
         decimal totalAmount,
         int? targetMonth,
         decimal amountAlreadySetAside,
-        decimal amountUsed = 0)
+        decimal amountUsed = 0,
+        string? totalAmountFormula = null,
+        string? amountUsedFormula = null)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -62,9 +70,11 @@ public class AnnualBudgetItem
         Year = year;
         Name = name;
         TotalAmount = totalAmount;
+        TotalAmountFormula = totalAmountFormula;
         TargetMonth = targetMonth;
         AmountAlreadySetAside = amountAlreadySetAside;
         AmountUsed = amountUsed;
+        AmountUsedFormula = amountUsedFormula;
     }
 
     /// <summary>Normal (non-overrun) smoothing requirement still owed toward the deposit target (FR-002).</summary>
@@ -85,13 +95,14 @@ public class AnnualBudgetItem
         AmountAlreadySetAside += amount;
     }
 
-    public void RecordUsage(decimal amount)
+    public void SetAmountUsed(decimal amount, string? formula = null)
     {
         if (amount < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(amount), "Used amount must be >= 0.");
         }
 
-        AmountUsed += amount;
+        AmountUsed = amount;
+        AmountUsedFormula = formula;
     }
 }

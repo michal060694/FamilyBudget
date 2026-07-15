@@ -7,7 +7,8 @@ public record DashboardResponse(
     decimal FixedExpenses,
     decimal TotalRequiredAllocation,
     decimal FreeBalance,
-    IReadOnlyList<AllocationLine> AllocationLines);
+    IReadOnlyList<AllocationLine> AllocationLines,
+    TitheDueView TitheDue);
 
 public record AllocationLine(
     Guid AnnualBudgetItemId,
@@ -17,3 +18,10 @@ public record AllocationLine(
     decimal AmountAlreadySetAside,
     decimal AmountUsed,
     decimal AllocatedMonthly);
+
+/// <summary>The dashboard's traceable tithe breakdown (FR-012, FR-013).</summary>
+public record TitheDueView(
+    decimal GrossTitheTarget,
+    decimal FixedDonationsDeduction,
+    decimal SmallCharityDeduction,
+    decimal NetTitheDue);

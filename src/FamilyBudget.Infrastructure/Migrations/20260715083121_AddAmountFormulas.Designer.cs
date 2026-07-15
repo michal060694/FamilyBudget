@@ -3,6 +3,7 @@ using System;
 using FamilyBudget.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FamilyBudget.Infrastructure.Migrations
 {
     [DbContext(typeof(FamilyBudgetDbContext))]
-    partial class FamilyBudgetDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260715083121_AddAmountFormulas")]
+    partial class AddAmountFormulas
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.11");
@@ -69,49 +72,6 @@ namespace FamilyBudget.Infrastructure.Migrations
                     b.HasKey("Year");
 
                     b.ToTable("AnnualReserves", (string)null);
-                });
-
-            modelBuilder.Entity("FamilyBudget.Core.Entities.MonthlyExpenseBudgetItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("BudgetedAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("BudgetedAmountFormula")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Month")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("UsedAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("UsedAmountFormula")
-                        .HasMaxLength(200)
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Year", "Month");
-
-                    b.ToTable("MonthlyExpenseBudgetItems", (string)null);
                 });
 
             modelBuilder.Entity("FamilyBudget.Core.Entities.TitheSetting", b =>

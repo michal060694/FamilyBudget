@@ -115,10 +115,15 @@ AmountAlreadySetAside, AmountUsed, AllocatedMonthly }`
 | `TotalRequiredAllocation` | `decimal` | From `MonthlyAllocationSnapshot` above |
 | `FreeBalance` | `decimal` | `ProjectedIncome - FixedExpenses - TotalRequiredAllocation` |
 
-No state transitions apply to `AnnualBudgetItem` beyond value updates (`AmountAlreadySetAside`
-changing over time as deposits are recorded by a future feature). This feature's original scope
-was read-only; it now also supports creating new `AnnualBudgetItem` rows (`POST
-/api/annual-budget-items`, always starting at `AmountAlreadySetAside = 0` and `AmountUsed = 0`)
-and setting the `AnnualReserve` for a year (`PUT /api/reserve`) — both added per explicit user
-direction alongside the client screen redesign. Editing/deleting existing items and recording
-deposits/usage against an item remain out of scope for this feature.
+This feature's original scope was read-only; it now also supports creating new
+`AnnualBudgetItem` rows (`POST /api/annual-budget-items`, always starting at
+`AmountAlreadySetAside = 0` and `AmountUsed = 0`), setting the `AnnualReserve` for a year (`PUT
+/api/reserve`), and **overwriting** `AmountUsed` to an exact value (`PATCH
+/api/annual-budget-items/{id}/usage`) — all added per explicit user direction alongside the
+client screen redesign. The client's "נוצל" column is a directly editable cell (not a
+button+form): typing a new value and moving focus away (blur) PATCHes the exact typed amount —
+this **overwrites** `AmountUsed`, it does not add to it, matching the inline-edit UX the amount
+is displayed with. `AmountAlreadySetAside` still has no write path and remains at 0 for every
+item. Items can also be permanently removed (`DELETE /api/annual-budget-items/{id}`), surfaced in
+the client as a "✕" button per row with a confirmation prompt. Editing `Name`/`TotalAmount`/
+`TargetMonth` after creation remains out of scope for this feature.

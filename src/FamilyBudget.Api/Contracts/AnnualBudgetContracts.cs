@@ -13,12 +13,15 @@ public record AnnualBudgetItemView(
     string Name,
     int? TargetMonth,
     decimal TotalAmount,
+    string? TotalAmountFormula,
     decimal AmountAlreadySetAside,
     decimal AmountUsed,
+    string? AmountUsedFormula,
     bool IsFullyUsed);
 
-public record CreateAnnualBudgetItemRequest(int Year, string Name, decimal TotalAmount, int? TargetMonth);
+public record CreateAnnualBudgetItemRequest(
+    int Year, string Name, decimal TotalAmount, int? TargetMonth, string? TotalAmountFormula = null);
 
 public record SetReserveRequest(decimal Amount);
 
-public record RecordUsageRequest(decimal Amount);
+public record SetUsageRequest(decimal Amount, string? AmountFormula = null);

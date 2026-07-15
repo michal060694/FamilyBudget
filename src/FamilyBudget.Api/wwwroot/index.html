@@ -159,89 +159,294 @@
   .badge.pending { color: var(--text-secondary); background: color-mix(in srgb, var(--text-secondary) 12%, transparent); }
   .badge.partial { color: var(--series-1); background: color-mix(in srgb, var(--series-1) 12%, transparent); }
 
-  button.mark-usage {
+  input.usage-input {
+    font: inherit;
+    font-variant-numeric: tabular-nums;
+    text-align: left;
+    width: 100px;
+    padding: 4px 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
     background: transparent;
-    color: var(--series-1);
-    border: 1px solid var(--series-1);
-    padding: 3px 10px;
-    font-size: 0.78rem;
+    color: var(--text-primary);
   }
-  tr.usage-form td { background: color-mix(in srgb, var(--status-good) 5%, transparent); }
+  input.usage-input:hover { border-color: var(--baseline); }
+  input.usage-input:focus {
+    border-color: var(--series-1);
+    background: var(--page-plane);
+    outline: none;
+  }
+
+  input.desc-input, input.name-input {
+    font: inherit;
+    width: 100%;
+    min-width: 120px;
+    padding: 4px 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-primary);
+  }
+  input.desc-input:hover, input.name-input:hover { border-color: var(--baseline); }
+  input.desc-input:focus, input.name-input:focus {
+    border-color: var(--series-1);
+    background: var(--page-plane);
+    outline: none;
+  }
+
+  button.delete-row {
+    background: transparent;
+    color: var(--text-muted);
+    border: none;
+    padding: 2px 8px;
+    font-size: 0.9rem;
+  }
+  button.delete-row:hover { color: var(--status-critical); }
 
   .error { color: var(--status-critical); font-size: 0.88rem; margin: 8px 0; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .tab-btn {
+    background: transparent;
+    color: var(--text-secondary);
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    padding: 8px 4px;
+    margin-left: 20px;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  .tab-btn.active { color: var(--text-primary); border-bottom-color: var(--series-1); font-weight: 600; }
+  .tab-panel[hidden] { display: none; }
+
+  .overview-columns { display: flex; gap: 16px; flex-wrap: wrap; }
+  .overview-columns > div { flex: 1; min-width: 280px; }
+  .overview-columns h3 { font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 8px; }
 </style>
 </head>
 <body>
-  <h1>תקציב שנתי</h1>
-  <p class="subtitle">קליינט בדיקה ידני מול FamilyBudget.Api — Feature 1: מנוע תקציב שנתי והחלקה</p>
+  <h1>תקציב שנתי וחומש</h1>
+  <p class="subtitle">קליינט בדיקה ידני מול FamilyBudget.Api</p>
 
-  <div class="controls">
-    <div class="field">
-      <label for="year">שנה</label>
-      <input id="year" type="number" value="2026" />
-    </div>
-    <button id="refresh">רענן</button>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="annual">תקציב שנתי</button>
+    <button class="tab-btn" data-tab="overview">סקירה חודשית</button>
   </div>
 
-  <div id="error" class="error" hidden></div>
+  <div id="tab-annual" class="tab-panel">
+    <div class="controls">
+      <div class="field">
+        <label for="year">שנה</label>
+        <input id="year" type="number" value="2026" />
+      </div>
+      <button id="refresh">רענן</button>
+    </div>
 
-  <div class="stat-row" style="margin-bottom: 20px;">
-    <div class="stat-tile">
-      <div class="label">כמה יש לנו בקופה</div>
-      <div class="value" id="stat-reserve">—</div>
-      <div class="edit-row">
-        <input id="reserve-input" type="number" min="0" step="1" />
-        <button id="save-reserve" class="secondary">שמור</button>
+    <div id="error" class="error" hidden></div>
+
+    <div class="stat-row" style="margin-bottom: 20px;">
+      <div class="stat-tile">
+        <div class="label">כמה יש לנו בקופה</div>
+        <div class="value" id="stat-reserve">—</div>
+        <div class="edit-row">
+          <input id="reserve-input" type="number" min="0" step="1" />
+          <button id="save-reserve" class="secondary">שמור</button>
+        </div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">כמה עוד לא נוצל לשנה זו</div>
+        <div class="value" id="stat-not-covered">—</div>
+        <div class="hint" id="stat-total-hint"></div>
+      </div>
+      <div class="stat-tile">
+        <div class="label">הפרשה נדרשת לכל חודש</div>
+        <div class="value accent" id="stat-monthly">—</div>
       </div>
     </div>
-    <div class="stat-tile">
-      <div class="label">כמה עוד לא נוצל לשנה זו</div>
-      <div class="value" id="stat-not-covered">—</div>
-      <div class="hint" id="stat-total-hint"></div>
+
+    <div class="card">
+      <h2>הוצאות לפי חודש</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>שם</th>
+            <th class="num">סכום שנתי</th>
+            <th class="num">נוצל</th>
+            <th>סטטוס</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="monthly-rows"></tbody>
+      </table>
     </div>
-    <div class="stat-tile">
-      <div class="label">הפרשה נדרשת לכל חודש</div>
-      <div class="value accent" id="stat-monthly">—</div>
+
+    <div class="card">
+      <h2>הוצאות כלליות (לא תלויות חודש)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>שם</th>
+            <th class="num">סכום שנתי</th>
+            <th class="num">נוצל</th>
+            <th>סטטוס</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="general-rows"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="5">
+              <button id="general-add-toggle" class="icon">+ הוסף הוצאה כללית</button>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
   </div>
 
-  <div class="card">
-    <h2>הוצאות לפי חודש</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>שם</th>
-          <th class="num">סכום שנתי</th>
-          <th class="num">נוצל</th>
-          <th>סטטוס</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="monthly-rows"></tbody>
-    </table>
-  </div>
+  <div id="tab-overview" class="tab-panel" hidden>
+    <div class="controls">
+      <div class="field">
+        <label for="ov-year">שנה</label>
+        <input id="ov-year" type="number" value="2026" />
+      </div>
+      <div class="field">
+        <label for="ov-month">חודש</label>
+        <input id="ov-month" type="number" min="1" max="12" value="7" />
+      </div>
+      <button id="ov-refresh">רענן</button>
+    </div>
 
-  <div class="card">
-    <h2>הוצאות כלליות (לא תלויות חודש)</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>שם</th>
-          <th class="num">סכום שנתי</th>
-          <th class="num">נוצל</th>
-          <th>סטטוס</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="general-rows"></tbody>
-      <tfoot>
-        <tr>
-          <td colspan="5">
-            <button id="general-add-toggle" class="icon">+ הוסף הוצאה כללית</button>
-          </td>
-        </tr>
-      </tfoot>
-    </table>
+    <div id="ov-error" class="error" hidden></div>
+
+    <div class="card">
+      <h2>הכנסות</h2>
+      <p class="hint" style="margin: 0 0 12px;">סכום אפשר להזין גם כנוסחה, למשל <code>600-200</code> — הערך המחושב הוא שמשמש לחישובים, והנוסחה נשמרת ומוצגת שוב בכניסה לשדה.</p>
+      <div class="overview-columns">
+        <div>
+          <h3>חייבות במעשר</h3>
+          <table>
+            <thead><tr><th>תאריך</th><th>תיאור</th><th class="num">סכום</th><th></th></tr></thead>
+            <tbody id="ov-income-tithe"></tbody>
+            <tfoot><tr><td colspan="4"><button class="icon add-row-toggle" data-target="income-tithe">+ הוסף הכנסה</button></td></tr></tfoot>
+          </table>
+        </div>
+        <div>
+          <h3>פטורות ממעשר</h3>
+          <table>
+            <thead><tr><th>תאריך</th><th>תיאור</th><th class="num">סכום</th><th></th></tr></thead>
+            <tbody id="ov-income-exempt"></tbody>
+            <tfoot><tr><td colspan="4"><button class="icon add-row-toggle" data-target="income-exempt">+ הוסף הכנסה</button></td></tr></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>חומש / מעשר</h2>
+      <div class="stat-row">
+        <div class="stat-tile">
+          <div class="label">יעד חומש (ברוטו)</div>
+          <div class="value" id="ov-gross-target">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">תרומות קבועות החודש</div>
+          <div class="value" id="ov-fixed-donations">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">קיזוז שהועבר מהחודש הקודם</div>
+          <div class="value" id="ov-carry-in">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">חומש לביצוע (נטו)</div>
+          <div class="value accent" id="ov-net-due">—</div>
+        </div>
+      </div>
+      <div class="hint" style="margin-top: 12px; display:flex; align-items:center; gap:8px;">
+        <span>שיעור מעשר נוכחי: <strong id="ov-rate">—</strong></span>
+        <input id="rate-input" type="number" min="0.01" max="1" step="0.01" style="width: 70px;" />
+        <button id="save-rate" class="secondary">שמור שיעור</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>תרומות החודש וקיזוז צדקה קטנה</h2>
+      <table>
+        <thead><tr><th>תאריך</th><th>תיאור</th><th>סוג</th><th class="num">סכום</th><th></th></tr></thead>
+        <tbody id="ov-donations"></tbody>
+        <tfoot><tr><td colspan="5"><button class="icon add-row-toggle" data-target="donation">+ הוסף תרומה</button></td></tr></tfoot>
+      </table>
+      <div class="stat-row" style="margin-top: 12px;">
+        <div class="stat-tile">
+          <div class="label">ניתן החודש (תרומות)</div>
+          <div class="value" id="ov-given">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">עוד נותר לתת החודש</div>
+          <div class="value accent" id="ov-remaining-give">—</div>
+        </div>
+      </div>
+      <div class="stat-row" style="margin-top: 12px;">
+        <div class="stat-tile">
+          <div class="label">הוצאות צדקה קטנות החודש</div>
+          <div class="value" id="ov-sc-total">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">זמין לקיזוז מהחודש הקודם</div>
+          <div class="value" id="ov-sc-available">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">קוזז בפועל החודש</div>
+          <div class="value" id="ov-sc-applied">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">יתרה שתעבור לחודש הבא</div>
+          <div class="value" id="ov-sc-remainder">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>הוצאות בהוראת קבע (הו"ק)</h2>
+      <p class="hint" style="margin: 0 0 12px;">לכל שורה: כמה מתוכנן לחודש, כמה כבר נוצל, והיתרה הפנויה — כמו בטבלת התקציב השנתי.</p>
+      <table>
+        <thead><tr><th>שם</th><th class="num">מתוכנן</th><th class="num">נוצל</th><th class="num">יתרה</th><th></th></tr></thead>
+        <tbody id="ov-fixed-expenses"></tbody>
+        <tfoot><tr><td colspan="5"><button class="icon add-row-toggle" data-target="fixed-expense">+ הוסף קטגוריית הוצאה</button></td></tr></tfoot>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>הוצאות שוטפות</h2>
+      <table>
+        <thead><tr><th>שם</th><th class="num">מתוכנן</th><th class="num">נוצל</th><th class="num">יתרה</th><th></th></tr></thead>
+        <tbody id="ov-regular-expenses"></tbody>
+        <tfoot><tr><td colspan="5"><button class="icon add-row-toggle" data-target="regular-expense">+ הוסף קטגוריית הוצאה</button></td></tr></tfoot>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>סיכום חודשי</h2>
+      <div class="stat-row">
+        <div class="stat-tile">
+          <div class="label">סה"כ הכנסות</div>
+          <div class="value" id="ov-total-income">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">החזרי חובות (בקרוב — ספר חובות)</div>
+          <div class="value" id="ov-debt-summary">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">סה"כ יוצא (תרומות + הוצאות + חובות)</div>
+          <div class="value" id="ov-total-outflow">—</div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">נשאר לחיסכון</div>
+          <div class="value accent" id="ov-remaining-save">—</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -315,61 +520,38 @@
       return `
         <td>${item.name}</td>
         <td class="num">${fmtMoney(item.totalAmount)}</td>
-        <td class="num">${fmtMoney(item.amountUsed)}</td>
+        <td class="num"><input class="usage-input" type="text" /></td>
         <td>${statusBadge(item)}</td>
-        <td>${item.isFullyUsed ? "" : `<button class="mark-usage" data-id="${item.annualBudgetItemId}">סמן מימוש</button>`}</td>
+        <td><button class="delete-row" title="מחק שורה">✕</button></td>
       `;
     }
 
-    function attachMarkUsageHandlers(tbody, items) {
-      tbody.querySelectorAll(".mark-usage").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const item = items.find(i => i.annualBudgetItemId === btn.dataset.id);
-          toggleUsageForm(btn, item);
-        });
-      });
+    function attachItemRowHandlers(row, item) {
+      attachFormulaInput(row.querySelector(".usage-input"), item.amountUsed, item.amountUsedFormula,
+        (amount, formula) => saveUsage(item, amount, formula));
+      row.querySelector(".delete-row").addEventListener("click", () => deleteItem(item.annualBudgetItemId, item.name));
     }
 
-    function toggleUsageForm(anchorBtn, item) {
-      const row = anchorBtn.closest("tr");
-      const existing = row.nextElementSibling;
-      if (existing && existing.classList.contains("usage-form")) {
-        existing.remove();
-        return;
-      }
-
-      const remaining = item.totalAmount - item.amountUsed;
-      const formRow = document.createElement("tr");
-      formRow.className = "usage-form";
-      formRow.innerHTML = `
-        <td colspan="5">
-          <div class="add-form-fields">
-            <span>סמן שנוצל עבור "${item.name}":</span>
-            <input name="amount" type="number" min="0.01" step="0.01" value="${remaining}" />
-            <button class="save-btn">שמור</button>
-            <button class="secondary cancel-btn">ביטול</button>
-          </div>
-        </td>
-      `;
-      row.after(formRow);
-
-      formRow.querySelector(".cancel-btn").addEventListener("click", () => formRow.remove());
-      formRow.querySelector(".save-btn").addEventListener("click", () =>
-        submitUsage(formRow, item.annualBudgetItemId));
-    }
-
-    async function submitUsage(formRow, itemId) {
-      const amount = parseFloat(formRow.querySelector('input[name="amount"]').value);
-      if (!(amount > 0)) {
-        showError("יש להזין סכום חיובי.");
+    async function deleteItem(id, name) {
+      if (!confirm(`למחוק את "${name}"?`)) {
         return;
       }
 
       try {
-        await fetchJson(`/api/annual-budget-items/${itemId}/usage`, {
+        await fetchJson(`/api/annual-budget-items/${id}`, { method: "DELETE" });
+        clearError();
+        await refresh();
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    async function saveUsage(item, amount, formula) {
+      try {
+        await fetchJson(`/api/annual-budget-items/${item.annualBudgetItemId}/usage`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount }),
+          body: JSON.stringify({ amount, amountFormula: formula }),
         });
         clearError();
         await refresh();
@@ -388,8 +570,12 @@
         const headerRow = document.createElement("tr");
         headerRow.className = "month-header";
         headerRow.innerHTML = `
-          <td colspan="4"><div class="month-name">${monthNames[month]}</div></td>
-          <td><button class="icon add-toggle" data-month="${month}">+</button></td>
+          <td colspan="5">
+            <div class="month-name">
+              ${monthNames[month]}
+              <button class="icon add-toggle" data-month="${month}">+</button>
+            </div>
+          </td>
         `;
         tbody.appendChild(headerRow);
 
@@ -403,6 +589,7 @@
             const row = document.createElement("tr");
             row.innerHTML = itemRowHtml(item);
             tbody.appendChild(row);
+            attachItemRowHandlers(row, item);
           }
         }
       }
@@ -410,7 +597,6 @@
       tbody.querySelectorAll(".add-toggle").forEach(btn => {
         btn.addEventListener("click", () => toggleAddForm(tbody, Number(btn.dataset.month), btn));
       });
-      attachMarkUsageHandlers(tbody, items);
     }
 
     function toggleAddForm(tbody, month, anchorBtn) {
@@ -427,7 +613,7 @@
         <td colspan="5">
           <div class="add-form-fields">
             <input name="name" type="text" placeholder="שם ההוצאה" />
-            <input name="amount" type="number" min="0.01" step="0.01" placeholder="סכום שנתי" />
+            <input name="amount" type="text" placeholder="סכום שנתי (או נוסחה)" />
             <button class="save-btn">שמור</button>
             <button class="secondary cancel-btn">ביטול</button>
           </div>
@@ -444,7 +630,21 @@
 
     async function submitNewItem(formRow, targetMonth) {
       const name = formRow.querySelector('input[name="name"]').value.trim();
-      const amount = parseFloat(formRow.querySelector('input[name="amount"]').value);
+      const amountText = formRow.querySelector('input[name="amount"]').value.trim();
+
+      let amount, formula;
+      try {
+        if (isPlainNumber(amountText)) {
+          amount = parseFloat(amountText);
+          formula = null;
+        } else {
+          amount = evaluateFormula(amountText);
+          formula = amountText;
+        }
+      } catch (err) {
+        showError(err.message);
+        return;
+      }
 
       if (!name || !(amount > 0)) {
         showError("יש להזין שם וסכום חיובי.");
@@ -459,6 +659,7 @@
             year: Number(currentYear()),
             name,
             totalAmount: amount,
+            totalAmountFormula: formula,
             targetMonth: targetMonth,
           }),
         });
@@ -483,10 +684,9 @@
           const row = document.createElement("tr");
           row.innerHTML = itemRowHtml(item);
           tbody.appendChild(row);
+          attachItemRowHandlers(row, item);
         }
       }
-
-      attachMarkUsageHandlers(tbody, generalItems);
     }
 
     document.getElementById("refresh").addEventListener("click", refresh);
@@ -524,7 +724,7 @@
         <td colspan="5">
           <div class="add-form-fields">
             <input name="name" type="text" placeholder="שם ההוצאה" />
-            <input name="amount" type="number" min="0.01" step="0.01" placeholder="סכום שנתי" />
+            <input name="amount" type="text" placeholder="סכום שנתי (או נוסחה)" />
             <button class="save-btn">שמור</button>
             <button class="secondary cancel-btn">ביטול</button>
           </div>
@@ -538,6 +738,512 @@
     });
 
     refresh();
+
+    // ---- Tabs ----
+
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("tab-annual").hidden = btn.dataset.tab !== "annual";
+        document.getElementById("tab-overview").hidden = btn.dataset.tab !== "overview";
+        if (btn.dataset.tab === "overview") {
+          refreshOverview();
+        }
+      });
+    });
+
+    // ---- Monthly Overview (Transactions & Tithe) ----
+
+    function ovShowError(message) {
+      const el = document.getElementById("ov-error");
+      el.textContent = "שגיאה: " + message;
+      el.hidden = false;
+    }
+
+    function ovClearError() {
+      document.getElementById("ov-error").hidden = true;
+    }
+
+    function ovYear() {
+      return document.getElementById("ov-year").value;
+    }
+
+    function ovMonth() {
+      return document.getElementById("ov-month").value;
+    }
+
+    // ---- Safe arithmetic formula support ("=600-200" -> 400) ----
+    // A small recursive-descent parser for +, -, *, /, parentheses and decimals.
+    // Deliberately not using eval()/Function() — only digits/operators/whitespace are consumed.
+
+    function isPlainNumber(text) {
+      return /^-?\d+(\.\d+)?$/.test(text.trim());
+    }
+
+    function evaluateFormula(rawText) {
+      const src = rawText.trim().replace(/^=/, "");
+      if (src === "") {
+        throw new Error("נוסחה ריקה");
+      }
+      let pos = 0;
+
+      function skipSpaces() {
+        while (pos < src.length && src[pos] === " ") pos++;
+      }
+      function peek() {
+        return src[pos];
+      }
+      function parseNumber() {
+        skipSpaces();
+        const start = pos;
+        while (pos < src.length && /[0-9.]/.test(peek())) pos++;
+        if (pos === start) throw new Error("נוסחה לא תקינה");
+        const value = parseFloat(src.slice(start, pos));
+        if (Number.isNaN(value)) throw new Error("נוסחה לא תקינה");
+        return value;
+      }
+      function parseFactor() {
+        skipSpaces();
+        const c = peek();
+        if (c === "+") { pos++; return parseFactor(); }
+        if (c === "-") { pos++; return -parseFactor(); }
+        if (c === "(") {
+          pos++;
+          const value = parseExpression();
+          skipSpaces();
+          if (peek() !== ")") throw new Error("חסר \")\"");
+          pos++;
+          return value;
+        }
+        return parseNumber();
+      }
+      function parseTerm() {
+        let value = parseFactor();
+        for (;;) {
+          skipSpaces();
+          const c = peek();
+          if (c === "*" || c === "/") {
+            pos++;
+            const rhs = parseFactor();
+            if (c === "/") {
+              if (rhs === 0) throw new Error("חילוק באפס");
+              value = value / rhs;
+            } else {
+              value = value * rhs;
+            }
+          } else break;
+        }
+        return value;
+      }
+      function parseExpression() {
+        let value = parseTerm();
+        for (;;) {
+          skipSpaces();
+          const c = peek();
+          if (c === "+" || c === "-") {
+            pos++;
+            const rhs = parseTerm();
+            value = c === "+" ? value + rhs : value - rhs;
+          } else break;
+        }
+        return value;
+      }
+
+      const result = parseExpression();
+      skipSpaces();
+      if (pos !== src.length) throw new Error("נוסחה לא תקינה");
+      return result;
+    }
+
+    // Turns a plain <input type="text"> into a formula-aware amount field: shows the computed
+    // number while blurred, the raw formula (or plain number) while focused, and calls onCommit
+    // with the new {amount, formula} pair only when the value actually changed.
+    function attachFormulaInput(input, amount, formula, onCommit) {
+      input.dataset.amount = amount;
+      input.dataset.formula = formula || "";
+      input.value = fmtNum(amount);
+
+      input.addEventListener("focus", () => {
+        input.value = input.dataset.formula || String(parseFloat(input.dataset.amount));
+      });
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") input.blur();
+      });
+
+      input.addEventListener("blur", async () => {
+        const text = input.value.trim();
+        const prevAmount = parseFloat(input.dataset.amount);
+        const prevFormula = input.dataset.formula || null;
+
+        if (text === "") {
+          input.value = fmtNum(prevAmount);
+          return;
+        }
+
+        let newAmount, newFormula;
+        try {
+          if (isPlainNumber(text)) {
+            newAmount = parseFloat(text);
+            newFormula = null;
+          } else {
+            newAmount = evaluateFormula(text);
+            newFormula = text;
+          }
+        } catch (err) {
+          ovShowError(err.message);
+          input.value = prevFormula || String(prevAmount);
+          return;
+        }
+
+        if (!(newAmount >= 0)) {
+          ovShowError("הסכום חייב להיות אי-שלילי.");
+          input.value = prevFormula || String(prevAmount);
+          return;
+        }
+
+        input.value = fmtNum(newAmount);
+        if (newAmount === prevAmount && newFormula === prevFormula) {
+          return;
+        }
+
+        input.dataset.amount = newAmount;
+        input.dataset.formula = newFormula || "";
+        await onCommit(newAmount, newFormula);
+      });
+    }
+
+    function dateInputValue(dateStr) {
+      return dateStr || new Date().toISOString().slice(0, 10);
+    }
+
+    // ---- Income & Donations: editable transaction rows ----
+
+    function renderTransactionRows(tbodyId, lines, colCount, onSave, onDelete, extraCellHtml) {
+      const tbody = document.getElementById(tbodyId);
+      tbody.innerHTML = "";
+      if (!lines || lines.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td colspan="${colCount}" style="color: var(--text-muted); font-style: italic;">אין תנועות החודש.</td>`;
+        tbody.appendChild(row);
+        return;
+      }
+      for (const line of lines) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${line.date}</td>
+          <td><input class="desc-input" type="text" value="${line.description ?? ""}" /></td>
+          ${extraCellHtml ? extraCellHtml(line) : ""}
+          <td class="num"><input class="amount-input usage-input" type="text" /></td>
+          <td><button class="delete-row" title="מחק">✕</button></td>
+        `;
+        tbody.appendChild(row);
+
+        const descInput = row.querySelector(".desc-input");
+        const amountInput = row.querySelector(".amount-input");
+
+        attachFormulaInput(amountInput, line.amount, line.amountFormula, (amount, formula) =>
+          onSave(line, { amount, amountFormula: formula }));
+
+        descInput.addEventListener("blur", () => {
+          if (descInput.value !== (line.description ?? "")) {
+            onSave(line, { description: descInput.value || null });
+          }
+        });
+        descInput.addEventListener("keydown", (e) => { if (e.key === "Enter") descInput.blur(); });
+
+        row.querySelector(".delete-row").addEventListener("click", () => onDelete(line));
+      }
+    }
+
+    async function saveTransactionPatch(line, patch) {
+      try {
+        await fetchJson(`/api/transactions/${line.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date: line.date,
+            amount: line.amount,
+            type: line.type,
+            paymentMethod: line.paymentMethod,
+            isTitheApplicable: line.isTitheApplicable,
+            description: line.description,
+            amountFormula: line.amountFormula,
+            ...patch,
+          }),
+        });
+        ovClearError();
+        await refreshOverview();
+      } catch (err) {
+        ovShowError(err.message);
+      }
+    }
+
+    async function deleteTransaction(line) {
+      try {
+        await fetchJson(`/api/transactions/${line.id}`, { method: "DELETE" });
+        ovClearError();
+        await refreshOverview();
+      } catch (err) {
+        ovShowError(err.message);
+      }
+    }
+
+    function donationTypeLabel(type) {
+      return type === "FixedDonation" ? "קבועה" : "צדקה קטנה";
+    }
+
+    function promptForAmount(label) {
+      const text = prompt(`${label} (אפשר גם נוסחה, למשל 600-200):`, "");
+      if (text === null) return null;
+      try {
+        if (isPlainNumber(text)) return { amount: parseFloat(text), formula: null };
+        return { amount: evaluateFormula(text), formula: text };
+      } catch (err) {
+        ovShowError(err.message);
+        return null;
+      }
+    }
+
+    async function submitNewIncome(isTitheApplicable) {
+      const parsed = promptForAmount("סכום ההכנסה");
+      if (!parsed || !(parsed.amount > 0)) {
+        if (parsed) ovShowError("הסכום חייב להיות חיובי.");
+        return;
+      }
+      const description = prompt("תיאור (לא חובה):", "") || null;
+
+      try {
+        await fetchJson("/api/transactions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date: dateInputValue(),
+            amount: parsed.amount,
+            amountFormula: parsed.formula,
+            type: "Income",
+            paymentMethod: "BankTransfer",
+            isTitheApplicable,
+            description,
+          }),
+        });
+        ovClearError();
+        await refreshOverview();
+      } catch (err) {
+        ovShowError(err.message);
+      }
+    }
+
+    async function submitNewDonation(type) {
+      const parsed = promptForAmount("סכום התרומה");
+      if (!parsed || !(parsed.amount > 0)) {
+        if (parsed) ovShowError("הסכום חייב להיות חיובי.");
+        return;
+      }
+      const description = prompt("תיאור (לא חובה):", "") || null;
+
+      try {
+        await fetchJson("/api/transactions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date: dateInputValue(),
+            amount: parsed.amount,
+            amountFormula: parsed.formula,
+            type,
+            paymentMethod: "BankTransfer",
+            isTitheApplicable: null,
+            description,
+          }),
+        });
+        ovClearError();
+        await refreshOverview();
+      } catch (err) {
+        ovShowError(err.message);
+      }
+    }
+
+    // ---- Fixed / Regular expense budget lines ----
+
+    function renderBudgetRows(tbodyId, items, onSave, onDelete) {
+      const tbody = document.getElementById(tbodyId);
+      tbody.innerHTML = "";
+      if (!items || items.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td colspan="5" style="color: var(--text-muted); font-style: italic;">אין קטגוריות מוגדרות החודש.</td>`;
+        tbody.appendChild(row);
+        return;
+      }
+      for (const item of items) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><input class="name-input" type="text" value="${item.name}" /></td>
+          <td class="num"><input class="budgeted-input usage-input" type="text" /></td>
+          <td class="num"><input class="used-input usage-input" type="text" /></td>
+          <td class="num">${fmtMoney(item.remaining)}</td>
+          <td><button class="delete-row" title="מחק">✕</button></td>
+        `;
+        tbody.appendChild(row);
+
+        const nameInput = row.querySelector(".name-input");
+        const budgetedInput = row.querySelector(".budgeted-input");
+        const usedInput = row.querySelector(".used-input");
+
+        attachFormulaInput(budgetedInput, item.budgetedAmount, item.budgetedAmountFormula, (amount, formula) =>
+          onSave(item, { budgetedAmount: amount, budgetedAmountFormula: formula }));
+        attachFormulaInput(usedInput, item.usedAmount, item.usedAmountFormula, (amount, formula) =>
+          onSave(item, { usedAmount: amount, usedAmountFormula: formula }));
+
+        nameInput.addEventListener("blur", () => {
+          if (nameInput.value && nameInput.value !== item.name) {
+            onSave(item, { name: nameInput.value });
+          }
+        });
+        nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
+
+        row.querySelector(".delete-row").addEventListener("click", () => onDeleteBudgetItem(item));
+      }
+
+      async function onDeleteBudgetItem(item) {
+        await onDelete(item);
+      }
+    }
+
+    async function saveBudgetItemPatch(item, patch) {
+      try {
+        await fetchJson(`/api/monthly-expense-budgets/${item.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: item.name,
+            budgetedAmount: item.budgetedAmount,
+            budgetedAmountFormula: item.budgetedAmountFormula,
+            usedAmount: item.usedAmount,
+            usedAmountFormula: item.usedAmountFormula,
+            ...patch,
+          }),
+        });
+        ovClearError();
+        await refreshOverview();
+      } catch (err) {
+        ovShowError(err.message);
+      }
+    }
+
+    async function deleteBudgetItem(item) {
+      try {
+        await fetchJson(`/api/monthly-expense-budgets/${item.id}`, { method: "DELETE" });
+        ovClearError();
+        await refreshOverview();
+      } catch (err) {
+        ovShowError(err.message);
+      }
+    }
+
+    async function submitNewBudgetItem(type) {
+      const name = prompt("שם הקטגוריה (למשל: ארנונה):", "");
+      if (!name) return;
+      const parsed = promptForAmount("כמה מתוכנן לחודש");
+      if (!parsed || !(parsed.amount >= 0)) {
+        if (parsed) ovShowError("הסכום חייב להיות אי-שלילי.");
+        return;
+      }
+
+      try {
+        await fetchJson("/api/monthly-expense-budgets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            year: Number(ovYear()),
+            month: Number(ovMonth()),
+            name,
+            type,
+            budgetedAmount: parsed.amount,
+            budgetedAmountFormula: parsed.formula,
+          }),
+        });
+        ovClearError();
+        await refreshOverview();
+      } catch (err) {
+        ovShowError(err.message);
+      }
+    }
+
+    // ---- Main refresh ----
+
+    async function refreshOverview() {
+      ovClearError();
+      try {
+        const [overview, titheSetting] = await Promise.all([
+          fetchJson(`/api/monthly-overview?year=${ovYear()}&month=${ovMonth()}`),
+          fetchJson("/api/tithe-setting"),
+        ]);
+
+        renderTransactionRows("ov-income-tithe", overview.titheApplicableIncome.lines, 4, saveTransactionPatch, deleteTransaction);
+        renderTransactionRows("ov-income-exempt", overview.nonTitheApplicableIncome.lines, 4, saveTransactionPatch, deleteTransaction);
+        renderTransactionRows("ov-donations", overview.donations.lines, 5, saveTransactionPatch, deleteTransaction,
+          (line) => `<td>${donationTypeLabel(line.type)}</td>`);
+
+        renderBudgetRows("ov-fixed-expenses", overview.fixedExpenses.items, saveBudgetItemPatch, deleteBudgetItem);
+        renderBudgetRows("ov-regular-expenses", overview.regularExpenses.items, saveBudgetItemPatch, deleteBudgetItem);
+
+        document.getElementById("ov-gross-target").textContent = fmtMoney(overview.titheObligation.grossTitheTarget);
+        document.getElementById("ov-fixed-donations").textContent = fmtMoney(overview.titheObligation.fixedDonationsThisMonth);
+        document.getElementById("ov-carry-in").textContent = fmtMoney(overview.titheObligation.creditCarriedIn);
+        document.getElementById("ov-net-due").textContent = fmtMoney(overview.titheObligation.netTitheDue);
+
+        document.getElementById("ov-given").textContent = fmtMoney(overview.donations.givenThisMonth);
+        document.getElementById("ov-remaining-give").textContent = fmtMoney(overview.donations.remainingToGive);
+
+        document.getElementById("ov-sc-total").textContent = fmtMoney(overview.smallCharityOffsetLedger.smallCharityExpenseTotal);
+        document.getElementById("ov-sc-available").textContent = fmtMoney(overview.smallCharityOffsetLedger.availableFromPriorMonth);
+        document.getElementById("ov-sc-applied").textContent = fmtMoney(overview.smallCharityOffsetLedger.appliedThisMonth);
+        document.getElementById("ov-sc-remainder").textContent = fmtMoney(overview.smallCharityOffsetLedger.unappliedRemainder);
+
+        document.getElementById("ov-total-income").textContent = fmtMoney(overview.totalIncome);
+        document.getElementById("ov-debt-summary").textContent = fmtMoney(overview.debtRepaymentsSummary);
+        document.getElementById("ov-total-outflow").textContent = fmtMoney(overview.totalOutflow);
+        document.getElementById("ov-remaining-save").textContent = fmtMoney(overview.remainingToSave);
+
+        document.getElementById("ov-rate").textContent = `${Math.round(titheSetting.rate * 100)}%`;
+        document.getElementById("rate-input").value = titheSetting.rate;
+      } catch (err) {
+        ovShowError(err.message);
+      }
+    }
+
+    document.getElementById("ov-refresh").addEventListener("click", refreshOverview);
+
+    document.getElementById("save-rate").addEventListener("click", async () => {
+      const rate = parseFloat(document.getElementById("rate-input").value);
+      if (!(rate > 0) || rate > 1) {
+        ovShowError("שיעור המעשר חייב להיות מספר בין 0 ל-1.");
+        return;
+      }
+      try {
+        await fetchJson("/api/tithe-setting", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rate }),
+        });
+        ovClearError();
+        await refreshOverview();
+      } catch (err) {
+        ovShowError(err.message);
+      }
+    });
+
+    document.querySelectorAll(".add-row-toggle").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const target = btn.dataset.target;
+        if (target === "income-tithe") submitNewIncome(true);
+        else if (target === "income-exempt") submitNewIncome(false);
+        else if (target === "donation") submitNewDonation("FixedDonation");
+        else if (target === "fixed-expense") submitNewBudgetItem("FixedExpense");
+        else if (target === "regular-expense") submitNewBudgetItem("RegularExpense");
+      });
+    });
   </script>
 </body>
 </html>
