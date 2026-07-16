@@ -23,6 +23,7 @@ public static class DebtEndpoints
         debt.CounterpartyName,
         debt.OriginalAmount,
         debt.CurrentBalance,
+        debt.CurrentBalanceFormula,
         debt.Status,
         debt.TargetDate,
         debt.RepaymentRate,
@@ -114,7 +115,7 @@ public static class DebtEndpoints
             return Results.NotFound();
         }
 
-        debt.SetCurrentBalance(request.CurrentBalance);
+        debt.SetCurrentBalance(request.CurrentBalance, request.CurrentBalanceFormula);
         await repository.SaveChangesAsync();
 
         return Results.Ok(ToResponse(debt));

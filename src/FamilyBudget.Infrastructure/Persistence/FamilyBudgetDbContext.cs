@@ -121,6 +121,7 @@ public class FamilyBudgetDbContext : DbContext
             builder.HasKey(e => e.Id);
             builder.Property(e => e.PurposeLabel).IsRequired().HasMaxLength(200);
             builder.Property(e => e.Amount).HasColumnType("decimal(18,2)").IsRequired();
+            builder.Property(e => e.AmountFormula).HasMaxLength(200);
 
             builder.HasOne<Fund>()
                 .WithMany()
@@ -138,6 +139,7 @@ public class FamilyBudgetDbContext : DbContext
             builder.Property(d => d.CounterpartyName).IsRequired().HasMaxLength(200);
             builder.Property(d => d.OriginalAmount).HasColumnType("decimal(18,2)").IsRequired();
             builder.Property(d => d.CurrentBalance).HasColumnType("decimal(18,2)").IsRequired();
+            builder.Property(d => d.CurrentBalanceFormula).HasMaxLength(200);
             builder.Property(d => d.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
             builder.Property(d => d.TargetDate);
             builder.Property(d => d.RepaymentRate).HasColumnType("decimal(18,2)");

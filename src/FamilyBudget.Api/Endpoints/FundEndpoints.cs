@@ -20,7 +20,7 @@ public static class FundEndpoints
     }
 
     private static FundEarmarkResponse ToResponse(FundEarmark earmark) => new(
-        earmark.Id, earmark.PurposeLabel, earmark.Amount);
+        earmark.Id, earmark.PurposeLabel, earmark.Amount, earmark.AmountFormula);
 
     private static FundSummaryResponse ToResponse(FundSummary summary) => new(
         summary.FundId,
@@ -108,7 +108,7 @@ public static class FundEndpoints
             return Results.NotFound();
         }
 
-        var earmark = new FundEarmark(Guid.NewGuid(), fundId, request.PurposeLabel, request.Amount);
+        var earmark = new FundEarmark(Guid.NewGuid(), fundId, request.PurposeLabel, request.Amount, request.AmountFormula);
         await earmarkRepository.AddAsync(earmark);
 
         return Results.Created($"/api/funds/earmarks/{earmark.Id}", ToResponse(earmark));
@@ -133,7 +133,7 @@ public static class FundEndpoints
             return Results.NotFound();
         }
 
-        earmark.Update(request.PurposeLabel, request.Amount);
+        earmark.Update(request.PurposeLabel, request.Amount, request.AmountFormula);
         await repository.SaveChangesAsync();
 
         return Results.Ok(ToResponse(earmark));

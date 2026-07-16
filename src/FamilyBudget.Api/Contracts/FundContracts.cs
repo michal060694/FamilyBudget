@@ -1,6 +1,6 @@
 namespace FamilyBudget.Api.Contracts;
 
-public record FundEarmarkResponse(Guid Id, string PurposeLabel, decimal Amount);
+public record FundEarmarkResponse(Guid Id, string PurposeLabel, decimal Amount, string? AmountFormula);
 
 public record FundSummaryResponse(
     Guid FundId,
@@ -16,6 +16,6 @@ public record CreateFundRequest(string Name, decimal TotalBalance);
 
 public record UpdateFundRequest(string Name, decimal TotalBalance);
 
-public record CreateFundEarmarkRequest(string PurposeLabel, decimal Amount);
+public record CreateFundEarmarkRequest(string PurposeLabel, decimal Amount, string? AmountFormula = null);
 
-public record UpdateFundEarmarkRequest(string PurposeLabel, decimal Amount);
+public record UpdateFundEarmarkRequest(string PurposeLabel, decimal Amount, string? AmountFormula = null);

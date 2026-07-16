@@ -140,6 +140,23 @@ public class DebtEndpointsTests : IClassFixture<FamilyBudgetApiFactory>
     }
 
     [Fact]
+    public async Task SetBalance_WithFormula_PersistsAmountAndFormula()
+    {
+        var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/debts", new CreateDebtRequest(DebtDirection.Payable, "Formula Balance", 1000m));
+        var created = await createResponse.Content.ReadFromJsonAsync<DebtResponse>(JsonOptions);
+
+        var balanceResponse = await client.PatchAsJsonAsync(
+            $"/api/debts/{created!.Id}/balance", new SetDebtBalanceRequest(600m, "1000-400"));
+
+        var updated = await balanceResponse.Content.ReadFromJsonAsync<DebtResponse>(JsonOptions);
+        Assert.Equal(600m, updated!.CurrentBalance);
+        Assert.Equal("1000-400", updated.CurrentBalanceFormula);
+    }
+
+    [Fact]
     public async Task SetBalance_Zero_ClosesDebt()
     {
         var client = _factory.CreateClient();

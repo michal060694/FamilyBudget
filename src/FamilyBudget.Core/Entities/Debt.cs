@@ -25,6 +25,10 @@ public class Debt
     public string CounterpartyName { get; private set; }
     public decimal OriginalAmount { get; private set; }
     public decimal CurrentBalance { get; private set; }
+
+    /// <summary>Raw formula the user typed for <see cref="CurrentBalance"/> via <see cref="SetCurrentBalance"/> (e.g. "1000-250"), or null if entered as a plain number or set by another path (repayment, edit).</summary>
+    public string? CurrentBalanceFormula { get; private set; }
+
     public DebtStatus Status { get; private set; }
     public DateOnly? TargetDate { get; private set; }
     public decimal? RepaymentRate { get; private set; }
@@ -70,6 +74,7 @@ public class Debt
         CounterpartyName = counterpartyName;
         OriginalAmount = originalAmount;
         CurrentBalance = Math.Max(0m, originalAmount - amountAlreadyPaid);
+        CurrentBalanceFormula = null;
         Status = CurrentBalance == 0m ? DebtStatus.Closed : DebtStatus.Open;
         TargetDate = targetDate;
         RepaymentRate = repaymentRate;
@@ -77,7 +82,7 @@ public class Debt
     }
 
     /// <summary>Directly corrects the current balance (e.g. fixing a data-entry mistake), bypassing repayment tracking.</summary>
-    public void SetCurrentBalance(decimal newBalance)
+    public void SetCurrentBalance(decimal newBalance, string? formula = null)
     {
         if (newBalance < 0)
         {
@@ -85,6 +90,7 @@ public class Debt
         }
 
         CurrentBalance = newBalance;
+        CurrentBalanceFormula = formula;
         Status = newBalance == 0m ? DebtStatus.Closed : DebtStatus.Open;
     }
 
@@ -107,6 +113,7 @@ public class Debt
         }
 
         CurrentBalance -= amount;
+        CurrentBalanceFormula = null;
         if (CurrentBalance == 0m)
         {
             Status = DebtStatus.Closed;

@@ -125,6 +125,40 @@ public class DebtTests
     }
 
     [Fact]
+    public void SetCurrentBalance_WithFormula_StoresFormula()
+    {
+        var debt = new Debt(Guid.NewGuid(), DebtDirection.Receivable, "Yossi", 1000m);
+
+        debt.SetCurrentBalance(600m, "1000-400");
+
+        Assert.Equal(600m, debt.CurrentBalance);
+        Assert.Equal("1000-400", debt.CurrentBalanceFormula);
+    }
+
+    [Fact]
+    public void RecordRepayment_ClearsAnyPreviousBalanceFormula()
+    {
+        var debt = new Debt(Guid.NewGuid(), DebtDirection.Payable, "Gemach", 1000m);
+        debt.SetCurrentBalance(800m, "1000-200");
+
+        debt.RecordRepayment(300m);
+
+        Assert.Equal(500m, debt.CurrentBalance);
+        Assert.Null(debt.CurrentBalanceFormula);
+    }
+
+    [Fact]
+    public void Update_ClearsAnyPreviousBalanceFormula()
+    {
+        var debt = new Debt(Guid.NewGuid(), DebtDirection.Payable, "Gemach", 1000m);
+        debt.SetCurrentBalance(800m, "1000-200");
+
+        debt.Update("Gemach", 1200m, null, null, null);
+
+        Assert.Null(debt.CurrentBalanceFormula);
+    }
+
+    [Fact]
     public void Update_CorrectingAmount_PreservesAlreadyPaidAmount()
     {
         var debt = new Debt(Guid.NewGuid(), DebtDirection.Payable, "Gemach", 1000m);

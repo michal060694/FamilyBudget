@@ -8,6 +8,7 @@ public record DebtResponse(
     string CounterpartyName,
     decimal OriginalAmount,
     decimal CurrentBalance,
+    string? CurrentBalanceFormula,
     DebtStatus Status,
     DateOnly? TargetDate,
     decimal? RepaymentRate,
@@ -32,4 +33,4 @@ public record UpdateDebtRequest(
 
 public record RecordRepaymentRequest(decimal Amount, PaymentMethod PaymentMethod);
 
-public record SetDebtBalanceRequest(decimal CurrentBalance);
+public record SetDebtBalanceRequest(decimal CurrentBalance, string? CurrentBalanceFormula = null);

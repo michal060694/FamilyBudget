@@ -146,6 +146,29 @@ public class FundEndpointsTests : IClassFixture<FamilyBudgetApiFactory>
     }
 
     [Fact]
+    public async Task CreateEarmark_WithFormula_PersistsAmountAndFormula()
+    {
+        var client = _factory.CreateClient();
+
+        var createFund = await client.PostAsJsonAsync("/api/funds", new CreateFundRequest("Formula Fund", 1000m));
+        var fund = await createFund.Content.ReadFromJsonAsync<FundSummaryResponse>();
+
+        var createResponse = await client.PostAsJsonAsync(
+            $"/api/funds/{fund!.FundId}/earmarks", new CreateFundEarmarkRequest("פאה", 600m, "100+500"));
+
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        var created = await createResponse.Content.ReadFromJsonAsync<FundEarmarkResponse>();
+        Assert.Equal(600m, created!.Amount);
+        Assert.Equal("100+500", created.AmountFormula);
+
+        var updateResponse = await client.PutAsJsonAsync(
+            $"/api/funds/earmarks/{created.Id}", new UpdateFundEarmarkRequest("פאה", 900m, "300*3"));
+        var updated = await updateResponse.Content.ReadFromJsonAsync<FundEarmarkResponse>();
+        Assert.Equal(900m, updated!.Amount);
+        Assert.Equal("300*3", updated.AmountFormula);
+    }
+
+    [Fact]
     public async Task CreateEarmark_UnknownFundId_ReturnsNotFound()
     {
         var client = _factory.CreateClient();

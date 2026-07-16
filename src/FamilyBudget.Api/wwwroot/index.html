@@ -151,7 +151,31 @@
     .chevron { transition: none; }
   }
 
-  [data-fund-id] { border-top: 4px solid var(--card-accent); }
+  #funds-list { display: flex; flex-wrap: wrap; gap: 14px; }
+  .fund-card {
+    flex: 1 1 300px;
+    max-width: 340px;
+    margin-bottom: 0;
+    padding: 12px 14px;
+    border-width: 2px;
+    border-style: solid;
+    overflow-x: visible;
+  }
+  .fund-card.fund-balanced { border-color: var(--status-good); }
+  .fund-card.fund-unbalanced { border-color: var(--status-critical); }
+  .fund-card-header { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .fund-card .fund-name-input { font-size: 0.95rem; font-weight: 700; min-width: 0; }
+  .fund-stats { display: flex; gap: 18px; margin: 8px 0; }
+  .fund-stat { display: flex; flex-direction: column; gap: 1px; }
+  .fund-stat-label { font-size: 0.7rem; color: var(--text-secondary); }
+  .fund-stat .fund-balance-input { font-size: 0.95rem; font-weight: 600; width: 90px; padding: 2px 4px; }
+  .fund-stat .value { font-size: 0.95rem; font-weight: 600; }
+  .fund-earmarks-table { margin-top: 6px; font-size: 0.8rem; table-layout: fixed; width: 100%; }
+  .fund-earmarks-table th, .fund-earmarks-table td { padding: 4px 6px; overflow: hidden; text-overflow: ellipsis; }
+  .fund-earmarks-table th:nth-child(2), .fund-earmarks-table td:nth-child(2) { width: 74px; }
+  .fund-earmarks-table th:last-child, .fund-earmarks-table td:last-child { width: 26px; padding-inline: 0; }
+  .fund-card .name-input { min-width: 0; }
+  .fund-card .amount-input { width: 64px; }
 
   .stat-row { display: flex; gap: 16px; flex-wrap: wrap; }
   .stat-tile {
@@ -1382,7 +1406,7 @@
     // Turns a plain <input type="text"> into a formula-aware amount field: shows the computed
     // number while blurred, the raw formula (or plain number) while focused, and calls onCommit
     // with the new {amount, formula} pair only when the value actually changed.
-    function attachFormulaInput(input, amount, formula, onCommit) {
+    function attachFormulaInput(input, amount, formula, onCommit, onError = ovShowError) {
       input.dataset.amount = amount;
       input.dataset.formula = formula || "";
       input.value = fmtNum(amount);
@@ -1415,13 +1439,13 @@
             newFormula = text;
           }
         } catch (err) {
-          ovShowError(err.message);
+          onError(err.message);
           input.value = prevFormula || String(prevAmount);
           return;
         }
 
         if (!(newAmount >= 0)) {
-          ovShowError("הסכום חייב להיות אי-שלילי.");
+          onError("הסכום חייב להיות אי-שלילי.");
           input.value = prevFormula || String(prevAmount);
           return;
         }
@@ -2384,39 +2408,25 @@
       document.getElementById("funds-error").hidden = true;
     }
 
-    function discrepancyBadgeHtml(discrepancy) {
-      if (discrepancy === 0) {
-        return '<span class="badge good">✓ מאוזן</span>';
-      }
-      if (discrepancy > 0) {
-        return `<span class="badge partial">נותר לצבוע ${fmtMoney(discrepancy)}</span>`;
-      }
-      return `<span class="badge critical">חריגה של ${fmtMoney(-discrepancy)}</span>`;
-    }
-
-    function fundCardHtml(fund, accentIndex) {
-      const accentClass = ["", "card-gold", "card-sage", "card-berry"][accentIndex % 4];
+    function fundCardHtml(fund) {
+      const balancedClass = fund.discrepancy === 0 ? "fund-balanced" : "fund-unbalanced";
       return `
-        <div class="card ${accentClass}" data-fund-id="${fund.fundId}">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div class="card fund-card ${balancedClass}" data-fund-id="${fund.fundId}">
+          <div class="fund-card-header">
             <input class="fund-name-input" type="text" value="${escapeHtml(fund.name)}" />
-            <button class="delete-row fund-delete-btn" title="מחק קרן" aria-label="מחק את הקרן ${escapeHtml(fund.name)}">✕ מחק קרן</button>
+            <button class="delete-row fund-delete-btn" title="מחק קרן" aria-label="מחק את הקרן ${escapeHtml(fund.name)}">✕</button>
           </div>
-          <div class="stat-row" style="margin-top:12px;">
-            <div class="stat-tile">
-              <div class="label">יתרה כוללת</div>
+          <div class="fund-stats">
+            <div class="fund-stat">
+              <span class="fund-stat-label">יתרה</span>
               <input class="fund-balance-input usage-input" type="number" min="0" step="0.01" value="${fund.totalBalance}" />
             </div>
-            <div class="stat-tile">
-              <div class="label">סה"כ צבוע</div>
-              <div class="value fund-earmarked-value">${fmtMoney(fund.earmarkedTotal)}</div>
-            </div>
-            <div class="stat-tile">
-              <div class="label">איזון</div>
-              <div class="value fund-discrepancy-value">${discrepancyBadgeHtml(fund.discrepancy)}</div>
+            <div class="fund-stat">
+              <span class="fund-stat-label">צבוע</span>
+              <span class="value fund-earmarked-value">${fmtMoney(fund.earmarkedTotal)}</span>
             </div>
           </div>
-          <table style="margin-top:16px;">
+          <table class="fund-earmarks-table">
             <thead><tr><th>מטרה</th><th class="num">סכום</th><th></th></tr></thead>
             <tbody class="fund-earmarks-body"></tbody>
             <tfoot><tr><td colspan="3"><button class="icon fund-add-earmark-toggle">+ הוסף ייעוד</button></td></tr></tfoot>
@@ -2437,7 +2447,7 @@
         const row = document.createElement("tr");
         row.innerHTML = `
           <td><input class="name-input" type="text" value="${escapeHtml(earmark.purposeLabel)}" /></td>
-          <td class="num"><input class="amount-input usage-input" type="number" min="0.01" step="0.01" value="${earmark.amount}" /></td>
+          <td class="num"><input class="amount-input usage-input" type="text" /></td>
           <td><button class="delete-row" title="מחק" aria-label="מחק את הייעוד ${escapeHtml(earmark.purposeLabel)}">✕</button></td>
         `;
         tbody.appendChild(row);
@@ -2445,21 +2455,17 @@
         const nameInput = row.querySelector(".name-input");
         const amountInput = row.querySelector(".amount-input");
 
-        const saveEdit = async () => {
-          const purposeLabel = nameInput.value.trim();
-          const amount = parseFloat(amountInput.value);
-          if (!purposeLabel || !(amount > 0)) {
-            fundsShowError("יש להזין מטרה וסכום חיובי.");
-            return;
-          }
-          if (purposeLabel === earmark.purposeLabel && amount === earmark.amount) {
-            return;
-          }
+        const saveEarmarkPatch = async (patch) => {
           try {
             await fetchJson(`/api/funds/earmarks/${earmark.id}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ purposeLabel, amount }),
+              body: JSON.stringify({
+                purposeLabel: earmark.purposeLabel,
+                amount: earmark.amount,
+                amountFormula: earmark.amountFormula,
+                ...patch,
+              }),
             });
             fundsClearError();
             await refreshFunds();
@@ -2468,10 +2474,15 @@
           }
         };
 
-        nameInput.addEventListener("blur", () => guardedSave(nameInput, saveEdit));
+        attachFormulaInput(amountInput, earmark.amount, earmark.amountFormula,
+          (amount, amountFormula) => saveEarmarkPatch({ amount, amountFormula }), fundsShowError);
+
+        nameInput.addEventListener("blur", () => {
+          if (nameInput.value.trim() && nameInput.value.trim() !== earmark.purposeLabel) {
+            guardedSave(nameInput, () => saveEarmarkPatch({ purposeLabel: nameInput.value.trim() }));
+          }
+        });
         nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
-        amountInput.addEventListener("blur", () => guardedSave(amountInput, saveEdit));
-        amountInput.addEventListener("keydown", (e) => { if (e.key === "Enter") amountInput.blur(); });
 
         attachConfirmDelete(row.querySelector(".delete-row"), async () => {
           try {
@@ -2498,7 +2509,7 @@
         <td colspan="3">
           <div class="add-form-fields">
             <input type="text" class="new-earmark-name" placeholder="מטרה (למשל: פאה)" />
-            <input type="number" class="new-earmark-amount" min="0.01" step="0.01" placeholder="סכום" />
+            <input type="text" class="new-earmark-amount" placeholder="סכום (או נוסחה)" />
             <button class="save-btn">שמור</button>
             <button class="secondary cancel-btn">ביטול</button>
           </div>
@@ -2510,16 +2521,25 @@
       const saveBtn = row.querySelector(".save-btn");
       saveBtn.addEventListener("click", () => withPending(saveBtn, async () => {
         const purposeLabel = row.querySelector(".new-earmark-name").value.trim();
-        const amount = parseFloat(row.querySelector(".new-earmark-amount").value);
-        if (!purposeLabel || !(amount > 0)) {
+        const amountText = row.querySelector(".new-earmark-amount").value.trim();
+
+        let parsed;
+        try {
+          parsed = parseAmountText(amountText);
+        } catch (err) {
+          fundsShowError(err.message);
+          return;
+        }
+        if (!purposeLabel || !(parsed.amount > 0)) {
           fundsShowError("יש להזין מטרה וסכום חיובי.");
           return;
         }
+
         try {
           await fetchJson(`/api/funds/${fundId}/earmarks`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ purposeLabel, amount }),
+            body: JSON.stringify({ purposeLabel, amount: parsed.amount, amountFormula: parsed.formula }),
           });
           fundsClearError();
           await refreshFunds();
@@ -2545,9 +2565,9 @@
           return;
         }
 
-        data.funds.forEach((fund, index) => {
+        data.funds.forEach((fund) => {
           const wrapper = document.createElement("div");
-          wrapper.innerHTML = fundCardHtml(fund, index);
+          wrapper.innerHTML = fundCardHtml(fund);
           const card = wrapper.firstElementChild;
           container.appendChild(card);
 
@@ -2559,8 +2579,6 @@
 
           wireCalcTrigger(card.querySelector(".fund-earmarked-value"), () =>
             Array.from(earmarksBody.querySelectorAll(".amount-input")));
-          wireCalcTrigger(card.querySelector(".fund-discrepancy-value"), () =>
-            [balanceInput, ...Array.from(earmarksBody.querySelectorAll(".amount-input"))]);
 
           const saveFund = async () => {
             const name = nameInput.value.trim();
@@ -2693,12 +2711,12 @@
       }
     }
 
-    async function saveDebtBalance(debt, currentBalance) {
+    async function saveDebtBalance(debt, currentBalance, currentBalanceFormula) {
       try {
         await fetchJson(`/api/debts/${debt.id}/balance`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ currentBalance }),
+          body: JSON.stringify({ currentBalance, currentBalanceFormula }),
         });
         debtsClearError();
         await refreshDebts();
@@ -2709,17 +2727,8 @@
 
     function attachBalanceHandler(row, debt) {
       const balanceInput = row.querySelector(".balance-input");
-      balanceInput.addEventListener("blur", () => {
-        const value = parseFloat(balanceInput.value);
-        if (!(value >= 0)) {
-          debtsShowError("היתרה חייבת להיות מספר אי-שלילי.");
-          return;
-        }
-        if (value !== debt.currentBalance) {
-          guardedSave(balanceInput, () => saveDebtBalance(debt, value));
-        }
-      });
-      balanceInput.addEventListener("keydown", (e) => { if (e.key === "Enter") balanceInput.blur(); });
+      attachFormulaInput(balanceInput, debt.currentBalance, debt.currentBalanceFormula,
+        (amount, formula) => saveDebtBalance(debt, amount, formula), debtsShowError);
     }
 
     async function deleteDebt(debt) {
@@ -2766,7 +2775,7 @@
         const row = document.createElement("tr");
         row.innerHTML = `
           <td><input class="name-input" type="text" value="${escapeHtml(debt.counterpartyName)}" /></td>
-          <td class="num"><input class="balance-input usage-input" type="number" min="0" step="0.01" value="${debt.currentBalance}" /></td>
+          <td class="num"><input class="balance-input usage-input" type="text" /></td>
           <td><input class="date-input desc-input" type="date" value="${escapeHtml(debt.targetDate ?? "")}" /></td>
           <td><input class="notes-input desc-input" type="text" value="${escapeHtml(debt.notes ?? "")}" /></td>
           <td>${debtStatusBadgeHtml(debt.status)}</td>
@@ -2807,7 +2816,7 @@
         const row = document.createElement("tr");
         row.innerHTML = `
           <td><input class="name-input" type="text" value="${escapeHtml(debt.counterpartyName)}" /></td>
-          <td class="num"><input class="balance-input usage-input" type="number" min="0" step="0.01" value="${debt.currentBalance}" /></td>
+          <td class="num"><input class="balance-input usage-input" type="text" /></td>
           <td><input class="rate-input usage-input" type="number" min="0" step="0.01" value="${debt.repaymentRate ?? ""}" placeholder="—" /></td>
           <td>${debtStatusBadgeHtml(debt.status)}</td>
           <td>${repayCellHtml(debt)}</td>
