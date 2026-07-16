@@ -113,6 +113,39 @@ public class MonthlyExpenseBudgetEndpointsTests : IClassFixture<FamilyBudgetApiF
     }
 
     [Fact]
+    public async Task Create_DefaultsIncludeInOutflowTotal_ToTrue()
+    {
+        var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/monthly-expense-budgets",
+            new CreateMonthlyExpenseBudgetItemRequest(2064, 10, "Water", TransactionType.RegularExpense, 80m));
+
+        var created = await createResponse.Content.ReadFromJsonAsync<MonthlyExpenseBudgetItemView>(JsonOptions);
+        Assert.True(created!.IncludeInOutflowTotal);
+    }
+
+    [Fact]
+    public async Task Update_CanExcludeItemFromOutflowTotal()
+    {
+        const int year = 2065;
+        const int month = 11;
+        var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/monthly-expense-budgets",
+            new CreateMonthlyExpenseBudgetItemRequest(year, month, "Vacation (paid from savings)", TransactionType.RegularExpense, 3000m));
+        var created = await createResponse.Content.ReadFromJsonAsync<MonthlyExpenseBudgetItemView>(JsonOptions);
+
+        var updateResponse = await client.PutAsJsonAsync(
+            $"/api/monthly-expense-budgets/{created!.Id}",
+            new UpdateMonthlyExpenseBudgetItemRequest("Vacation (paid from savings)", 3000m, 0m, IncludeInOutflowTotal: false));
+
+        var updated = await updateResponse.Content.ReadFromJsonAsync<MonthlyExpenseBudgetItemView>(JsonOptions);
+        Assert.False(updated!.IncludeInOutflowTotal);
+    }
+
+    [Fact]
     public async Task Delete_UnknownId_ReturnsNotFound()
     {
         var client = _factory.CreateClient();

@@ -222,7 +222,7 @@
   }
   dialog.modal::backdrop { background: rgba(0, 0, 0, 0.45); }
   dialog.modal h3 { font-size: 1rem; margin: 0 0 12px; }
-  dialog.modal .modal-actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+  dialog.modal .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   .annual-table { table-layout: fixed; }
@@ -513,6 +513,7 @@
         <input id="ov-month" type="number" min="1" max="12" value="7" />
       </div>
       <button id="ov-refresh">רענן</button>
+      <button id="open-template-modal">הכנס תבנית לחודש הנוכחי</button>
     </div>
 
     <div id="ov-error" class="error" hidden></div>
@@ -616,6 +617,40 @@
       </div>
     </dialog>
 
+    <dialog id="modal-monthly-template" class="modal" style="width:min(820px,94vw);">
+      <h3>תבנית חודשית</h3>
+      <p class="hint" style="margin: 0 0 12px;">קטגוריות שחוזרות כל חודש. אפשר לערוך, להוסיף ולמחוק כאן — כל שינוי נשמר מיד בתבנית עצמה. כשהתבנית מוכנה, לחצי על הכפתור למטה כדי להכניס את הפריטים בפועל <strong id="template-target-month">לחודש הנוכחי</strong>.</p>
+
+      <div id="template-error" class="error" hidden></div>
+      <div id="template-apply-status" style="font-weight:600; color: var(--status-good); margin-bottom: 12px;" hidden></div>
+
+      <h4>הכנסות</h4>
+      <table>
+        <thead><tr><th>תיאור</th><th class="num">סכום</th><th>חייב מעשר?</th><th></th></tr></thead>
+        <tbody id="template-income"></tbody>
+        <tfoot><tr><td colspan="4"><button class="icon" id="template-add-income">+ הוסף הכנסה לתבנית</button></td></tr></tfoot>
+      </table>
+
+      <h4 style="margin-top:16px;">הוצאות בהוראת קבע</h4>
+      <table>
+        <thead><tr><th>שם</th><th class="num">סכום</th><th></th></tr></thead>
+        <tbody id="template-fixed"></tbody>
+        <tfoot><tr><td colspan="3"><button class="icon" id="template-add-fixed">+ הוסף הוצאת הו"ק לתבנית</button></td></tr></tfoot>
+      </table>
+
+      <h4 style="margin-top:16px;">הוצאות שוטפות</h4>
+      <table>
+        <thead><tr><th>שם</th><th class="num">סכום</th><th></th></tr></thead>
+        <tbody id="template-regular"></tbody>
+        <tfoot><tr><td colspan="3"><button class="icon" id="template-add-regular">+ הוסף הוצאה שוטפת לתבנית</button></td></tr></tfoot>
+      </table>
+
+      <div class="modal-actions">
+        <button class="secondary" id="close-template-modal">סגור</button>
+        <button id="apply-template-btn">הוסף פריטים אלה לחודש</button>
+      </div>
+    </dialog>
+
     <details class="card">
       <summary>הוצאות שצריך להביא מהקופה השנתית <span class="chevron">▾</span></summary>
       <p class="hint" style="margin: 0 0 12px;">פריטי תקציב שנתי (ממסך "תקציב שנתי") שהחודש הנוכחי הוא החודש היעד שלהם — צריך למשוך את הסכום מהקופה כדי לממן אותם.</p>
@@ -628,20 +663,21 @@
     <div class="overview-columns">
       <details class="card card-berry" open>
         <summary>הוצאות בהוראת קבע (הו"ק) <span class="chevron">▾</span></summary>
-        <p class="hint" style="margin: 0 0 12px;">לכל שורה: כמה מתוכנן לחודש, כמה כבר נוצל, והיתרה הפנויה — כמו בטבלת התקציב השנתי.</p>
+        <p class="hint" style="margin: 0 0 12px;">הוצאה חודשית קבועה — בלי מעקב ניצול, כמו בהוראת קבע אמיתית.</p>
         <table>
-          <thead><tr><th>שם</th><th class="num">מתוכנן</th><th class="num">נוצל</th><th class="num">יתרה</th><th></th></tr></thead>
+          <thead><tr><th>שם</th><th class="num">מתוכנן</th><th></th></tr></thead>
           <tbody id="ov-fixed-expenses"></tbody>
-          <tfoot><tr><td colspan="5"><button class="icon add-row-toggle" data-target="fixed-expense">+ הוסף קטגוריית הוצאה</button></td></tr></tfoot>
+          <tfoot><tr><td colspan="3"><button class="icon add-row-toggle" data-target="fixed-expense">+ הוסף הוצאת הו"ק</button></td></tr></tfoot>
         </table>
       </details>
 
       <details class="card card-berry" open>
         <summary>הוצאות שוטפות <span class="chevron">▾</span></summary>
+        <p class="hint" style="margin: 0 0 12px;">סמני "כלול בסה"כ" כבוי עבור סכום שאת רוצה לנהל ולעקוב אחריו כאן, אבל שלא ייספר בתוך סה"כ ההוצאות של החודש (למשל הוצאה חד-פעמית שממומנת מחיסכון).</p>
         <table>
-          <thead><tr><th>שם</th><th class="num">מתוכנן</th><th class="num">נוצל</th><th class="num">יתרה</th><th></th></tr></thead>
+          <thead><tr><th>שם</th><th class="num">מתוכנן</th><th class="num">נוצל</th><th class="num">יתרה</th><th>כלול בסה"כ</th><th></th></tr></thead>
           <tbody id="ov-regular-expenses"></tbody>
-          <tfoot><tr><td colspan="5"><button class="icon add-row-toggle" data-target="regular-expense">+ הוסף קטגוריית הוצאה</button></td></tr></tfoot>
+          <tfoot><tr><td colspan="6"><button class="icon add-row-toggle" data-target="regular-expense">+ הוסף קטגוריית הוצאה</button></td></tr></tfoot>
         </table>
       </details>
     </div>
@@ -1731,12 +1767,50 @@
 
     // ---- Fixed / Regular expense budget lines ----
 
-    function renderBudgetRows(tbodyId, items, onSave, onDelete) {
+    // Fixed expenses (הו"ק) are a flat monthly amount with no usage tracking — just name + planned amount.
+    function renderFixedExpenseRows(tbodyId, items, onSave, onDelete) {
       const tbody = document.getElementById(tbodyId);
       tbody.innerHTML = "";
       if (!items || items.length === 0) {
         const row = document.createElement("tr");
-        row.innerHTML = `<td colspan="5" style="color: var(--text-muted); font-style: italic;">אין קטגוריות מוגדרות החודש.</td>`;
+        row.innerHTML = `<td colspan="3" style="color: var(--text-muted); font-style: italic;">אין קטגוריות מוגדרות החודש.</td>`;
+        tbody.appendChild(row);
+        return;
+      }
+      for (const item of items) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><input class="name-input" type="text" value="${escapeHtml(item.name)}" /></td>
+          <td class="num"><input class="budgeted-input usage-input" type="text" /></td>
+          <td><button class="delete-row" title="מחק" aria-label="מחק את ${escapeHtml(item.name)}">✕</button></td>
+        `;
+        tbody.appendChild(row);
+
+        const nameInput = row.querySelector(".name-input");
+        const budgetedInput = row.querySelector(".budgeted-input");
+
+        attachFormulaInput(budgetedInput, item.budgetedAmount, item.budgetedAmountFormula, (amount, formula) =>
+          onSave(item, { budgetedAmount: amount, budgetedAmountFormula: formula }));
+
+        nameInput.addEventListener("blur", () => {
+          if (nameInput.value && nameInput.value !== item.name) {
+            guardedSave(nameInput, () => onSave(item, { name: nameInput.value }));
+          }
+        });
+        nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
+
+        attachConfirmDelete(row.querySelector(".delete-row"), () => onDelete(item));
+      }
+    }
+
+    // Regular expenses track budgeted/used/remaining like the annual budget screen, plus a toggle
+    // for whether the budgeted amount counts toward the Monthly Overview's total outflow figure.
+    function renderRegularExpenseRows(tbodyId, items, onSave, onDelete) {
+      const tbody = document.getElementById(tbodyId);
+      tbody.innerHTML = "";
+      if (!items || items.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td colspan="6" style="color: var(--text-muted); font-style: italic;">אין קטגוריות מוגדרות החודש.</td>`;
         tbody.appendChild(row);
         return;
       }
@@ -1747,6 +1821,7 @@
           <td class="num"><input class="budgeted-input usage-input" type="text" /></td>
           <td class="num"><input class="used-input usage-input" type="text" /></td>
           <td class="num budget-remaining-cell">${fmtMoney(item.remaining)}</td>
+          <td style="text-align:center;"><input type="checkbox" class="include-checkbox" ${item.includeInOutflowTotal ? "checked" : ""} title='לכלול בסה"כ ההוצאות של החודש' /></td>
           <td><button class="delete-row" title="מחק" aria-label="מחק את ${escapeHtml(item.name)}">✕</button></td>
         `;
         tbody.appendChild(row);
@@ -1754,6 +1829,7 @@
         const nameInput = row.querySelector(".name-input");
         const budgetedInput = row.querySelector(".budgeted-input");
         const usedInput = row.querySelector(".used-input");
+        const includeCheckbox = row.querySelector(".include-checkbox");
 
         wireCalcTrigger(row.querySelector(".budget-remaining-cell"), () => [budgetedInput, usedInput]);
 
@@ -1768,6 +1844,10 @@
           }
         });
         nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
+
+        includeCheckbox.addEventListener("change", () => {
+          guardedSave(includeCheckbox, () => onSave(item, { includeInOutflowTotal: includeCheckbox.checked }));
+        });
 
         attachConfirmDelete(row.querySelector(".delete-row"), () => onDelete(item));
       }
@@ -1784,6 +1864,7 @@
             budgetedAmountFormula: item.budgetedAmountFormula,
             usedAmount: item.usedAmount,
             usedAmountFormula: item.usedAmountFormula,
+            includeInOutflowTotal: item.includeInOutflowTotal,
             ...patch,
           }),
         });
@@ -1805,10 +1886,16 @@
     }
 
     function toggleBudgetItemAddRow(tbodyId, type) {
+      const isRegular = type === "RegularExpense";
       const tbody = document.getElementById(tbodyId);
-      const row = toggleAddRow(tbody, 5, `
+      const row = toggleAddRow(tbody, isRegular ? 6 : 3, `
         <input type="text" class="new-name" placeholder="שם הקטגוריה (למשל: ארנונה)" />
         <input type="text" class="new-amount" placeholder="מתוכנן לחודש (או נוסחה)" />
+        ${isRegular ? `
+          <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;">
+            <input type="checkbox" class="new-include" checked /> כלול בסה"כ
+          </label>
+        ` : ""}
       `);
       if (!row) return;
 
@@ -1816,6 +1903,7 @@
       saveBtn.addEventListener("click", () => withPending(saveBtn, async () => {
         const name = row.querySelector(".new-name").value.trim();
         const amountText = row.querySelector(".new-amount").value.trim();
+        const includeInOutflowTotal = isRegular ? row.querySelector(".new-include").checked : true;
 
         let parsed;
         try {
@@ -1835,7 +1923,7 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               year: Number(ovYear()), month: Number(ovMonth()),
-              name, type, budgetedAmount: parsed.amount, budgetedAmountFormula: parsed.formula,
+              name, type, budgetedAmount: parsed.amount, budgetedAmountFormula: parsed.formula, includeInOutflowTotal,
             }),
           });
           ovClearError();
@@ -1883,8 +1971,8 @@
         renderStandingOrders(overview.titheObligation.fixedDonationsThisMonth.items);
         renderTransactionRows("ov-prior-month-donations", overview.titheObligation.priorMonthSmallCharity.lines, 4, saveTransactionPatch, deleteTransaction);
 
-        renderBudgetRows("ov-fixed-expenses", overview.fixedExpenses.items, saveBudgetItemPatch, deleteBudgetItem);
-        renderBudgetRows("ov-regular-expenses", overview.regularExpenses.items, saveBudgetItemPatch, deleteBudgetItem);
+        renderFixedExpenseRows("ov-fixed-expenses", overview.fixedExpenses.items, saveBudgetItemPatch, deleteBudgetItem);
+        renderRegularExpenseRows("ov-regular-expenses", overview.regularExpenses.items, saveBudgetItemPatch, deleteBudgetItem);
 
         renderAnnualWithdrawals(overview.annualWithdrawals.lines);
 
@@ -1910,8 +1998,12 @@
     wireCalcTrigger(document.getElementById("ov-total-income"), () =>
       byQuery("#ov-income-tithe .amount-input", "#ov-income-exempt .amount-input"));
     wireCalcTrigger(document.getElementById("ov-total-outflow"), () => [
-      ...byId("ov-fixed-donations", "ov-debt-summary"),
-      ...byQuery("#ov-fixed-expenses .used-input", "#ov-regular-expenses .used-input", ".annual-withdrawal-amount"),
+      ...byId("ov-gross-target", "ov-debt-summary"),
+      ...byQuery("#ov-fixed-expenses .budgeted-input", ".annual-withdrawal-amount"),
+      ...Array.from(document.querySelectorAll("#ov-regular-expenses tr"))
+        .filter(tr => tr.querySelector(".include-checkbox")?.checked)
+        .map(tr => tr.querySelector(".budgeted-input"))
+        .filter(Boolean),
     ]);
     wireCalcTrigger(document.getElementById("ov-remaining-save"), () => byId("ov-total-income", "ov-total-outflow"));
     wireCalcTrigger(document.getElementById("ov-gross-target"), () =>
@@ -1981,6 +2073,223 @@
 
     document.getElementById("add-prior-month-donation").addEventListener("click", () => {
       toggleNewPriorMonthDonationRow();
+    });
+
+    // ---- Monthly Template (recurring income/expense categories, applied to a month on demand) ----
+
+    function templateShowError(message) {
+      const el = document.getElementById("template-error");
+      el.textContent = "שגיאה: " + message;
+      el.hidden = false;
+    }
+
+    function templateClearError() {
+      document.getElementById("template-error").hidden = true;
+    }
+
+    async function saveTemplateItemPatch(item, patch) {
+      try {
+        await fetchJson(`/api/monthly-template-items/${item.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: item.name,
+            amount: item.amount,
+            amountFormula: item.amountFormula,
+            isTitheApplicable: item.isTitheApplicable,
+            ...patch,
+          }),
+        });
+        templateClearError();
+        await refreshTemplate();
+      } catch (err) {
+        templateShowError(err.message);
+      }
+    }
+
+    async function deleteTemplateItem(item) {
+      try {
+        await fetchJson(`/api/monthly-template-items/${item.id}`, { method: "DELETE" });
+        templateClearError();
+        await refreshTemplate();
+      } catch (err) {
+        templateShowError(err.message);
+      }
+    }
+
+    function renderTemplateIncomeRows(items) {
+      const tbody = document.getElementById("template-income");
+      tbody.innerHTML = "";
+      if (!items || items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color: var(--text-muted); font-style: italic;">אין הכנסות קבועות בתבנית.</td></tr>`;
+        return;
+      }
+      for (const item of items) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><input class="name-input" type="text" value="${escapeHtml(item.name)}" /></td>
+          <td class="num"><input class="amount-input usage-input" type="text" /></td>
+          <td><input type="checkbox" class="tithe-checkbox" ${item.isTitheApplicable ? "checked" : ""} /></td>
+          <td><button class="delete-row" title="מחק" aria-label="מחק את ${escapeHtml(item.name)}">✕</button></td>
+        `;
+        tbody.appendChild(row);
+
+        const nameInput = row.querySelector(".name-input");
+        const amountInput = row.querySelector(".amount-input");
+        const titheCheckbox = row.querySelector(".tithe-checkbox");
+
+        attachFormulaInput(amountInput, item.amount, item.amountFormula, (amount, formula) =>
+          saveTemplateItemPatch(item, { amount, amountFormula: formula }));
+
+        nameInput.addEventListener("blur", () => {
+          if (nameInput.value.trim() && nameInput.value !== item.name) {
+            guardedSave(nameInput, () => saveTemplateItemPatch(item, { name: nameInput.value.trim() }));
+          }
+        });
+        nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
+
+        titheCheckbox.addEventListener("change", () => {
+          guardedSave(titheCheckbox, () => saveTemplateItemPatch(item, { isTitheApplicable: titheCheckbox.checked }));
+        });
+
+        attachConfirmDelete(row.querySelector(".delete-row"), () => deleteTemplateItem(item));
+      }
+    }
+
+    function renderTemplateExpenseRows(tbodyId, items) {
+      const tbody = document.getElementById(tbodyId);
+      tbody.innerHTML = "";
+      if (!items || items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="color: var(--text-muted); font-style: italic;">אין קטגוריות בתבנית.</td></tr>`;
+        return;
+      }
+      for (const item of items) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><input class="name-input" type="text" value="${escapeHtml(item.name)}" /></td>
+          <td class="num"><input class="amount-input usage-input" type="text" /></td>
+          <td><button class="delete-row" title="מחק" aria-label="מחק את ${escapeHtml(item.name)}">✕</button></td>
+        `;
+        tbody.appendChild(row);
+
+        const nameInput = row.querySelector(".name-input");
+        const amountInput = row.querySelector(".amount-input");
+
+        attachFormulaInput(amountInput, item.amount, item.amountFormula, (amount, formula) =>
+          saveTemplateItemPatch(item, { amount, amountFormula: formula }));
+
+        nameInput.addEventListener("blur", () => {
+          if (nameInput.value.trim() && nameInput.value !== item.name) {
+            guardedSave(nameInput, () => saveTemplateItemPatch(item, { name: nameInput.value.trim() }));
+          }
+        });
+        nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
+
+        attachConfirmDelete(row.querySelector(".delete-row"), () => deleteTemplateItem(item));
+      }
+    }
+
+    async function refreshTemplate() {
+      templateClearError();
+      try {
+        const data = await fetchJson("/api/monthly-template");
+        renderTemplateIncomeRows(data.items.filter(i => i.type === "Income"));
+        renderTemplateExpenseRows("template-fixed", data.items.filter(i => i.type === "FixedExpense"));
+        renderTemplateExpenseRows("template-regular", data.items.filter(i => i.type === "RegularExpense"));
+      } catch (err) {
+        templateShowError(err.message);
+      }
+    }
+
+    function toggleTemplateAddRow(tbodyId, type, colCount, includeTithe) {
+      const tbody = document.getElementById(tbodyId);
+      const fieldsHtml = includeTithe
+        ? `
+          <input type="text" class="new-name" placeholder="תיאור (למשל: משכורת)" />
+          <input type="text" class="new-amount" placeholder="סכום (או נוסחה)" />
+          <label style="display:flex; align-items:center; gap:4px; font-size:0.85rem;">
+            <input type="checkbox" class="new-tithe" /> חייב מעשר
+          </label>
+        `
+        : `
+          <input type="text" class="new-name" placeholder="שם הקטגוריה" />
+          <input type="text" class="new-amount" placeholder="סכום (או נוסחה)" />
+        `;
+
+      const row = toggleAddRow(tbody, colCount, fieldsHtml);
+      if (!row) return;
+
+      const saveBtn = row.querySelector(".save-btn");
+      saveBtn.addEventListener("click", () => withPending(saveBtn, async () => {
+        const name = row.querySelector(".new-name").value.trim();
+        const amountText = row.querySelector(".new-amount").value.trim();
+        const isTitheApplicable = includeTithe ? row.querySelector(".new-tithe").checked : null;
+
+        let parsed;
+        try {
+          parsed = parseAmountText(amountText);
+        } catch (err) {
+          templateShowError(err.message);
+          return;
+        }
+        if (!name || !(parsed.amount > 0)) {
+          templateShowError("יש להזין שם וסכום חיובי.");
+          return;
+        }
+
+        try {
+          await fetchJson("/api/monthly-template-items", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type, name, amount: parsed.amount, amountFormula: parsed.formula, isTitheApplicable }),
+          });
+          templateClearError();
+          await refreshTemplate();
+        } catch (err) {
+          templateShowError(err.message);
+        }
+      }));
+    }
+
+    document.getElementById("open-template-modal").addEventListener("click", async () => {
+      await refreshTemplate();
+      document.getElementById("template-target-month").textContent = `לחודש ${ovMonth()}/${ovYear()}`;
+      document.getElementById("template-apply-status").hidden = true;
+      templateClearError();
+      document.getElementById("modal-monthly-template").showModal();
+    });
+
+    document.getElementById("close-template-modal").addEventListener("click", () => {
+      document.getElementById("modal-monthly-template").close();
+    });
+
+    document.getElementById("template-add-income").addEventListener("click", () =>
+      toggleTemplateAddRow("template-income", "Income", 4, true));
+    document.getElementById("template-add-fixed").addEventListener("click", () =>
+      toggleTemplateAddRow("template-fixed", "FixedExpense", 3, false));
+    document.getElementById("template-add-regular").addEventListener("click", () =>
+      toggleTemplateAddRow("template-regular", "RegularExpense", 3, false));
+
+    // Applies the template to whichever year/month is currently selected on the overview screen
+    // behind this modal; already-present items (matched by name) are skipped, so clicking this more
+    // than once is harmless. The modal stays open afterward so the confirmation is visible — the
+    // user closes it herself once she's seen the result.
+    document.getElementById("apply-template-btn").addEventListener("click", (e) => {
+      const btn = e.currentTarget; // captured now — e.currentTarget is nulled once dispatch finishes,
+      withPending(btn, async () => {   // so it can't be read again from inside this async callback.
+        try {
+          const result = await fetchJson(`/api/monthly-template/apply?year=${ovYear()}&month=${ovMonth()}`, { method: "POST" });
+          templateClearError();
+          await refreshOverview();
+          const statusEl = document.getElementById("template-apply-status");
+          statusEl.textContent = result.itemsApplied > 0
+            ? `נוספו ${result.itemsApplied} פריטים לחודש ${result.month}/${result.year} ✓${result.itemsSkipped > 0 ? ` (${result.itemsSkipped} כבר היו קיימים)` : ""}`
+            : `כל פריטי התבנית כבר קיימים בחודש ${result.month}/${result.year} — לא נוסף כלום.`;
+          statusEl.hidden = false;
+        } catch (err) {
+          templateShowError(err.message);
+        }
+      });
     });
 
     // ---- Funds (savings/investment accounts) ----

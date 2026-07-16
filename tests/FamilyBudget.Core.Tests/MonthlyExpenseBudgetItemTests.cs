@@ -44,6 +44,26 @@ public class MonthlyExpenseBudgetItemTests
     }
 
     [Fact]
+    public void Constructor_DefaultsIncludeInOutflowTotal_ToTrue()
+    {
+        var item = new MonthlyExpenseBudgetItem(
+            Guid.NewGuid(), 2026, 7, "Groceries", TransactionType.RegularExpense, budgetedAmount: 600m);
+
+        Assert.True(item.IncludeInOutflowTotal);
+    }
+
+    [Fact]
+    public void SetIncludeInOutflowTotal_CanBeToggledOff()
+    {
+        var item = new MonthlyExpenseBudgetItem(
+            Guid.NewGuid(), 2026, 7, "One-off covered by savings", TransactionType.RegularExpense, budgetedAmount: 600m);
+
+        item.SetIncludeInOutflowTotal(false);
+
+        Assert.False(item.IncludeInOutflowTotal);
+    }
+
+    [Fact]
     public void Rename_EmptyName_Throws()
     {
         var item = new MonthlyExpenseBudgetItem(

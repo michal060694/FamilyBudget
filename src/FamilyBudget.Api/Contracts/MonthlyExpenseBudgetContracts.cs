@@ -12,7 +12,8 @@ public record MonthlyExpenseBudgetItemView(
     string? BudgetedAmountFormula,
     decimal UsedAmount,
     string? UsedAmountFormula,
-    decimal Remaining);
+    decimal Remaining,
+    bool IncludeInOutflowTotal);
 
 public record MonthlyExpenseBudgetListResponse(
     int Year, int Month, IReadOnlyList<MonthlyExpenseBudgetItemView> Items);
@@ -23,11 +24,13 @@ public record CreateMonthlyExpenseBudgetItemRequest(
     string Name,
     TransactionType Type,
     decimal BudgetedAmount,
-    string? BudgetedAmountFormula = null);
+    string? BudgetedAmountFormula = null,
+    bool IncludeInOutflowTotal = true);
 
 public record UpdateMonthlyExpenseBudgetItemRequest(
     string Name,
     decimal BudgetedAmount,
     decimal UsedAmount,
     string? BudgetedAmountFormula = null,
-    string? UsedAmountFormula = null);
+    string? UsedAmountFormula = null,
+    bool IncludeInOutflowTotal = true);

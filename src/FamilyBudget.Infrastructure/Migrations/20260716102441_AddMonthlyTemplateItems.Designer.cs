@@ -3,6 +3,7 @@ using System;
 using FamilyBudget.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FamilyBudget.Infrastructure.Migrations
 {
     [DbContext(typeof(FamilyBudgetDbContext))]
-    partial class FamilyBudgetDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260716102441_AddMonthlyTemplateItems")]
+    partial class AddMonthlyTemplateItems
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -202,9 +205,6 @@ namespace FamilyBudget.Infrastructure.Migrations
                     b.Property<string>("BudgetedAmountFormula")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
-
-                    b.Property<bool>("IncludeInOutflowTotal")
-                        .HasColumnType("boolean");
 
                     b.Property<int>("Month")
                         .HasColumnType("integer");

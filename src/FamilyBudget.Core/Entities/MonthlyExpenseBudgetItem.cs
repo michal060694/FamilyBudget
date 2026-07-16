@@ -24,6 +24,14 @@ public class MonthlyExpenseBudgetItem
     public decimal UsedAmount { get; private set; }
     public string? UsedAmountFormula { get; private set; }
 
+    /// <summary>
+    /// Whether this item's <see cref="BudgetedAmount"/> counts toward the Monthly Overview's total
+    /// outflow figure. Lets a RegularExpense row be tracked (budgeted/used/remaining) without
+    /// distorting "how much do I need this month" — e.g. an irregular purchase covered from savings
+    /// rather than this month's income. Defaults to true (the common case).
+    /// </summary>
+    public bool IncludeInOutflowTotal { get; private set; }
+
     private MonthlyExpenseBudgetItem()
     {
         Name = string.Empty;
@@ -38,7 +46,8 @@ public class MonthlyExpenseBudgetItem
         decimal budgetedAmount,
         decimal usedAmount = 0m,
         string? budgetedAmountFormula = null,
-        string? usedAmountFormula = null)
+        string? usedAmountFormula = null,
+        bool includeInOutflowTotal = true)
     {
         ValidateType(type);
 
@@ -71,6 +80,7 @@ public class MonthlyExpenseBudgetItem
         BudgetedAmountFormula = budgetedAmountFormula;
         UsedAmount = usedAmount;
         UsedAmountFormula = usedAmountFormula;
+        IncludeInOutflowTotal = includeInOutflowTotal;
     }
 
     public decimal Remaining => BudgetedAmount - UsedAmount;
@@ -105,6 +115,11 @@ public class MonthlyExpenseBudgetItem
 
         UsedAmount = amount;
         UsedAmountFormula = formula;
+    }
+
+    public void SetIncludeInOutflowTotal(bool include)
+    {
+        IncludeInOutflowTotal = include;
     }
 
     private static void ValidateType(TransactionType type)

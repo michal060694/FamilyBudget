@@ -24,7 +24,8 @@ public static class MonthlyExpenseBudgetEndpoints
         item.BudgetedAmountFormula,
         item.UsedAmount,
         item.UsedAmountFormula,
-        item.Remaining);
+        item.Remaining,
+        item.IncludeInOutflowTotal);
 
     private static async Task<IResult> GetMonthlyExpenseBudgets(
         int year, int month, IMonthlyExpenseBudgetItemRepository repository, TransactionType? type = null)
@@ -69,7 +70,8 @@ public static class MonthlyExpenseBudgetEndpoints
             request.Name,
             request.Type,
             request.BudgetedAmount,
-            budgetedAmountFormula: request.BudgetedAmountFormula);
+            budgetedAmountFormula: request.BudgetedAmountFormula,
+            includeInOutflowTotal: request.IncludeInOutflowTotal);
 
         await repository.AddAsync(item);
 
@@ -98,6 +100,7 @@ public static class MonthlyExpenseBudgetEndpoints
         item.Rename(request.Name);
         item.SetBudgetedAmount(request.BudgetedAmount, request.BudgetedAmountFormula);
         item.SetUsedAmount(request.UsedAmount, request.UsedAmountFormula);
+        item.SetIncludeInOutflowTotal(request.IncludeInOutflowTotal);
         await repository.SaveChangesAsync();
 
         return Results.Ok(ToView(item));

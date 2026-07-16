@@ -34,7 +34,8 @@ public static class MonthlyOverviewEndpoints
         item.BudgetedAmountFormula,
         item.UsedAmount,
         item.UsedAmountFormula,
-        item.Remaining);
+        item.Remaining,
+        item.IncludeInOutflowTotal);
 
     private static FixedDonationStandingOrderView ToView(FixedDonationStandingOrder order) => new(
         order.Id, order.Name, order.Amount, order.AmountFormula, order.ValidUntilYear, order.ValidUntilMonth);

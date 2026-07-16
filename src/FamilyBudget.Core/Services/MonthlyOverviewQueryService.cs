@@ -60,6 +60,15 @@ public class MonthlyOverviewQueryService
         var fixedExpenseUsedTotal = fixedExpenseItems.Sum(i => i.UsedAmount);
         var regularExpenseUsedTotal = regularExpenseItems.Sum(i => i.UsedAmount);
 
+        // TotalOutflow is a forward-looking "how much do I need this month" figure, not a record of
+        // money already moved — so every component is the planned/target amount, not the amount
+        // actually used/paid so far: the full tithe target (not just standing orders already given),
+        // budgeted expense amounts (not used-so-far), and the planned debt repayment pace.
+        var fixedExpenseBudgetedTotal = fixedExpenseItems.Sum(i => i.BudgetedAmount);
+        var regularExpenseBudgetedTotal = regularExpenseItems
+            .Where(i => i.IncludeInOutflowTotal)
+            .Sum(i => i.BudgetedAmount);
+
         // The household's planned monthly repayment pace for what it owes, not the actual amount
         // paid this month — matches how fixed/regular expenses show "מתוכנן" (planned), and a
         // debt already fully repaid (Closed) or with no rate set no longer needs a monthly pace.
@@ -68,7 +77,7 @@ public class MonthlyOverviewQueryService
             .Where(d => d.Direction == DebtDirection.Payable && d.Status == DebtStatus.Open)
             .Sum(d => d.RepaymentRate ?? 0m);
 
-        var totalOutflow = obligation.FixedDonationsThisMonth + fixedExpenseUsedTotal + regularExpenseUsedTotal +
+        var totalOutflow = obligation.GrossTitheTarget + fixedExpenseBudgetedTotal + regularExpenseBudgetedTotal +
             annualWithdrawalsTotal + debtRepaymentsSummary;
         var totalIncome = obligation.TitheApplicableIncome + obligation.NonTitheApplicableIncome;
         var remainingToSave = totalIncome - totalOutflow;

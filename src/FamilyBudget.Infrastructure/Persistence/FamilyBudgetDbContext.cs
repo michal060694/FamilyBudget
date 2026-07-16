@@ -28,6 +28,8 @@ public class FamilyBudgetDbContext : DbContext
 
     public DbSet<Debt> Debts => Set<Debt>();
 
+    public DbSet<MonthlyTemplateItem> MonthlyTemplateItems => Set<MonthlyTemplateItem>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AnnualBudgetItem>(builder =>
@@ -89,6 +91,7 @@ public class FamilyBudgetDbContext : DbContext
             builder.Property(i => i.BudgetedAmountFormula).HasMaxLength(200);
             builder.Property(i => i.UsedAmount).HasColumnType("decimal(18,2)").IsRequired();
             builder.Property(i => i.UsedAmountFormula).HasMaxLength(200);
+            builder.Property(i => i.IncludeInOutflowTotal).IsRequired();
 
             builder.HasIndex(i => new { i.Year, i.Month });
         });
@@ -139,6 +142,17 @@ public class FamilyBudgetDbContext : DbContext
             builder.Property(d => d.TargetDate);
             builder.Property(d => d.RepaymentRate).HasColumnType("decimal(18,2)");
             builder.Property(d => d.Notes).HasMaxLength(1000);
+        });
+
+        modelBuilder.Entity<MonthlyTemplateItem>(builder =>
+        {
+            builder.ToTable("MonthlyTemplateItems");
+            builder.HasKey(i => i.Id);
+            builder.Property(i => i.Type).HasConversion<string>().HasMaxLength(30).IsRequired();
+            builder.Property(i => i.Name).IsRequired().HasMaxLength(200);
+            builder.Property(i => i.Amount).HasColumnType("decimal(18,2)").IsRequired();
+            builder.Property(i => i.AmountFormula).HasMaxLength(200);
+            builder.Property(i => i.IsTitheApplicable);
         });
     }
 }

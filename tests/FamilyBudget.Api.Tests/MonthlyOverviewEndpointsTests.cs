@@ -81,10 +81,39 @@ public class MonthlyOverviewEndpointsTests : IClassFixture<FamilyBudgetApiFactor
         Assert.Equal(900m, response.AnnualWithdrawals.Total);
 
         var totalIncome = 1000m + 300m;
-        var totalOutflow = 120m + 400m + 150m + 900m; // fixed donations + fixed used + regular used + annual withdrawals (+0 debt)
+        var totalOutflow = 200m + 400m + 200m + 900m; // gross tithe target + fixed budgeted + regular budgeted + annual withdrawals (+0 debt)
         Assert.Equal(totalOutflow, response.TotalOutflow);
         Assert.Equal(totalIncome, response.TotalIncome);
         Assert.Equal(totalIncome - totalOutflow, response.RemainingToSave);
+    }
+
+    [Fact]
+    public async Task GetMonthlyOverview_ExcludedRegularExpense_DoesNotCountTowardTotalOutflow()
+    {
+        const int year = 2053;
+        const int month = 6;
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<FamilyBudgetDbContext>();
+            var included = new MonthlyExpenseBudgetItem(
+                Guid.NewGuid(), year, month, "Groceries", TransactionType.RegularExpense, budgetedAmount: 500m);
+            var excluded = new MonthlyExpenseBudgetItem(
+                Guid.NewGuid(), year, month, "Vacation (from savings)", TransactionType.RegularExpense, budgetedAmount: 3000m);
+            excluded.SetIncludeInOutflowTotal(false);
+            db.MonthlyExpenseBudgetItems.AddRange(included, excluded);
+            await db.SaveChangesAsync();
+        }
+
+        var client = _factory.CreateClient();
+        var response = await client.GetFromJsonAsync<MonthlyOverviewResponse>(
+            $"/api/monthly-overview?year={year}&month={month}", JsonOptions);
+
+        // Only the included item's budgeted amount (500) counts; the excluded 3000 does not,
+        // even though both are still visible/tracked in the RegularExpenses section.
+        Assert.NotNull(response);
+        Assert.Equal(2, response!.RegularExpenses.Items.Count);
+        Assert.Equal(500m, response.TotalOutflow);
     }
 
     [Fact]
