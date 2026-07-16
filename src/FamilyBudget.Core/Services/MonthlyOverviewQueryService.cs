@@ -10,6 +10,7 @@ public class MonthlyOverviewQueryService
     private readonly IMonthlyExpenseBudgetItemRepository _monthlyExpenseBudgetItemRepository;
     private readonly IFixedDonationStandingOrderRepository _standingOrderRepository;
     private readonly IAnnualBudgetItemRepository _annualBudgetItemRepository;
+    private readonly IDebtRepository _debtRepository;
     private readonly TitheEngine _titheEngine;
 
     public MonthlyOverviewQueryService(
@@ -17,12 +18,14 @@ public class MonthlyOverviewQueryService
         IMonthlyExpenseBudgetItemRepository monthlyExpenseBudgetItemRepository,
         IFixedDonationStandingOrderRepository standingOrderRepository,
         IAnnualBudgetItemRepository annualBudgetItemRepository,
+        IDebtRepository debtRepository,
         TitheEngine titheEngine)
     {
         _transactionRepository = transactionRepository;
         _monthlyExpenseBudgetItemRepository = monthlyExpenseBudgetItemRepository;
         _standingOrderRepository = standingOrderRepository;
         _annualBudgetItemRepository = annualBudgetItemRepository;
+        _debtRepository = debtRepository;
         _titheEngine = titheEngine;
     }
 
@@ -57,9 +60,13 @@ public class MonthlyOverviewQueryService
         var fixedExpenseUsedTotal = fixedExpenseItems.Sum(i => i.UsedAmount);
         var regularExpenseUsedTotal = regularExpenseItems.Sum(i => i.UsedAmount);
 
-        var debtRepaymentTransactions = await _transactionRepository.GetByMonthAsync(
-            year, month, TransactionType.DebtRepayment, cancellationToken: cancellationToken);
-        var debtRepaymentsSummary = debtRepaymentTransactions.Sum(t => t.Amount);
+        // The household's planned monthly repayment pace for what it owes, not the actual amount
+        // paid this month — matches how fixed/regular expenses show "מתוכנן" (planned), and a
+        // debt already fully repaid (Closed) or with no rate set no longer needs a monthly pace.
+        var allDebts = await _debtRepository.GetAllAsync(cancellationToken);
+        var debtRepaymentsSummary = allDebts
+            .Where(d => d.Direction == DebtDirection.Payable && d.Status == DebtStatus.Open)
+            .Sum(d => d.RepaymentRate ?? 0m);
 
         var totalOutflow = obligation.FixedDonationsThisMonth + fixedExpenseUsedTotal + regularExpenseUsedTotal + debtRepaymentsSummary;
         var totalIncome = obligation.TitheApplicableIncome + obligation.NonTitheApplicableIncome;

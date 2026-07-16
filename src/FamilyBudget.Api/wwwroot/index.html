@@ -375,6 +375,12 @@
   .overview-columns > div,
   .overview-columns > .card { flex: 1; min-width: 280px; }
   .overview-columns h3 { font-size: 0.85rem; color: var(--text-secondary); margin: 0 0 8px; }
+
+  /* Drag-and-drop between the tithe-applicable / tithe-exempt income tables. */
+  tr.draggable-row { cursor: grab; }
+  tr.draggable-row:active { cursor: grabbing; }
+  tr.draggable-row.dragging { opacity: 0.4; }
+  tbody.drag-over { outline: 2px dashed var(--card-accent, var(--series-1)); outline-offset: -2px; }
 </style>
 </head>
 <body>
@@ -601,24 +607,26 @@
       </table>
     </details>
 
-    <details class="card card-berry" open>
-      <summary>הוצאות בהוראת קבע (הו"ק) <span class="chevron">▾</span></summary>
-      <p class="hint" style="margin: 0 0 12px;">לכל שורה: כמה מתוכנן לחודש, כמה כבר נוצל, והיתרה הפנויה — כמו בטבלת התקציב השנתי.</p>
-      <table>
-        <thead><tr><th>שם</th><th class="num">מתוכנן</th><th class="num">נוצל</th><th class="num">יתרה</th><th></th></tr></thead>
-        <tbody id="ov-fixed-expenses"></tbody>
-        <tfoot><tr><td colspan="5"><button class="icon add-row-toggle" data-target="fixed-expense">+ הוסף קטגוריית הוצאה</button></td></tr></tfoot>
-      </table>
-    </details>
+    <div class="overview-columns">
+      <details class="card card-berry" open>
+        <summary>הוצאות בהוראת קבע (הו"ק) <span class="chevron">▾</span></summary>
+        <p class="hint" style="margin: 0 0 12px;">לכל שורה: כמה מתוכנן לחודש, כמה כבר נוצל, והיתרה הפנויה — כמו בטבלת התקציב השנתי.</p>
+        <table>
+          <thead><tr><th>שם</th><th class="num">מתוכנן</th><th class="num">נוצל</th><th class="num">יתרה</th><th></th></tr></thead>
+          <tbody id="ov-fixed-expenses"></tbody>
+          <tfoot><tr><td colspan="5"><button class="icon add-row-toggle" data-target="fixed-expense">+ הוסף קטגוריית הוצאה</button></td></tr></tfoot>
+        </table>
+      </details>
 
-    <details class="card card-berry" open>
-      <summary>הוצאות שוטפות <span class="chevron">▾</span></summary>
-      <table>
-        <thead><tr><th>שם</th><th class="num">מתוכנן</th><th class="num">נוצל</th><th class="num">יתרה</th><th></th></tr></thead>
-        <tbody id="ov-regular-expenses"></tbody>
-        <tfoot><tr><td colspan="5"><button class="icon add-row-toggle" data-target="regular-expense">+ הוסף קטגוריית הוצאה</button></td></tr></tfoot>
-      </table>
-    </details>
+      <details class="card card-berry" open>
+        <summary>הוצאות שוטפות <span class="chevron">▾</span></summary>
+        <table>
+          <thead><tr><th>שם</th><th class="num">מתוכנן</th><th class="num">נוצל</th><th class="num">יתרה</th><th></th></tr></thead>
+          <tbody id="ov-regular-expenses"></tbody>
+          <tfoot><tr><td colspan="5"><button class="icon add-row-toggle" data-target="regular-expense">+ הוסף קטגוריית הוצאה</button></td></tr></tfoot>
+        </table>
+      </details>
+    </div>
   </div>
 
   <div id="tab-funds" class="tab-panel" hidden>
@@ -1249,7 +1257,53 @@
 
     // ---- Income & Donations: editable transaction rows ----
 
-    function renderTransactionRows(tbodyId, lines, colCount, onSave, onDelete, extraCellHtml) {
+    // ---- Drag-and-drop between the tithe-applicable / tithe-exempt income tables ----
+    // Native HTML5 drag-and-drop; the actual line + its onSave callback are kept in this plain
+    // closure variable (not serialized through dataTransfer) since both tables live on the same
+    // page. dataTransfer still gets a token so the browser treats it as a real drag operation.
+    let draggedIncomeLine = null;
+
+    function makeRowDraggable(row, line, onSave) {
+      row.draggable = true;
+      row.classList.add("draggable-row");
+      row.addEventListener("dragstart", (e) => {
+        draggedIncomeLine = { line, onSave };
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", line.id);
+        row.classList.add("dragging");
+      });
+      row.addEventListener("dragend", () => {
+        row.classList.remove("dragging");
+        draggedIncomeLine = null;
+      });
+    }
+
+    function wireIncomeDropZone(tbodyId, isTitheApplicable) {
+      const tbody = document.getElementById(tbodyId);
+      if (tbody.dataset.dropWired) return;
+      tbody.dataset.dropWired = "true";
+
+      tbody.addEventListener("dragover", (e) => {
+        if (!draggedIncomeLine) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        tbody.classList.add("drag-over");
+      });
+      tbody.addEventListener("dragleave", (e) => {
+        if (e.target === tbody) tbody.classList.remove("drag-over");
+      });
+      tbody.addEventListener("drop", (e) => {
+        e.preventDefault();
+        tbody.classList.remove("drag-over");
+        if (!draggedIncomeLine) return;
+        const { line, onSave } = draggedIncomeLine;
+        draggedIncomeLine = null;
+        if (line.isTitheApplicable === isTitheApplicable) return; // dropped back where it started
+        onSave(line, { isTitheApplicable });
+      });
+    }
+
+    function renderTransactionRows(tbodyId, lines, colCount, onSave, onDelete, extraCellHtml, enableDrag) {
       const tbody = document.getElementById(tbodyId);
       tbody.innerHTML = "";
       if (!lines || lines.length === 0) {
@@ -1268,6 +1322,10 @@
           <td><button class="delete-row" title="מחק" aria-label="מחק תנועה מ-${escapeHtml(line.date)}">✕</button></td>
         `;
         tbody.appendChild(row);
+
+        if (enableDrag) {
+          makeRowDraggable(row, line, onSave);
+        }
 
         const descInput = row.querySelector(".desc-input");
         const amountInput = row.querySelector(".amount-input");
@@ -1744,8 +1802,10 @@
           fetchJson("/api/tithe-setting"),
         ]);
 
-        renderTransactionRows("ov-income-tithe", overview.titheApplicableIncome.lines, 4, saveTransactionPatch, deleteTransaction);
-        renderTransactionRows("ov-income-exempt", overview.nonTitheApplicableIncome.lines, 4, saveTransactionPatch, deleteTransaction);
+        renderTransactionRows("ov-income-tithe", overview.titheApplicableIncome.lines, 4, saveTransactionPatch, deleteTransaction, null, true);
+        renderTransactionRows("ov-income-exempt", overview.nonTitheApplicableIncome.lines, 4, saveTransactionPatch, deleteTransaction, null, true);
+        wireIncomeDropZone("ov-income-tithe", true);
+        wireIncomeDropZone("ov-income-exempt", false);
 
         renderStandingOrders(overview.titheObligation.fixedDonationsThisMonth.items);
         renderTransactionRows("ov-prior-month-donations", overview.titheObligation.priorMonthSmallCharity.lines, 4, saveTransactionPatch, deleteTransaction);

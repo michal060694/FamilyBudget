@@ -92,6 +92,11 @@ public class FamilyBudgetApiFactory : WebApplicationFactory<Program>
 
             using var scope = services.BuildServiceProvider().CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<FamilyBudgetDbContext>();
+            // Migrate() is idempotent (tracked via __EFMigrationsHistory), so this and Program.cs's
+            // own startup Migrate() call don't conflict even though they both run against this same
+            // in-memory SQLite connection. The migrations now generate Postgres-flavored SQL (e.g.
+            // "uuid", "numeric(18,2)"), but SQLite's loose type affinity accepts those type names
+            // without validation, so the same migration files still apply cleanly here.
             db.Database.Migrate();
         });
     }

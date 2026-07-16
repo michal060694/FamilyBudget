@@ -88,27 +88,55 @@ public class MonthlyOverviewEndpointsTests : IClassFixture<FamilyBudgetApiFactor
     }
 
     [Fact]
-    public async Task GetMonthlyOverview_DebtRepaymentTransactions_FeedDebtRepaymentsSummary()
+    public async Task GetMonthlyOverview_DebtRepaymentsSummary_SumsRepaymentRateOfOpenPayableDebts()
     {
         const int year = 2051;
         const int month = 4;
 
-        using (var scope = _factory.Services.CreateScope())
+        // Debts (unlike transactions/annual items) aren't year-scoped, so they're visible to every
+        // month's overview and to every other test sharing this fixture's database. Clean up after
+        // this test so it doesn't leak into DebtRepaymentsSummary elsewhere.
+        var debtIds = new List<Guid>();
+
+        try
         {
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<FamilyBudgetDbContext>();
+
+                // Counts: open payable debt with a repayment rate.
+                var payableWithRate = new Debt(Guid.NewGuid(), DebtDirection.Payable, "Gemach", 5000m, repaymentRate: 750m);
+
+                // Excluded: payable debt with no repayment rate set (contributes 0, not an error).
+                var payableNoRate = new Debt(Guid.NewGuid(), DebtDirection.Payable, "No Rate Set", 1000m);
+
+                // Excluded: receivable debt (money owed *to* the household, not a household repayment).
+                var receivable = new Debt(Guid.NewGuid(), DebtDirection.Receivable, "Yossi Cohen", 2000m, repaymentRate: 300m);
+
+                // Excluded: closed payable debt (fully repaid, no further monthly pace needed).
+                var closedDebt = new Debt(Guid.NewGuid(), DebtDirection.Payable, "Paid Off Loan", 400m, repaymentRate: 100m);
+                closedDebt.RecordRepayment(400m);
+
+                db.Debts.AddRange(payableWithRate, payableNoRate, receivable, closedDebt);
+                debtIds.AddRange(new[] { payableWithRate.Id, payableNoRate.Id, receivable.Id, closedDebt.Id });
+                await db.SaveChangesAsync();
+            }
+
+            var client = _factory.CreateClient();
+            var response = await client.GetFromJsonAsync<MonthlyOverviewResponse>(
+                $"/api/monthly-overview?year={year}&month={month}", JsonOptions);
+
+            Assert.NotNull(response);
+            Assert.Equal(750m, response!.DebtRepaymentsSummary);
+            Assert.Equal(750m, response.TotalOutflow); // no other outflow sources seeded for this month
+        }
+        finally
+        {
+            using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<FamilyBudgetDbContext>();
-            db.Transactions.Add(new Transaction(
-                Guid.NewGuid(), new DateOnly(year, month, 10), 750m,
-                TransactionType.DebtRepayment, PaymentMethod.Cash, null, "החזר חוב - Gemach"));
+            db.Debts.RemoveRange(db.Debts.Where(d => debtIds.Contains(d.Id)));
             await db.SaveChangesAsync();
         }
-
-        var client = _factory.CreateClient();
-        var response = await client.GetFromJsonAsync<MonthlyOverviewResponse>(
-            $"/api/monthly-overview?year={year}&month={month}", JsonOptions);
-
-        Assert.NotNull(response);
-        Assert.Equal(750m, response!.DebtRepaymentsSummary);
-        Assert.Equal(750m, response.TotalOutflow); // no other outflow sources seeded for this month
     }
 
     [Fact]
