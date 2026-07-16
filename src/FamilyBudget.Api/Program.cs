@@ -6,7 +6,9 @@ using FamilyBudget.Core.Abstractions;
 using FamilyBudget.Core.Services;
 using FamilyBudget.Infrastructure.Persistence;
 using FamilyBudget.Infrastructure.Repositories;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +16,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddDbContext<FamilyBudgetDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("FamilyBudget")));
+    options.UseNpgsql(NormalizeConnectionString(builder.Configuration.GetConnectionString("FamilyBudget"))));
 
 builder.Services.AddScoped<IAnnualBudgetItemRepository, AnnualBudgetItemRepository>();
 builder.Services.AddScoped<IAnnualReserveRepository, AnnualReserveRepository>();
@@ -103,6 +105,43 @@ static bool FixedTimeEquals(string a, string b)
     var aBytes = Encoding.UTF8.GetBytes(a);
     var bBytes = Encoding.UTF8.GetBytes(b);
     return aBytes.Length == bBytes.Length && CryptographicOperations.FixedTimeEquals(aBytes, bBytes);
+}
+
+/// <summary>
+/// Hosted Postgres providers (Neon, Railway, Heroku, Supabase...) commonly hand out a libpq-style
+/// URI (<c>postgresql://user:pass@host/db?sslmode=require</c>), but Npgsql's connection-string
+/// parser only understands ADO.NET keyword=value pairs and throws on a URI. Converting here means
+/// the provider's connection string can be pasted into config as-is.
+/// </summary>
+static string? NormalizeConnectionString(string? raw)
+{
+    if (string.IsNullOrWhiteSpace(raw) ||
+        !(raw.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) ||
+          raw.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase)))
+    {
+        return raw;
+    }
+
+    var uri = new Uri(raw);
+    var userInfo = uri.UserInfo.Split(':', 2);
+    var query = QueryHelpers.ParseQuery(uri.Query);
+
+    var csBuilder = new NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port > 0 ? uri.Port : 5432,
+        Database = uri.AbsolutePath.TrimStart('/'),
+        Username = Uri.UnescapeDataString(userInfo[0]),
+        Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : null,
+        SslMode = SslMode.Require,
+    };
+
+    if (query.TryGetValue("sslmode", out var sslMode) && sslMode.ToString().Equals("disable", StringComparison.OrdinalIgnoreCase))
+    {
+        csBuilder.SslMode = SslMode.Disable;
+    }
+
+    return csBuilder.ConnectionString;
 }
 
 /// <summary>Exposed for <c>WebApplicationFactory&lt;Program&gt;</c> in integration tests.</summary>
