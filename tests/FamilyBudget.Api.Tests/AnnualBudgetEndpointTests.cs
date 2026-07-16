@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using FamilyBudget.Api.Contracts;
 using FamilyBudget.Core.Entities;
+using FamilyBudget.Core.Services;
 using FamilyBudget.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -41,7 +42,7 @@ public class AnnualBudgetEndpointTests : IClassFixture<FamilyBudgetApiFactory>
     }
 
     [Fact]
-    public async Task GetAnnualBudget_ComputesFlatMonthlySummary_FromReserveAndTotals()
+    public async Task GetAnnualBudget_ComputesMonthlySummary_FromPerItemRemainingBalancesAndMonthsRemaining()
     {
         const int year = 2028;
         var client = _factory.CreateClient();
@@ -49,9 +50,11 @@ public class AnnualBudgetEndpointTests : IClassFixture<FamilyBudgetApiFactory>
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<FamilyBudgetDbContext>();
+            // Item A: 30000 total, 10000 used -> 20000 remaining. Item B: 18000 total, 8000 used
+            // -> 10000 remaining. NotYetCovered = 30000, independent of the reserve set below.
             db.AnnualBudgetItems.AddRange(
-                new AnnualBudgetItem(Guid.NewGuid(), year, "Item A", 30000m, null, 0m),
-                new AnnualBudgetItem(Guid.NewGuid(), year, "Item B", 18000m, 6, 0m));
+                new AnnualBudgetItem(Guid.NewGuid(), year, "Item A", 30000m, null, 0m, amountUsed: 10000m),
+                new AnnualBudgetItem(Guid.NewGuid(), year, "Item B", 18000m, 6, 0m, amountUsed: 8000m));
             await db.SaveChangesAsync();
         }
 
@@ -60,11 +63,19 @@ public class AnnualBudgetEndpointTests : IClassFixture<FamilyBudgetApiFactory>
 
         var response = await client.GetFromJsonAsync<AnnualBudgetResponse>($"/api/annual-budget?year={year}");
 
+        // monthlyAllocation spreads (notYetCovered - reserveOnHand) over the deposit months (the
+        // 1st of each month) still remaining to year-end, excluding the current month once its own
+        // 1st has passed — mirror the same CalendarYearCycle math the endpoint uses.
+        var now = DateTime.Now;
+        var effectiveMonth = now.Day > 1 ? now.Month + 1 : now.Month;
+        var monthsRemaining = Math.Max(1, new CalendarYearCycle().GetMonthsRemaining(effectiveMonth, targetMonth: null));
+        var expectedMonthlyAllocation = (30000m - 12000m) / monthsRemaining;
+
         Assert.NotNull(response);
         Assert.Equal(12000m, response!.ReserveOnHand);
         Assert.Equal(48000m, response.TotalAnnualBudget);
-        Assert.Equal(36000m, response.NotYetCovered);
-        Assert.Equal(3000m, response.MonthlyAllocation); // (48000 - 12000) / 12
+        Assert.Equal(30000m, response.NotYetCovered);
+        Assert.Equal(expectedMonthlyAllocation, response.MonthlyAllocation);
     }
 
     [Fact]

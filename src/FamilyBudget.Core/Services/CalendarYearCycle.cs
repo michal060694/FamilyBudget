@@ -8,10 +8,10 @@ public class CalendarYearCycle
 {
     public const int MonthsInYear = 12;
 
-    public (int Year, int Month) GetCurrent()
+    public (int Year, int Month, int Day) GetCurrent()
     {
         var now = DateTime.Now;
-        return (now.Year, now.Month);
+        return (now.Year, now.Month, now.Day);
     }
 
     /// <summary>

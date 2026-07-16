@@ -27,10 +27,11 @@ public static class AnnualBudgetEndpoints
         item.AmountUsedFormula,
         item.AmountUsed >= item.TotalAmount);
 
-    private static async Task<IResult> GetAnnualBudget(int year, AnnualBudgetQueryService queryService)
+    private static async Task<IResult> GetAnnualBudget(int year, AnnualBudgetQueryService queryService, CalendarYearCycle calendarYearCycle)
     {
         var items = await queryService.GetOrderedForYearAsync(year);
-        var summary = await queryService.GetSummaryAsync(year);
+        var (_, currentMonth, currentDay) = calendarYearCycle.GetCurrent();
+        var summary = await queryService.GetSummaryAsync(year, currentMonth, currentDay);
 
         var views = items.Select(ToView).ToList();
 
