@@ -68,7 +68,8 @@ public class MonthlyOverviewQueryService
             .Where(d => d.Direction == DebtDirection.Payable && d.Status == DebtStatus.Open)
             .Sum(d => d.RepaymentRate ?? 0m);
 
-        var totalOutflow = obligation.FixedDonationsThisMonth + fixedExpenseUsedTotal + regularExpenseUsedTotal + debtRepaymentsSummary;
+        var totalOutflow = obligation.FixedDonationsThisMonth + fixedExpenseUsedTotal + regularExpenseUsedTotal +
+            annualWithdrawalsTotal + debtRepaymentsSummary;
         var totalIncome = obligation.TitheApplicableIncome + obligation.NonTitheApplicableIncome;
         var remainingToSave = totalIncome - totalOutflow;
 

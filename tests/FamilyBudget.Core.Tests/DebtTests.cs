@@ -81,6 +81,50 @@ public class DebtTests
     }
 
     [Fact]
+    public void SetCurrentBalance_PositiveValue_UpdatesBalanceAndStaysOpen()
+    {
+        var debt = new Debt(Guid.NewGuid(), DebtDirection.Payable, "Gemach", 1000m);
+        debt.RecordRepayment(400m); // balance now 600
+
+        debt.SetCurrentBalance(750m);
+
+        Assert.Equal(750m, debt.CurrentBalance);
+        Assert.Equal(DebtStatus.Open, debt.Status);
+    }
+
+    [Fact]
+    public void SetCurrentBalance_Zero_ClosesDebt()
+    {
+        var debt = new Debt(Guid.NewGuid(), DebtDirection.Receivable, "Yossi", 1000m);
+
+        debt.SetCurrentBalance(0m);
+
+        Assert.Equal(0m, debt.CurrentBalance);
+        Assert.Equal(DebtStatus.Closed, debt.Status);
+    }
+
+    [Fact]
+    public void SetCurrentBalance_ReopensAClosedDebt()
+    {
+        var debt = new Debt(Guid.NewGuid(), DebtDirection.Receivable, "Yossi", 1000m);
+        debt.RecordRepayment(1000m); // closes it
+
+        debt.SetCurrentBalance(200m); // correcting a mistaken close
+
+        Assert.Equal(200m, debt.CurrentBalance);
+        Assert.Equal(DebtStatus.Open, debt.Status);
+    }
+
+    [Fact]
+    public void SetCurrentBalance_Negative_Throws()
+    {
+        var debt = new Debt(Guid.NewGuid(), DebtDirection.Receivable, "Yossi", 1000m);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => debt.SetCurrentBalance(-1m));
+        Assert.Equal(1000m, debt.CurrentBalance); // unaffected by the rejected attempt
+    }
+
+    [Fact]
     public void Update_CorrectingAmount_PreservesAlreadyPaidAmount()
     {
         var debt = new Debt(Guid.NewGuid(), DebtDirection.Payable, "Gemach", 1000m);

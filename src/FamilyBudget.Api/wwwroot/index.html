@@ -193,6 +193,24 @@
     outline: 2px solid var(--series-1);
     outline-offset: 2px;
   }
+
+  /* "Show me the math": clicking a computed value highlights the fields that feed it. */
+  .calc-trigger {
+    cursor: pointer;
+    border-bottom: 1px dashed var(--baseline);
+  }
+  .calc-trigger:hover { color: var(--gold); border-color: var(--gold); }
+  .calc-trigger:focus-visible {
+    outline: 2px solid var(--series-1);
+    outline-offset: 2px;
+  }
+  .calc-trigger-active { color: var(--gold); border-color: var(--gold); }
+  .calc-source-highlight {
+    background: color-mix(in srgb, var(--gold) 20%, transparent);
+    outline: 1px solid var(--gold);
+    border-radius: 6px;
+  }
+  input.calc-source-highlight { background: color-mix(in srgb, var(--gold) 20%, transparent); }
   dialog.modal {
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -391,7 +409,7 @@
     <button class="tab-btn active" data-tab="annual">תקציב שנתי</button>
     <button class="tab-btn" data-tab="overview">סקירה חודשית</button>
     <button class="tab-btn" data-tab="funds">קרנות</button>
-    <button class="tab-btn" data-tab="debts">ספר חובות</button>
+    <button class="tab-btn" data-tab="debts">חובות</button>
   </div>
 
   <div id="tab-annual" class="tab-panel">
@@ -802,12 +820,53 @@
       return text ? JSON.parse(text) : null;
     }
 
+    // ---- "Show me the math": click a computed value to highlight the fields behind it ----
+
+    let activeCalcTrigger = null;
+
+    function clearCalcHighlight() {
+      document.querySelectorAll(".calc-source-highlight").forEach(el => el.classList.remove("calc-source-highlight"));
+      if (activeCalcTrigger) activeCalcTrigger.classList.remove("calc-trigger-active");
+      activeCalcTrigger = null;
+    }
+
+    // getSourceEls is called at click time (not once up front) so it always sees the current DOM,
+    // since the tables/rows it points into are torn down and rebuilt on every refresh.
+    function wireCalcTrigger(trigger, getSourceEls) {
+      if (!trigger) return;
+      trigger.classList.add("calc-trigger");
+      trigger.setAttribute("role", "button");
+      trigger.setAttribute("tabindex", "0");
+      trigger.title = "לחצי כדי להדגיש את השדות שמרכיבים את הסכום הזה";
+      trigger.addEventListener("click", () => {
+        const reopening = activeCalcTrigger === trigger;
+        clearCalcHighlight();
+        if (reopening) return;
+        const sourceEls = getSourceEls().filter(Boolean);
+        sourceEls.forEach(el => el.classList.add("calc-source-highlight"));
+        trigger.classList.add("calc-trigger-active");
+        activeCalcTrigger = trigger;
+      });
+      trigger.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); trigger.click(); }
+      });
+    }
+
+    function byId(...ids) {
+      return ids.map(id => document.getElementById(id));
+    }
+
+    function byQuery(...selectors) {
+      return selectors.flatMap(sel => Array.from(document.querySelectorAll(sel)));
+    }
+
     function currentYear() {
       return document.getElementById("year").value;
     }
 
     async function refresh() {
       clearError();
+      clearCalcHighlight();
       try {
         const data = await fetchJson(`/api/annual-budget?year=${currentYear()}`);
         renderSummary(data);
@@ -826,12 +885,21 @@
       document.getElementById("stat-monthly").textContent = fmtMoney(data.monthlyAllocation);
     }
 
+    // Wired once (these tiles' ids are never rebuilt); the getters below re-query row cells fresh
+    // on every click since the rows themselves are torn down and rebuilt on every refresh().
+    wireCalcTrigger(document.getElementById("stat-total-budget"), () =>
+      byQuery("#monthly-rows .annual-total-cell", "#general-rows .annual-total-cell"));
+    wireCalcTrigger(document.getElementById("stat-not-covered"), () =>
+      byQuery("#monthly-rows .annual-total-cell", "#general-rows .annual-total-cell",
+        "#monthly-rows .usage-input", "#general-rows .usage-input"));
+    wireCalcTrigger(document.getElementById("stat-monthly"), () => byId("stat-not-covered", "stat-reserve"));
+
     function itemRowHtml(item) {
       return `
         <td>${escapeHtml(item.name)}</td>
-        <td class="num">${fmtMoney(item.totalAmount)}</td>
+        <td class="num annual-total-cell">${fmtMoney(item.totalAmount)}</td>
         <td class="num"><input class="usage-input" type="text" /></td>
-        <td class="num">${fmtMoney(item.totalAmount - item.amountUsed)}</td>
+        <td class="num annual-remaining-cell">${fmtMoney(item.totalAmount - item.amountUsed)}</td>
         <td><button class="delete-row" title="מחק שורה" aria-label="מחק את ${escapeHtml(item.name)}">✕</button></td>
       `;
     }
@@ -840,6 +908,8 @@
       attachFormulaInput(row.querySelector(".usage-input"), item.amountUsed, item.amountUsedFormula,
         (amount, formula) => saveUsage(item, amount, formula));
       attachConfirmDelete(row.querySelector(".delete-row"), () => deleteItem(item.annualBudgetItemId));
+      wireCalcTrigger(row.querySelector(".annual-remaining-cell"), () =>
+        [row.querySelector(".annual-total-cell"), row.querySelector(".usage-input")]);
     }
 
     async function deleteItem(id) {
@@ -1676,7 +1746,7 @@
           <td><input class="name-input" type="text" value="${escapeHtml(item.name)}" /></td>
           <td class="num"><input class="budgeted-input usage-input" type="text" /></td>
           <td class="num"><input class="used-input usage-input" type="text" /></td>
-          <td class="num">${fmtMoney(item.remaining)}</td>
+          <td class="num budget-remaining-cell">${fmtMoney(item.remaining)}</td>
           <td><button class="delete-row" title="מחק" aria-label="מחק את ${escapeHtml(item.name)}">✕</button></td>
         `;
         tbody.appendChild(row);
@@ -1684,6 +1754,8 @@
         const nameInput = row.querySelector(".name-input");
         const budgetedInput = row.querySelector(".budgeted-input");
         const usedInput = row.querySelector(".used-input");
+
+        wireCalcTrigger(row.querySelector(".budget-remaining-cell"), () => [budgetedInput, usedInput]);
 
         attachFormulaInput(budgetedInput, item.budgetedAmount, item.budgetedAmountFormula, (amount, formula) =>
           onSave(item, { budgetedAmount: amount, budgetedAmountFormula: formula }));
@@ -1787,7 +1859,7 @@
       }
       for (const line of lines) {
         const row = document.createElement("tr");
-        row.innerHTML = `<td>${escapeHtml(line.name)}</td><td class="num">${fmtMoney(line.totalAmount)}</td>`;
+        row.innerHTML = `<td>${escapeHtml(line.name)}</td><td class="num annual-withdrawal-amount">${fmtMoney(line.totalAmount)}</td>`;
         tbody.appendChild(row);
       }
     }
@@ -1796,6 +1868,7 @@
 
     async function refreshOverview() {
       ovClearError();
+      clearCalcHighlight();
       try {
         const [overview, titheSetting] = await Promise.all([
           fetchJson(`/api/monthly-overview?year=${ovYear()}&month=${ovMonth()}`),
@@ -1831,6 +1904,19 @@
         ovShowError(err.message);
       }
     }
+
+    // Wired once (these tiles' ids are never rebuilt); the getters re-query row cells fresh on
+    // every click since the tables they point into are torn down and rebuilt on every refresh.
+    wireCalcTrigger(document.getElementById("ov-total-income"), () =>
+      byQuery("#ov-income-tithe .amount-input", "#ov-income-exempt .amount-input"));
+    wireCalcTrigger(document.getElementById("ov-total-outflow"), () => [
+      ...byId("ov-fixed-donations", "ov-debt-summary"),
+      ...byQuery("#ov-fixed-expenses .used-input", "#ov-regular-expenses .used-input", ".annual-withdrawal-amount"),
+    ]);
+    wireCalcTrigger(document.getElementById("ov-remaining-save"), () => byId("ov-total-income", "ov-total-outflow"));
+    wireCalcTrigger(document.getElementById("ov-gross-target"), () =>
+      [...byId("ov-rate"), ...byQuery("#ov-income-tithe .amount-input")]);
+    wireCalcTrigger(document.getElementById("ov-still-to-donate"), () => byId("ov-gross-target", "ov-fixed-donations"));
 
     document.getElementById("ov-refresh").addEventListener("click", refreshOverview);
 
@@ -1934,11 +2020,11 @@
             </div>
             <div class="stat-tile">
               <div class="label">סה"כ צבוע</div>
-              <div class="value">${fmtMoney(fund.earmarkedTotal)}</div>
+              <div class="value fund-earmarked-value">${fmtMoney(fund.earmarkedTotal)}</div>
             </div>
             <div class="stat-tile">
               <div class="label">איזון</div>
-              <div class="value">${discrepancyBadgeHtml(fund.discrepancy)}</div>
+              <div class="value fund-discrepancy-value">${discrepancyBadgeHtml(fund.discrepancy)}</div>
             </div>
           </div>
           <table style="margin-top:16px;">
@@ -2056,6 +2142,7 @@
 
     async function refreshFunds() {
       fundsClearError();
+      clearCalcHighlight();
       try {
         const data = await fetchJson("/api/funds");
         const container = document.getElementById("funds-list");
@@ -2080,6 +2167,11 @@
           const earmarksBody = card.querySelector(".fund-earmarks-body");
 
           renderEarmarkRows(earmarksBody, fund.fundId, fund.earmarks);
+
+          wireCalcTrigger(card.querySelector(".fund-earmarked-value"), () =>
+            Array.from(earmarksBody.querySelectorAll(".amount-input")));
+          wireCalcTrigger(card.querySelector(".fund-discrepancy-value"), () =>
+            [balanceInput, ...Array.from(earmarksBody.querySelectorAll(".amount-input"))]);
 
           const saveFund = async () => {
             const name = nameInput.value.trim();
@@ -2212,6 +2304,35 @@
       }
     }
 
+    async function saveDebtBalance(debt, currentBalance) {
+      try {
+        await fetchJson(`/api/debts/${debt.id}/balance`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ currentBalance }),
+        });
+        debtsClearError();
+        await refreshDebts();
+      } catch (err) {
+        debtsShowError(err.message);
+      }
+    }
+
+    function attachBalanceHandler(row, debt) {
+      const balanceInput = row.querySelector(".balance-input");
+      balanceInput.addEventListener("blur", () => {
+        const value = parseFloat(balanceInput.value);
+        if (!(value >= 0)) {
+          debtsShowError("היתרה חייבת להיות מספר אי-שלילי.");
+          return;
+        }
+        if (value !== debt.currentBalance) {
+          guardedSave(balanceInput, () => saveDebtBalance(debt, value));
+        }
+      });
+      balanceInput.addEventListener("keydown", (e) => { if (e.key === "Enter") balanceInput.blur(); });
+    }
+
     async function deleteDebt(debt) {
       try {
         await fetchJson(`/api/debts/${debt.id}`, { method: "DELETE" });
@@ -2256,7 +2377,7 @@
         const row = document.createElement("tr");
         row.innerHTML = `
           <td><input class="name-input" type="text" value="${escapeHtml(debt.counterpartyName)}" /></td>
-          <td class="num">${fmtMoney(debt.currentBalance)}</td>
+          <td class="num"><input class="balance-input usage-input" type="number" min="0" step="0.01" value="${debt.currentBalance}" /></td>
           <td><input class="date-input desc-input" type="date" value="${escapeHtml(debt.targetDate ?? "")}" /></td>
           <td><input class="notes-input desc-input" type="text" value="${escapeHtml(debt.notes ?? "")}" /></td>
           <td>${debtStatusBadgeHtml(debt.status)}</td>
@@ -2283,6 +2404,7 @@
 
         attachConfirmDelete(row.querySelector(".delete-row"), () => deleteDebt(debt));
         attachRepayHandler(row, debt);
+        attachBalanceHandler(row, debt);
       }
     }
 
@@ -2296,7 +2418,7 @@
         const row = document.createElement("tr");
         row.innerHTML = `
           <td><input class="name-input" type="text" value="${escapeHtml(debt.counterpartyName)}" /></td>
-          <td class="num">${fmtMoney(debt.currentBalance)}</td>
+          <td class="num"><input class="balance-input usage-input" type="number" min="0" step="0.01" value="${debt.currentBalance}" /></td>
           <td><input class="rate-input usage-input" type="number" min="0" step="0.01" value="${debt.repaymentRate ?? ""}" placeholder="—" /></td>
           <td>${debtStatusBadgeHtml(debt.status)}</td>
           <td>${repayCellHtml(debt)}</td>
@@ -2322,6 +2444,7 @@
 
         attachConfirmDelete(row.querySelector(".delete-row"), () => deleteDebt(debt));
         attachRepayHandler(row, debt);
+        attachBalanceHandler(row, debt);
       }
     }
 

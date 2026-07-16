@@ -76,6 +76,18 @@ public class Debt
         Notes = notes;
     }
 
+    /// <summary>Directly corrects the current balance (e.g. fixing a data-entry mistake), bypassing repayment tracking.</summary>
+    public void SetCurrentBalance(decimal newBalance)
+    {
+        if (newBalance < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(newBalance), "CurrentBalance must be >= 0.");
+        }
+
+        CurrentBalance = newBalance;
+        Status = newBalance == 0m ? DebtStatus.Closed : DebtStatus.Open;
+    }
+
     /// <summary>Records a repayment, reducing the balance and auto-closing at zero (FR-006, FR-008, FR-009).</summary>
     public void RecordRepayment(decimal amount)
     {

@@ -14,6 +14,7 @@ public static class DebtEndpoints
         app.MapPut("/api/debts/{id:guid}", UpdateDebt);
         app.MapDelete("/api/debts/{id:guid}", DeleteDebt);
         app.MapPost("/api/debts/{id:guid}/repayments", RecordRepayment);
+        app.MapPatch("/api/debts/{id:guid}/balance", SetBalance);
     }
 
     private static DebtResponse ToResponse(Debt debt) => new(
@@ -98,6 +99,25 @@ public static class DebtEndpoints
     {
         var deleted = await repository.DeleteAsync(id);
         return deleted ? Results.NoContent() : Results.NotFound();
+    }
+
+    private static async Task<IResult> SetBalance(Guid id, SetDebtBalanceRequest request, IDebtRepository repository)
+    {
+        if (request.CurrentBalance < 0)
+        {
+            return Results.BadRequest("currentBalance must be >= 0.");
+        }
+
+        var debt = await repository.GetByIdAsync(id);
+        if (debt is null)
+        {
+            return Results.NotFound();
+        }
+
+        debt.SetCurrentBalance(request.CurrentBalance);
+        await repository.SaveChangesAsync();
+
+        return Results.Ok(ToResponse(debt));
     }
 
     private static async Task<IResult> RecordRepayment(

@@ -122,6 +122,67 @@ public class DebtEndpointsTests : IClassFixture<FamilyBudgetApiFactory>
     }
 
     [Fact]
+    public async Task SetBalance_UpdatesCurrentBalanceDirectly()
+    {
+        var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/debts", new CreateDebtRequest(DebtDirection.Payable, "Balance Fix", 1000m));
+        var created = await createResponse.Content.ReadFromJsonAsync<DebtResponse>(JsonOptions);
+
+        var balanceResponse = await client.PatchAsJsonAsync(
+            $"/api/debts/{created!.Id}/balance", new SetDebtBalanceRequest(650m));
+
+        Assert.Equal(HttpStatusCode.OK, balanceResponse.StatusCode);
+        var updated = await balanceResponse.Content.ReadFromJsonAsync<DebtResponse>(JsonOptions);
+        Assert.Equal(650m, updated!.CurrentBalance);
+        Assert.Equal(DebtStatus.Open, updated.Status);
+    }
+
+    [Fact]
+    public async Task SetBalance_Zero_ClosesDebt()
+    {
+        var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/debts", new CreateDebtRequest(DebtDirection.Receivable, "Zeroed Out", 500m));
+        var created = await createResponse.Content.ReadFromJsonAsync<DebtResponse>(JsonOptions);
+
+        var balanceResponse = await client.PatchAsJsonAsync(
+            $"/api/debts/{created!.Id}/balance", new SetDebtBalanceRequest(0m));
+
+        var updated = await balanceResponse.Content.ReadFromJsonAsync<DebtResponse>(JsonOptions);
+        Assert.Equal(0m, updated!.CurrentBalance);
+        Assert.Equal(DebtStatus.Closed, updated.Status);
+    }
+
+    [Fact]
+    public async Task SetBalance_Negative_ReturnsBadRequest()
+    {
+        var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/debts", new CreateDebtRequest(DebtDirection.Receivable, "Negative Attempt", 500m));
+        var created = await createResponse.Content.ReadFromJsonAsync<DebtResponse>(JsonOptions);
+
+        var response = await client.PatchAsJsonAsync(
+            $"/api/debts/{created!.Id}/balance", new SetDebtBalanceRequest(-1m));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SetBalance_UnknownId_ReturnsNotFound()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PatchAsJsonAsync(
+            $"/api/debts/{Guid.NewGuid()}/balance", new SetDebtBalanceRequest(100m));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task RecordRepayment_Receivable_FullAmount_ClosesDebtAndCreatesIncomeTransaction()
     {
         var client = _factory.CreateClient();

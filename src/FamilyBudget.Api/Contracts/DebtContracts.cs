@@ -31,3 +31,5 @@ public record UpdateDebtRequest(
     string? Notes = null);
 
 public record RecordRepaymentRequest(decimal Amount, PaymentMethod PaymentMethod);
+
+public record SetDebtBalanceRequest(decimal CurrentBalance);

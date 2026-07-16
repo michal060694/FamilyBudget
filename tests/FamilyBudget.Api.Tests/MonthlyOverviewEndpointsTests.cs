@@ -81,7 +81,7 @@ public class MonthlyOverviewEndpointsTests : IClassFixture<FamilyBudgetApiFactor
         Assert.Equal(900m, response.AnnualWithdrawals.Total);
 
         var totalIncome = 1000m + 300m;
-        var totalOutflow = 120m + 400m + 150m; // fixed donations this month + fixed used + regular used (+0 debt)
+        var totalOutflow = 120m + 400m + 150m + 900m; // fixed donations + fixed used + regular used + annual withdrawals (+0 debt)
         Assert.Equal(totalOutflow, response.TotalOutflow);
         Assert.Equal(totalIncome, response.TotalIncome);
         Assert.Equal(totalIncome - totalOutflow, response.RemainingToSave);
