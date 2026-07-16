@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
 using FamilyBudget.Api.Endpoints;
+using FamilyBudget.Api.Services;
 using FamilyBudget.Core.Abstractions;
 using FamilyBudget.Core.Services;
 using FamilyBudget.Infrastructure.Persistence;
@@ -36,6 +37,7 @@ builder.Services.AddScoped<MonthlyOverviewQueryService>();
 builder.Services.AddScoped<FundSummaryQueryService>();
 builder.Services.AddScoped<DebtRepaymentService>();
 builder.Services.AddScoped<MonthlyTemplateApplyService>();
+builder.Services.AddScoped<ExcelExportService>();
 
 var app = builder.Build();
 
@@ -99,6 +101,7 @@ app.MapFixedDonationStandingOrderEndpoints();
 app.MapFundEndpoints();
 app.MapDebtEndpoints();
 app.MapMonthlyTemplateEndpoints();
+app.MapExportEndpoints();
 
 app.Run();
 

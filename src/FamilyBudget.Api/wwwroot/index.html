@@ -363,6 +363,13 @@
   }
   .save-flash-visible { opacity: 1; }
 
+  .page-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
   .tabs {
     display: inline-flex;
     gap: 4px;
@@ -405,12 +412,16 @@
   <h1>תקציב הבית</h1>
   <p class="subtitle">תקציב שנתי, מעשרות, קרנות וחובות — הכל במקום אחד</p>
 
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="annual">תקציב שנתי</button>
-    <button class="tab-btn" data-tab="overview">סקירה חודשית</button>
-    <button class="tab-btn" data-tab="funds">קרנות</button>
-    <button class="tab-btn" data-tab="debts">חובות</button>
+  <div class="page-header-row">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="annual">תקציב שנתי</button>
+      <button class="tab-btn" data-tab="overview">סקירה חודשית</button>
+      <button class="tab-btn" data-tab="funds">קרנות</button>
+      <button class="tab-btn" data-tab="debts">חובות</button>
+    </div>
+    <button class="secondary" id="export-excel-btn" title="מייצא את תקציב השנה (מהטאב 'תקציב שנתי') והחודש (מהטאב 'סקירה חודשית') הנבחרים, יחד עם הקרנות והחובות">📥 ייצוא לאקסל</button>
   </div>
+  <div id="export-error" class="error" hidden></div>
 
   <div id="tab-annual" class="tab-panel">
     <div class="controls">
@@ -2837,6 +2848,50 @@
         <input type="number" class="new-amount" min="0.01" step="0.01" placeholder="סכום" />
         <input type="number" class="new-rate" min="0" step="0.01" placeholder="קצב החזר (לא חובה)" />
       `, "Payable");
+    });
+
+    // ---- Excel export (one workbook, one sheet per tab) ----
+
+    function exportShowError(message) {
+      const el = document.getElementById("export-error");
+      el.textContent = "שגיאה: " + message;
+      el.hidden = false;
+    }
+
+    function exportClearError() {
+      document.getElementById("export-error").hidden = true;
+    }
+
+    document.getElementById("export-excel-btn").addEventListener("click", (e) => {
+      const btn = e.currentTarget;
+      withPending(btn, async () => {
+        try {
+          const annualYear = document.getElementById("year").value;
+          const overviewYear = document.getElementById("ov-year").value;
+          const overviewMonth = document.getElementById("ov-month").value;
+
+          const response = await fetch(
+            `/api/export/excel?annualYear=${annualYear}&overviewYear=${overviewYear}&overviewMonth=${overviewMonth}`);
+          if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`${response.status}: ${text || response.statusText}`);
+          }
+
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `תקציב-${overviewYear}-${String(overviewMonth).padStart(2, "0")}.xlsx`;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(url);
+
+          exportClearError();
+        } catch (err) {
+          exportShowError(err.message);
+        }
+      });
     });
   </script>
 </body>
