@@ -25,3 +25,7 @@ public record CreateAnnualBudgetItemRequest(
 public record SetReserveRequest(decimal Amount);
 
 public record SetUsageRequest(decimal Amount, string? AmountFormula = null);
+
+public record CopyAnnualBudgetYearRequest(int SourceYear, int TargetYear);
+
+public record CopyAnnualBudgetYearResponse(int SourceYear, int TargetYear, int ItemsCopied, int ItemsSkipped);

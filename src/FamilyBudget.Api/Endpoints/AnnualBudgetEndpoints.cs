@@ -14,6 +14,7 @@ public static class AnnualBudgetEndpoints
         app.MapPatch("/api/annual-budget-items/{id:guid}/usage", SetUsage);
         app.MapDelete("/api/annual-budget-items/{id:guid}", DeleteAnnualBudgetItem);
         app.MapPut("/api/reserve", SetReserve);
+        app.MapPost("/api/annual-budget/copy", CopyYear);
     }
 
     private static AnnualBudgetItemView ToView(AnnualBudgetItem item) => new(
@@ -111,5 +112,17 @@ public static class AnnualBudgetEndpoints
 
         await repository.SetAmountAsync(year, request.Amount);
         return Results.Ok(new { year, amount = request.Amount });
+    }
+
+    private static async Task<IResult> CopyYear(CopyAnnualBudgetYearRequest request, AnnualBudgetCopyService copyService)
+    {
+        if (request.SourceYear == request.TargetYear)
+        {
+            return Results.BadRequest("sourceYear and targetYear must differ.");
+        }
+
+        var (copied, skipped) = await copyService.CopyYearAsync(request.SourceYear, request.TargetYear);
+
+        return Results.Ok(new CopyAnnualBudgetYearResponse(request.SourceYear, request.TargetYear, copied, skipped));
     }
 }

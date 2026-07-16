@@ -430,9 +430,28 @@
         <input id="year" type="number" value="2026" />
       </div>
       <button id="refresh">רענן</button>
+      <button class="secondary" id="open-copy-year-modal">העתקה משנה קודמת/אחרת</button>
     </div>
 
     <div id="error" class="error" hidden></div>
+
+    <dialog id="modal-copy-year" class="modal" style="width:min(420px,92vw);">
+      <h3>העתקת תקציב משנה אחרת</h3>
+      <p class="hint" style="margin: 0 0 12px;">מעתיק את כל הקטגוריות (שם, סכום, חודש) מהשנה שתבחרי אל השנה הנוכחית (<strong id="copy-target-year"></strong>). קטגוריה עם שם שכבר קיים בשנה הנוכחית תדולג — אין כפילויות. הסכום שנוצל ומה שהופרש בפועל לא מועתקים — השנה החדשה מתחילה מאפס.</p>
+
+      <div class="field">
+        <label for="copy-source-year">העתק מהשנה</label>
+        <input id="copy-source-year" type="number" />
+      </div>
+
+      <div id="copy-year-error" class="error" hidden></div>
+      <div id="copy-year-status" style="font-weight:600; color: var(--status-good); margin-top:10px;" hidden></div>
+
+      <div class="modal-actions">
+        <button class="secondary" id="close-copy-year-modal">סגור</button>
+        <button id="copy-year-btn">העתק</button>
+      </div>
+    </dialog>
 
     <div class="stat-row" style="margin-bottom: 20px;">
       <div class="stat-tile">
@@ -1138,6 +1157,56 @@
     }
 
     document.getElementById("refresh").addEventListener("click", refresh);
+
+    // ---- Copy annual budget from another year (year-start convenience) ----
+
+    document.getElementById("open-copy-year-modal").addEventListener("click", () => {
+      const targetYear = Number(currentYear());
+      document.getElementById("copy-target-year").textContent = targetYear;
+      document.getElementById("copy-source-year").value = targetYear - 1;
+      document.getElementById("copy-year-error").hidden = true;
+      document.getElementById("copy-year-status").hidden = true;
+      document.getElementById("modal-copy-year").showModal();
+    });
+
+    document.getElementById("close-copy-year-modal").addEventListener("click", () => {
+      document.getElementById("modal-copy-year").close();
+    });
+
+    document.getElementById("copy-year-btn").addEventListener("click", (e) => {
+      const btn = e.currentTarget;
+      withPending(btn, async () => {
+        const errorEl = document.getElementById("copy-year-error");
+        const statusEl = document.getElementById("copy-year-status");
+        errorEl.hidden = true;
+        statusEl.hidden = true;
+
+        const sourceYear = Number(document.getElementById("copy-source-year").value);
+        const targetYear = Number(currentYear());
+        if (!sourceYear || sourceYear === targetYear) {
+          errorEl.textContent = "שגיאה: יש לבחור שנה שונה מהשנה הנוכחית.";
+          errorEl.hidden = false;
+          return;
+        }
+
+        try {
+          const result = await fetchJson("/api/annual-budget/copy", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sourceYear, targetYear }),
+          });
+          clearError();
+          await refresh();
+          statusEl.textContent = result.itemsCopied > 0
+            ? `הועתקו ${result.itemsCopied} קטגוריות משנת ${result.sourceYear} ✓${result.itemsSkipped > 0 ? ` (${result.itemsSkipped} כבר היו קיימות)` : ""}`
+            : `כל הקטגוריות משנת ${result.sourceYear} כבר קיימות בשנה הנוכחית — לא הועתק כלום.`;
+          statusEl.hidden = false;
+        } catch (err) {
+          errorEl.textContent = "שגיאה: " + err.message;
+          errorEl.hidden = false;
+        }
+      });
+    });
 
     document.getElementById("save-reserve").addEventListener("click", (e) => withPending(e.currentTarget, async () => {
       const amount = parseFloat(document.getElementById("reserve-input").value);

@@ -32,6 +32,7 @@ builder.Services.AddScoped<IMonthlyTemplateItemRepository, MonthlyTemplateItemRe
 builder.Services.AddSingleton<CalendarYearCycle>();
 builder.Services.AddScoped<BudgetSmoothingEngine>();
 builder.Services.AddScoped<AnnualBudgetQueryService>();
+builder.Services.AddScoped<AnnualBudgetCopyService>();
 builder.Services.AddScoped<TitheEngine>();
 builder.Services.AddScoped<MonthlyOverviewQueryService>();
 builder.Services.AddScoped<FundSummaryQueryService>();

@@ -210,4 +210,61 @@ public class AnnualBudgetEndpointTests : IClassFixture<FamilyBudgetApiFactory>
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
+
+    [Fact]
+    public async Task CopyYear_CopiesItemsFromSourceYear_SkippingNamesAlreadyInTargetYear()
+    {
+        const int sourceYear = 2040;
+        const int targetYear = 2041;
+        var client = _factory.CreateClient();
+
+        await client.PostAsJsonAsync("/api/annual-budget-items", new CreateAnnualBudgetItemRequest(sourceYear, "Car Insurance", 1200m, null));
+        await client.PostAsJsonAsync("/api/annual-budget-items", new CreateAnnualBudgetItemRequest(sourceYear, "Passover", 2000m, 7));
+        await client.PostAsJsonAsync("/api/annual-budget-items", new CreateAnnualBudgetItemRequest(targetYear, "Car Insurance", 1300m, null));
+
+        var response = await client.PostAsJsonAsync(
+            "/api/annual-budget/copy", new CopyAnnualBudgetYearRequest(sourceYear, targetYear));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<CopyAnnualBudgetYearResponse>();
+        Assert.Equal(1, result!.ItemsCopied);
+        Assert.Equal(1, result.ItemsSkipped);
+
+        var targetList = await client.GetFromJsonAsync<AnnualBudgetResponse>($"/api/annual-budget?year={targetYear}");
+        var copiedPassover = Assert.Single(targetList!.Items, i => i.Name == "Passover");
+        Assert.Equal(2000m, copiedPassover.TotalAmount);
+        Assert.Equal(7, copiedPassover.TargetMonth);
+        Assert.Equal(1300m, targetList.Items.Single(i => i.Name == "Car Insurance").TotalAmount); // untouched, not overwritten
+    }
+
+    [Fact]
+    public async Task CopyYear_CopiedItemsStartWithZeroUsageAndSetAside()
+    {
+        const int sourceYear = 2043;
+        const int targetYear = 2044;
+        var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/annual-budget-items", new CreateAnnualBudgetItemRequest(sourceYear, "Rent", 12000m, null));
+        var created = await createResponse.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
+        await client.PatchAsJsonAsync($"/api/annual-budget-items/{created!.AnnualBudgetItemId}/usage", new SetUsageRequest(5000m));
+
+        await client.PostAsJsonAsync("/api/annual-budget/copy", new CopyAnnualBudgetYearRequest(sourceYear, targetYear));
+
+        var targetList = await client.GetFromJsonAsync<AnnualBudgetResponse>($"/api/annual-budget?year={targetYear}");
+        var copiedItem = Assert.Single(targetList!.Items, i => i.Name == "Rent");
+        Assert.Equal(0m, copiedItem.AmountUsed);
+        Assert.Equal(0m, copiedItem.AmountAlreadySetAside);
+    }
+
+    [Fact]
+    public async Task CopyYear_SameSourceAndTargetYear_ReturnsBadRequest()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/annual-budget/copy", new CopyAnnualBudgetYearRequest(2045, 2045));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }
