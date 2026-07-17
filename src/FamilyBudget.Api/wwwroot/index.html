@@ -160,7 +160,10 @@
     border-width: 2px;
     border-style: solid;
     overflow-x: visible;
+    display: flex;
+    flex-direction: column;
   }
+  .fund-card-footer { margin-top: auto; padding-top: 6px; }
   .fund-card.fund-balanced { border-color: var(--status-good); }
   .fund-card.fund-unbalanced { border-color: var(--status-critical); }
   .fund-card-header { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
@@ -355,6 +358,15 @@
     font-size: 0.9rem;
   }
   button.delete-row:hover { color: var(--status-critical); }
+  button.notes-btn {
+    background: transparent;
+    color: var(--text-muted);
+    border: none;
+    padding: 2px 8px;
+    font-size: 0.9rem;
+  }
+  button.notes-btn:hover { color: var(--card-accent, var(--series-1)); }
+  button.notes-btn.has-notes { color: var(--card-accent, var(--series-1)); }
   /* The armed "לאשר מחיקה?" label is wider than a narrow table action column (especially
      .annual-table's fixed 36px one), so it pops out as an absolutely-positioned overlay
      anchored inside its own cell instead of stretching/escaping the table's column layout. */
@@ -765,15 +777,27 @@
 
     <div id="debts-error" class="error" hidden></div>
 
+    <dialog id="modal-debt-notes" class="modal" style="width:min(420px,92vw);">
+      <h3>הערות</h3>
+      <div class="field">
+        <textarea id="debt-notes-input" rows="5" style="width:100%; font: inherit; padding: 6px 10px; border: 1px solid var(--baseline); border-radius: 8px; background: var(--page-plane); color: var(--text-primary);"></textarea>
+      </div>
+      <div id="debt-notes-error" class="error" hidden></div>
+      <div class="modal-actions">
+        <button class="secondary" id="close-debt-notes-modal">סגור</button>
+        <button id="save-debt-notes-btn">שמור</button>
+      </div>
+    </dialog>
+
     <div class="overview-columns">
       <div class="card card-sage">
         <h2>חייבים לנו</h2>
         <table>
           <thead>
-            <tr><th>שם</th><th class="num">יתרה</th><th>תאריך יעד</th><th>הערות</th><th>סטטוס</th><th>החזר</th><th></th></tr>
+            <tr><th>שם</th><th class="num">יתרה</th><th>תאריך יעד</th><th>סטטוס</th><th>החזר</th><th></th></tr>
           </thead>
           <tbody id="debts-receivables"></tbody>
-          <tfoot><tr><td colspan="7"><button class="icon" id="add-receivable-toggle">+ הוסף חוב</button></td></tr></tfoot>
+          <tfoot><tr><td colspan="6"><button class="icon" id="add-receivable-toggle">+ הוסף חוב</button></td></tr></tfoot>
         </table>
       </div>
       <div class="card card-berry">
@@ -2429,8 +2453,10 @@
           <table class="fund-earmarks-table">
             <thead><tr><th>מטרה</th><th class="num">סכום</th><th></th></tr></thead>
             <tbody class="fund-earmarks-body"></tbody>
-            <tfoot><tr><td colspan="3"><button class="icon fund-add-earmark-toggle">+ הוסף ייעוד</button></td></tr></tfoot>
           </table>
+          <div class="fund-card-footer">
+            <button class="icon fund-add-earmark-toggle">+ הוסף ייעוד</button>
+          </div>
         </div>
       `;
     }
@@ -2662,6 +2688,8 @@
 
     // ---- Debts Ledger ----
 
+    let currentNotesDebt = null;
+
     function debtsShowError(message) {
       const el = document.getElementById("debts-error");
       el.textContent = "שגיאה: " + message;
@@ -2706,8 +2734,10 @@
         });
         debtsClearError();
         await refreshDebts();
+        return true;
       } catch (err) {
         debtsShowError(err.message);
+        return false;
       }
     }
 
@@ -2729,6 +2759,21 @@
       const balanceInput = row.querySelector(".balance-input");
       attachFormulaInput(balanceInput, debt.currentBalance, debt.currentBalanceFormula,
         (amount, formula) => saveDebtBalance(debt, amount, formula), debtsShowError);
+    }
+
+    function notesButtonHtml(debt) {
+      return `<button class="icon notes-btn${debt.notes ? " has-notes" : ""}" title="הערות" aria-label="הערות עבור ${escapeHtml(debt.counterpartyName)}">📝</button>`;
+    }
+
+    function openDebtNotesModal(debt) {
+      currentNotesDebt = debt;
+      document.getElementById("debt-notes-input").value = debt.notes ?? "";
+      document.getElementById("debt-notes-error").hidden = true;
+      document.getElementById("modal-debt-notes").showModal();
+    }
+
+    function attachNotesHandler(row, debt) {
+      row.querySelector(".notes-btn").addEventListener("click", () => openDebtNotesModal(debt));
     }
 
     async function deleteDebt(debt) {
@@ -2768,7 +2813,7 @@
     function renderReceivableRows(tbody, debts) {
       tbody.innerHTML = "";
       if (!debts || debts.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="color: var(--text-muted); font-style: italic;">אין חובות כאלה עדיין.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="color: var(--text-muted); font-style: italic;">אין חובות כאלה עדיין.</td></tr>`;
         return;
       }
       for (const debt of debts) {
@@ -2777,16 +2822,14 @@
           <td><input class="name-input" type="text" value="${escapeHtml(debt.counterpartyName)}" /></td>
           <td class="num"><input class="balance-input usage-input" type="text" /></td>
           <td><input class="date-input desc-input" type="date" value="${escapeHtml(debt.targetDate ?? "")}" /></td>
-          <td><input class="notes-input desc-input" type="text" value="${escapeHtml(debt.notes ?? "")}" /></td>
           <td>${debtStatusBadgeHtml(debt.status)}</td>
           <td>${repayCellHtml(debt)}</td>
-          <td><button class="delete-row" title="מחק" aria-label="מחק את החוב עם ${escapeHtml(debt.counterpartyName)}">✕</button></td>
+          <td>${notesButtonHtml(debt)}<button class="delete-row" title="מחק" aria-label="מחק את החוב עם ${escapeHtml(debt.counterpartyName)}">✕</button></td>
         `;
         tbody.appendChild(row);
 
         const nameInput = row.querySelector(".name-input");
         const dateInput = row.querySelector(".date-input");
-        const notesInput = row.querySelector(".notes-input");
 
         nameInput.addEventListener("blur", () => {
           if (nameInput.value.trim() && nameInput.value !== debt.counterpartyName) {
@@ -2794,15 +2837,11 @@
           }
         });
         dateInput.addEventListener("change", () => guardedSave(dateInput, () => saveDebtPatch(debt, { targetDate: dateInput.value || null })));
-        notesInput.addEventListener("blur", () => {
-          if (notesInput.value !== (debt.notes ?? "")) {
-            guardedSave(notesInput, () => saveDebtPatch(debt, { notes: notesInput.value || null }));
-          }
-        });
 
         attachConfirmDelete(row.querySelector(".delete-row"), () => deleteDebt(debt));
         attachRepayHandler(row, debt);
         attachBalanceHandler(row, debt);
+        attachNotesHandler(row, debt);
       }
     }
 
@@ -2820,7 +2859,7 @@
           <td><input class="rate-input usage-input" type="number" min="0" step="0.01" value="${debt.repaymentRate ?? ""}" placeholder="—" /></td>
           <td>${debtStatusBadgeHtml(debt.status)}</td>
           <td>${repayCellHtml(debt)}</td>
-          <td><button class="delete-row" title="מחק" aria-label="מחק את החוב עם ${escapeHtml(debt.counterpartyName)}">✕</button></td>
+          <td>${notesButtonHtml(debt)}<button class="delete-row" title="מחק" aria-label="מחק את החוב עם ${escapeHtml(debt.counterpartyName)}">✕</button></td>
         `;
         tbody.appendChild(row);
 
@@ -2843,6 +2882,7 @@
         attachConfirmDelete(row.querySelector(".delete-row"), () => deleteDebt(debt));
         attachRepayHandler(row, debt);
         attachBalanceHandler(row, debt);
+        attachNotesHandler(row, debt);
       }
     }
 
@@ -2912,8 +2952,28 @@
 
     document.getElementById("debts-refresh").addEventListener("click", refreshDebts);
 
+    document.getElementById("close-debt-notes-modal").addEventListener("click", () => {
+      document.getElementById("modal-debt-notes").close();
+    });
+
+    document.getElementById("save-debt-notes-btn").addEventListener("click", () => {
+      if (!currentNotesDebt) return;
+      withPending(document.getElementById("save-debt-notes-btn"), async () => {
+        const notes = document.getElementById("debt-notes-input").value;
+        const notesErrorEl = document.getElementById("debt-notes-error");
+        const ok = await saveDebtPatch(currentNotesDebt, { notes: notes || null });
+        if (ok) {
+          notesErrorEl.hidden = true;
+          document.getElementById("modal-debt-notes").close();
+        } else {
+          notesErrorEl.textContent = document.getElementById("debts-error").textContent;
+          notesErrorEl.hidden = false;
+        }
+      });
+    });
+
     document.getElementById("add-receivable-toggle").addEventListener("click", () => {
-      toggleAddDebtRow(document.getElementById("debts-receivables"), 7, `
+      toggleAddDebtRow(document.getElementById("debts-receivables"), 6, `
         <input type="text" class="new-name" placeholder="שם" />
         <input type="number" class="new-amount" min="0.01" step="0.01" placeholder="סכום" />
         <input type="date" class="new-target-date" title="תאריך יעד (לא חובה)" />
