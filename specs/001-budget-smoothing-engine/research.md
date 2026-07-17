@@ -47,17 +47,24 @@ Principle V (every number must be traceable to its components).
   introduces a second source of truth and a synchronization/staleness risk; the calculation is
   cheap enough (≤30 items) to compute on every request.
 
-## Decision: Tests run against real SQLite, not the EF Core InMemory provider
+## Decision: Tests run against real SQLite (not the EF Core InMemory provider), as a fast in-memory stand-in for production PostgreSQL
 
-**Rationale**: Constitution Principle III fixes SQLite as the only supported store. The EF Core
-InMemory provider does not enforce the same constraints (e.g., column types, SQL translation) as
-SQLite and could hide bugs that only surface against the real provider. Integration tests instead
-use a SQLite connection with `DataSource=:memory:` kept open for the test's lifetime, which is
-fast and still exercises the real provider.
+**Rationale**: Constitution Principle III fixes PostgreSQL as the only supported production store,
+but requiring a live PostgreSQL instance for every test run would be slow and add CI/local setup
+friction. SQLite is used instead as an in-memory test double: the EF Core InMemory provider does
+not enforce the same constraints (e.g., column types, SQL translation) that a real relational
+provider does and could hide bugs that only surface against real SQL. A SQLite connection with
+`DataSource=:memory:` kept open for the test's lifetime is fast and still exercises a real
+provider's SQL translation. This works in practice because SQLite's loose type affinity accepts
+the Postgres-flavored column types EF Core migrations generate (e.g. `uuid`, `numeric(18,2)`)
+without validation, so the same migration files apply cleanly to both databases.
 
 **Alternatives considered**:
-- EF Core InMemory provider — rejected: diverges from the production database engine, risking
-  false-positive test passes.
+- Running integration tests against a real PostgreSQL instance — rejected as the default: much
+  slower, and requires a running Postgres server (Docker or hosted) for every local test run and
+  in CI.
+- EF Core InMemory provider — rejected: diverges further from the production database engine's
+  SQL translation, risking false-positive test passes.
 - A file-based SQLite test database — rejected as the default: slower and requires cleanup;
   reserved for scenarios that specifically need file-persistence behavior.
 

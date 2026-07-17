@@ -13,7 +13,7 @@ calendar month, exactly how much must be set aside toward each annual budget ite
 (`AllocatedMonthly = (TotalAmount - AmountAlreadySetAside) / MonthsRemaining`), and to review the
 full annual budget table ordered by calendar month. Implemented as a Core domain library
 (calculation engine, entities, calendar-month arithmetic) with an Infrastructure layer persisting
-`AnnualBudgetItem` records in SQLite via EF Core, exposed through a thin API layer with no
+`AnnualBudgetItem` records in PostgreSQL via EF Core, exposed through a thin API layer with no
 business logic of its own.
 
 ## Technical Context
@@ -21,10 +21,13 @@ business logic of its own.
 **Language/Version**: C# 12 / .NET 8
 
 **Primary Dependencies**: ASP.NET Core (Minimal APIs) for the API layer; Entity Framework Core 8
-(Microsoft.EntityFrameworkCore.Sqlite) for persistence; no UI framework in this feature's scope.
+(Npgsql.EntityFrameworkCore.PostgreSQL) for persistence; Microsoft.EntityFrameworkCore.Sqlite is
+used only as the in-memory connection for API integration tests; no UI framework in this
+feature's scope.
 
-**Storage**: SQLite, single local file, accessed exclusively through EF Core (Constitution
-Principle III).
+**Storage**: PostgreSQL, accessed exclusively through EF Core (Constitution Principle III);
+SQLite is used only as the in-memory test double for API integration tests, never as a deployed
+store.
 
 **Testing**: xUnit for Core domain unit tests (calculation engine, calendar-month arithmetic,
 overrun/shortfall logic); `Microsoft.AspNetCore.Mvc.Testing` (`WebApplicationFactory`) for API
@@ -39,9 +42,9 @@ screens is out of scope for this feature and will consume these endpoints later.
 **Performance Goals**: Not a high-throughput system — single household, dashboard and table
 endpoints must respond well under 1s with realistic data volumes (see Scale/Scope).
 
-**Constraints**: Fully offline-capable (local SQLite file, no external network calls); monthly
-allocation recomputation must be deterministic and side-effect-free when just querying (FR-002,
-FR-005).
+**Constraints**: Persistence requires a reachable PostgreSQL instance (no other external network
+calls); monthly allocation recomputation must be deterministic and side-effect-free when just
+querying (FR-002, FR-005).
 
 **Scale/Scope**: Single household/user context; on the order of 10-30 annual budget items per
 calendar year (always 12 months); no concurrent-user or multi-tenant concerns.
@@ -53,8 +56,8 @@ calendar year (always 12 months); no concurrent-user or multi-tenant concerns.
 | Principle | Check | Result |
 |---|---|---|
 | I. Proactive Budget Smoothing | Feature's entire purpose is the smoothing engine (FR-002, FR-006, FR-007) | PASS |
-| II. Clean Layered Architecture (NON-NEGOTIABLE) | Solution split into `FamilyBudget.Core` (calculation engine, entities — no EF/ASP.NET references), `FamilyBudget.Infrastructure` (EF Core + SQLite), `FamilyBudget.Api` (thin endpoints) | PASS |
-| III. Fixed Technology Stack | C#/.NET 8, SQLite via EF Core only, new GitHub repo (already initialized) | PASS |
+| II. Clean Layered Architecture (NON-NEGOTIABLE) | Solution split into `FamilyBudget.Core` (calculation engine, entities — no EF/ASP.NET references), `FamilyBudget.Infrastructure` (EF Core + PostgreSQL), `FamilyBudget.Api` (thin endpoints) | PASS |
+| III. Fixed Technology Stack | C#/.NET 8, PostgreSQL via EF Core only, new GitHub repo (already initialized) | PASS |
 | IV. Financial Data Integrity (NON-NEGOTIABLE) | Fund-balance invariant itself belongs to the future Asset Allocation feature; this feature only guarantees its own invariant — allocation math always resolves overruns/shortfalls to zero by calendar year-end (FR-006, FR-007, SC-002/SC-003) — covered by dedicated Core unit tests | PASS (scoped) |
 | V. Auditability & Transparency | Dashboard endpoint returns income, fixed expenses, allocation, and free balance as distinct fields (FR-003), never a single aggregate | PASS |
 
@@ -85,7 +88,7 @@ src/
 │   ├── Services/            # BudgetSmoothingEngine (AllocatedMonthly calc, overrun/shortfall)
 │   └── Abstractions/        # IAnnualBudgetItemRepository (implemented in Infrastructure)
 ├── FamilyBudget.Infrastructure/
-│   ├── Persistence/         # FamilyBudgetDbContext, EF Core configurations, SQLite migrations
+│   ├── Persistence/         # FamilyBudgetDbContext, EF Core configurations, PostgreSQL migrations
 │   └── Repositories/        # EF Core implementation of Core abstractions
 └── FamilyBudget.Api/
     ├── Endpoints/           # Minimal API endpoints: GET /dashboard, GET /annual-budget
@@ -100,7 +103,7 @@ tests/
 **Structure Decision**: Single-solution, three-project Clean Architecture layout mandated by
 Constitution Principle II. `FamilyBudget.Core` has zero package references beyond the BCL — it is
 directly unit-testable without a database or HTTP host. `FamilyBudget.Infrastructure` depends on
-`FamilyBudget.Core` and owns all EF Core/SQLite concerns. `FamilyBudget.Api` depends on both and
+`FamilyBudget.Core` and owns all EF Core/PostgreSQL concerns. `FamilyBudget.Api` depends on both and
 contains no business logic — endpoints only translate HTTP requests into calls against
 `FamilyBudget.Core` services. This structure is reused unchanged by every subsequent feature
 (002-006); later features add new entities/services within the same three projects rather than

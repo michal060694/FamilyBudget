@@ -4,7 +4,7 @@
 
 - .NET 8 SDK installed
 - Solution restored: `dotnet restore` from the repo root
-- SQLite database migrated (adds the `Debts` table): `dotnet ef database update --project src/FamilyBudget.Infrastructure --startup-project src/FamilyBudget.Api`
+- PostgreSQL database migrated (adds the `Debts` table): `dotnet ef database update --project src/FamilyBudget.Infrastructure --startup-project src/FamilyBudget.Api`
 
 ## Run
 

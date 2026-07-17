@@ -23,18 +23,18 @@ Monthly Dashboard (feature 001), replacing its external-input placeholder.
 **Language/Version**: C# 12 / .NET 8
 
 **Primary Dependencies**: ASP.NET Core (Minimal APIs) for the API layer; Entity Framework Core 8
-(Microsoft.EntityFrameworkCore.Sqlite) for persistence; the existing single-page vanilla
+(Npgsql.EntityFrameworkCore.PostgreSQL) for persistence; the existing single-page vanilla
 HTML/CSS/JS client (`src/FamilyBudget.Api/wwwroot/index.html`) is extended with a new Monthly
 Overview view — no JS framework is introduced.
 
-**Storage**: SQLite, single local file, accessed exclusively through EF Core (Constitution
-Principle III). Adds two new tables (`Transactions`, `TitheSettings`) alongside feature 001's
-existing tables in the same database/DbContext.
+**Storage**: PostgreSQL, accessed exclusively through EF Core (Constitution Principle III). Adds
+two new tables (`Transactions`, `TitheSettings`) alongside feature 001's existing tables in the
+same database/DbContext.
 
 **Testing**: xUnit for Core domain unit tests (tithe engine math, small-charity offset
 carry-forward, credit carry-forward, income tithe-applicable split); `Microsoft.AspNetCore.Mvc.Testing`
-(`WebApplicationFactory`) for API integration tests against a real SQLite connection, consistent
-with feature 001.
+(`WebApplicationFactory`) for API integration tests against an in-memory SQLite connection used as
+a test double, consistent with feature 001.
 
 **Target Platform**: Self-hosted local ASP.NET Core Web API (single-household deployment, no
 cloud dependency required for this feature) — same host as feature 001.
@@ -45,9 +45,9 @@ cloud dependency required for this feature) — same host as feature 001.
 transaction-list endpoints must respond well under 1s with realistic data volumes (see
 Scale/Scope).
 
-**Constraints**: Fully offline-capable (local SQLite file, no external network calls); the tithe
-calculation must be deterministic and side-effect-free when queried, and must recompute correctly
-on demand whenever a transaction is created, edited, or deleted (FR-003).
+**Constraints**: Persistence requires a reachable PostgreSQL instance (no other external network
+calls); the tithe calculation must be deterministic and side-effect-free when queried, and must
+recompute correctly on demand whenever a transaction is created, edited, or deleted (FR-003).
 
 **Scale/Scope**: Single household/user context; on the order of tens to low hundreds of
 transactions per month, evaluated across however many months the household has been using the
@@ -62,7 +62,7 @@ stays small in practice).
 |---|---|---|
 | I. Proactive Budget Smoothing | Not this feature's core purpose, but it supplies the real income/expense inputs the smoothing dashboard previously assumed as external placeholders (FR-013) — no conflict | PASS (scoped) |
 | II. Clean Layered Architecture (NON-NEGOTIABLE) | New `Transaction`/`TitheSetting` entities and the `TitheEngine` calculation service live in `FamilyBudget.Core` with zero EF/ASP.NET references; `FamilyBudget.Infrastructure` owns persistence; `FamilyBudget.Api` stays a thin translation layer | PASS |
-| III. Fixed Technology Stack | C#/.NET 8, SQLite via EF Core only, same solution/repo as feature 001 | PASS |
+| III. Fixed Technology Stack | C#/.NET 8, PostgreSQL via EF Core only, same solution/repo as feature 001 | PASS |
 | IV. Financial Data Integrity (NON-NEGOTIABLE) | This feature's entire purpose is the protected tithe calculation (FR-006, FR-008, FR-009, FR-011) with a stored, user-configurable rate (FR-006) — never hardcoded — covered by dedicated Core unit tests before being considered done | PASS |
 | V. Auditability & Transparency | Monthly overview screen shows income split, donations vs. remaining-to-give, expense tables, and outflow/savings summary as separate traceable sections (FR-012, FR-014–FR-018), never a single opaque total | PASS |
 

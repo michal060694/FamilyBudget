@@ -87,15 +87,14 @@ keeps the codebase consistent rather than introducing a second config-storage co
 
 ## Decision: `TransactionType` and `PaymentMethod` are C# enums, stored as strings via EF Core value conversion
 
-**Rationale**: Storing as strings (rather than raw integers) keeps the SQLite data
-human-readable when inspected directly (consistent with the project's local-first,
-single-household, low-ceremony philosophy) and avoids silent breakage if enum members are
-reordered later. EF Core's built-in enum-to-string value conversion covers this with no custom
-converter code.
+**Rationale**: Storing as strings (rather than raw integers) keeps the data human-readable when
+inspected directly (consistent with the project's low-ceremony philosophy) and avoids silent
+breakage if enum members are reordered later. EF Core's built-in enum-to-string value conversion
+covers this with no custom converter code.
 
 **Alternatives considered**:
 - Default EF Core integer storage for enums — rejected: fragile against future reordering of enum
-  members and harder to eyeball when debugging the SQLite file directly.
+  members and harder to eyeball when debugging the database directly.
 - Separate lookup tables for type/payment method — rejected: over-engineered for a small, fixed,
   code-defined set of values with no user-facing management need.
 
@@ -113,8 +112,9 @@ alongside the existing income/expense/allocation/free-balance fields already on 
   use (see contracts/api.md), but the dashboard endpoint itself is extended directly rather than
   requiring the client to stitch two calls together for one screen.
 
-## Decision: xUnit + real SQLite for tests (unchanged from feature 001)
+## Decision: xUnit + real SQLite as the test double (unchanged from feature 001)
 
 **Rationale**: No new information changes feature 001's existing testing decision — Constitution
-Principle III still fixes SQLite as the only supported store, and the EF Core InMemory provider
-still risks masking SQL-translation bugs. Reused without modification.
+Principle III fixes PostgreSQL as the production store, but tests still run against an in-memory
+SQLite connection as a fast stand-in, since the EF Core InMemory provider risks masking
+SQL-translation bugs that a real relational provider would catch. Reused without modification.

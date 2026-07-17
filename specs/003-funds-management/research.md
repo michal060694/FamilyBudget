@@ -55,8 +55,9 @@ the exact same client-side pattern already built (`attachFormulaInput`) if reque
   the existing `attachFormulaInput` widget can be reused verbatim on these fields later with no
   backend redesign needed, so deferring it costs nothing.
 
-## Decision: xUnit + real SQLite for tests (unchanged from features 001/002)
+## Decision: xUnit + real SQLite as the test double (unchanged from features 001/002)
 
 **Rationale**: No new information changes the existing testing decision — Constitution Principle
-III still fixes SQLite as the only supported store, and the EF Core InMemory provider still risks
-masking SQL-translation bugs. Reused without modification.
+III fixes PostgreSQL as the production store, but tests still run against an in-memory SQLite
+connection as a fast stand-in, since the EF Core InMemory provider risks masking SQL-translation
+bugs that a real relational provider would catch. Reused without modification.

@@ -4,7 +4,7 @@
 
 - .NET 8 SDK installed
 - Solution restored: `dotnet restore` from the repo root
-- SQLite database migrated (adds `Transactions` and `TitheSettings` tables to the existing
+- PostgreSQL database migrated (adds `Transactions` and `TitheSettings` tables to the existing
   feature-001 database): `dotnet ef database update --project src/FamilyBudget.Infrastructure --startup-project src/FamilyBudget.Api`
 
 ## Set the tithe rate

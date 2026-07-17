@@ -86,7 +86,7 @@ Per plan.md: `src/FamilyBudget.Core/`, `src/FamilyBudget.Infrastructure/`, `src/
       table using `dotnet ef migrations add` against `src/FamilyBudget.Infrastructure` (depends
       on T008)
 - [X] T011 Wire up dependency injection in `src/FamilyBudget.Api/Program.cs`: register
-      `FamilyBudgetDbContext` with the SQLite connection string and register
+      `FamilyBudgetDbContext` with the PostgreSQL connection string and register
       `IAnnualBudgetItemRepository` → `AnnualBudgetItemRepository` (depends on T008, T009)
 
 **Checkpoint**: Foundation ready — `dotnet ef database update` succeeds and DI resolves the

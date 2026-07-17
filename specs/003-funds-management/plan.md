@@ -20,17 +20,17 @@ single-page client, alongside the Annual Budget and Monthly Overview tabs.
 **Language/Version**: C# 12 / .NET 8
 
 **Primary Dependencies**: ASP.NET Core (Minimal APIs) for the API layer; Entity Framework Core 8
-(Microsoft.EntityFrameworkCore.Sqlite) for persistence; the existing single-page vanilla
+(Npgsql.EntityFrameworkCore.PostgreSQL) for persistence; the existing single-page vanilla
 HTML/CSS/JS client (`src/FamilyBudget.Api/wwwroot/index.html`) gains a third tab — no JS framework
 is introduced.
 
-**Storage**: SQLite, single local file, accessed exclusively through EF Core (Constitution
-Principle III). Adds two new tables (`Funds`, `FundEarmarks`) to the same database/DbContext used
-by features 001 and 002.
+**Storage**: PostgreSQL, accessed exclusively through EF Core (Constitution Principle III). Adds
+two new tables (`Funds`, `FundEarmarks`) to the same database/DbContext used by features 001 and
+002.
 
 **Testing**: xUnit for Core domain unit tests (the balance-vs-earmark reconciliation calculation);
-`Microsoft.AspNetCore.Mvc.Testing` (`WebApplicationFactory`) for API integration tests against a
-real SQLite connection, consistent with features 001/002.
+`Microsoft.AspNetCore.Mvc.Testing` (`WebApplicationFactory`) for API integration tests against an
+in-memory SQLite connection used as a test double, consistent with features 001/002.
 
 **Target Platform**: Self-hosted local ASP.NET Core Web API (single-household deployment) — same
 host as features 001/002.
@@ -40,9 +40,9 @@ host as features 001/002.
 **Performance Goals**: Not a high-throughput system — single household; a handful of funds, each
 with a handful of earmark lines. Screen must respond well under 1s.
 
-**Constraints**: Fully offline-capable (local SQLite file, no external network/brokerage feed);
-the reconciliation figure (balance minus earmarked sum) must recompute deterministically on every
-read, with no cached/stale state.
+**Constraints**: Persistence requires a reachable PostgreSQL instance (no external network/
+brokerage feed); the reconciliation figure (balance minus earmarked sum) must recompute
+deterministically on every read, with no cached/stale state.
 
 **Scale/Scope**: Single household/user context; on the order of 2-10 funds, each with a handful of
 earmark lines; no concurrent-user or multi-tenant concerns.
@@ -55,7 +55,7 @@ earmark lines; no concurrent-user or multi-tenant concerns.
 |---|---|---|
 | I. Proactive Budget Smoothing | Not this feature's purpose; no conflict — funds are a standalone balance/earmark view, explicitly not auto-reconciled against the smoothing engine (spec.md Assumptions) | PASS (scoped) |
 | II. Clean Layered Architecture (NON-NEGOTIABLE) | `Fund`/`FundEarmark` entities and `FundSummaryQueryService` live in `FamilyBudget.Core` with zero EF/ASP.NET references; `FamilyBudget.Infrastructure` owns persistence; `FamilyBudget.Api` stays a thin translation layer | PASS |
-| III. Fixed Technology Stack | C#/.NET 8, SQLite via EF Core only, same solution/repo as features 001/002 | PASS |
+| III. Fixed Technology Stack | C#/.NET 8, PostgreSQL via EF Core only, same solution/repo as features 001/002 | PASS |
 | IV. Financial Data Integrity (NON-NEGOTIABLE) | This feature's entire purpose is the fund-balance invariant itself (FR-009–FR-012): earmarked sum vs. recorded balance, discrepancy always visible, never silently drifting — covered by dedicated Core unit tests before being considered done | PASS |
 | V. Auditability & Transparency | Each fund's balance, full earmark list, and the computed discrepancy are always shown as separate, traceable figures — never a single opaque total | PASS |
 

@@ -21,18 +21,19 @@ Exposed as a new "ספר חובות" tab in the existing single-page client.
 **Language/Version**: C# 12 / .NET 8
 
 **Primary Dependencies**: ASP.NET Core (Minimal APIs) for the API layer; Entity Framework Core 8
-(Microsoft.EntityFrameworkCore.Sqlite) for persistence; the existing single-page vanilla
+(Npgsql.EntityFrameworkCore.PostgreSQL) for persistence; the existing single-page vanilla
 HTML/CSS/JS client (`src/FamilyBudget.Api/wwwroot/index.html`) gains a fourth tab — no JS framework
 is introduced.
 
-**Storage**: SQLite, single local file, accessed exclusively through EF Core (Constitution
-Principle III). Adds one new table (`Debts`) to the same database/DbContext used by features
-001-003; no new table is needed for repayments (each repayment's history lives in the existing
-`Transactions` table via the transaction it generates).
+**Storage**: PostgreSQL, accessed exclusively through EF Core (Constitution Principle III). Adds
+one new table (`Debts`) to the same database/DbContext used by features 001-003; no new table is
+needed for repayments (each repayment's history lives in the existing `Transactions` table via the
+transaction it generates).
 
 **Testing**: xUnit for Core domain unit tests (`Debt` balance/status transitions, rejection of
 over-payment); `Microsoft.AspNetCore.Mvc.Testing` (`WebApplicationFactory`) for API integration
-tests against a real SQLite connection, consistent with features 001-003.
+tests against an in-memory SQLite connection used as a test double, consistent with features
+001-003.
 
 **Target Platform**: Self-hosted local ASP.NET Core Web API (single-household deployment) — same
 host as features 001-003.
@@ -42,9 +43,9 @@ host as features 001-003.
 **Performance Goals**: Not a high-throughput system — single household; a handful of debts. Screen
 must respond well under 1s.
 
-**Constraints**: Fully offline-capable (local SQLite file); recording a repayment must atomically
-update the debt and create the transaction — both MUST be reflected together, never one without
-the other.
+**Constraints**: Persistence requires a reachable PostgreSQL instance; recording a repayment must
+atomically update the debt and create the transaction — both MUST be reflected together, never one
+without the other.
 
 **Scale/Scope**: Single household/user context; on the order of a handful of open debts at any
 time; no concurrent-user or multi-tenant concerns.
@@ -57,7 +58,7 @@ time; no concurrent-user or multi-tenant concerns.
 |---|---|---|
 | I. Proactive Budget Smoothing | Not this feature's purpose; no conflict | PASS (scoped) |
 | II. Clean Layered Architecture (NON-NEGOTIABLE) | `Debt` entity and the repayment operation live in `FamilyBudget.Core` with zero EF/ASP.NET references; `FamilyBudget.Infrastructure` owns persistence; `FamilyBudget.Api` stays a thin translation layer | PASS |
-| III. Fixed Technology Stack | C#/.NET 8, SQLite via EF Core only, same solution/repo as features 001-003 | PASS |
+| III. Fixed Technology Stack | C#/.NET 8, PostgreSQL via EF Core only, same solution/repo as features 001-003 | PASS |
 | IV. Financial Data Integrity (NON-NEGOTIABLE) | This feature's core invariant is its own: a debt's balance MUST NEVER go negative and its generated transaction MUST always reflect exactly the amount actually paid (FR-008, FR-009) — covered by dedicated Core unit tests. It also directly feeds a Principle-V-relevant figure into feature 002 (the Monthly Overview's debt-repayments line, FR-012), which itself remains a traceable, separately-shown figure, not folded into an opaque total | PASS |
 | V. Auditability & Transparency | Each debt's original amount, current balance, and status are always shown as separate, traceable figures; every repayment is traceable to the specific transaction it generated in feature 002's ledger | PASS |
 

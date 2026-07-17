@@ -1,5 +1,24 @@
 <!--
 Sync Impact Report
+- Version change: 1.2.0 → 2.0.0
+- Modified principles: III. Fixed Technology Stack (database changed from SQLite to PostgreSQL,
+  per explicit user direction reflecting the actual production deployment on Render/hosted Postgres;
+  SQLite is retained solely as the in-memory test double for integration tests, never as a deployed
+  store); II. Clean Layered Architecture (Infrastructure layer description updated from "SQLite
+  persistence" to "PostgreSQL persistence" to match)
+- Added sections: none
+- Removed sections: none
+- Modified sections: none beyond the principle text itself
+- Templates requiring updates:
+  - .specify/templates/plan-template.md ✅ no storage-specific references to sync
+  - .specify/templates/spec-template.md ✅ no storage-specific references to sync
+  - .specify/templates/tasks-template.md ✅ no storage-specific references to sync
+  - specs/001-*/plan.md, specs/002-*/plan.md, specs/003-*/plan.md, specs/004-*/plan.md, and their
+    research.md/quickstart.md companions ✅ updated in the same change: storage/testing sections
+    now describe PostgreSQL as the production store with SQLite as the in-memory test double
+- Follow-up TODOs: none
+
+Prior report (v1.2.0, superseded):
 - Version change: 1.1.0 → 1.2.0
 - Modified principles: IV. Financial Data Integrity (Protected tithe calculation) — per explicit
   user direction, simplified from an open-ended multi-month recursive carry-forward to a flat
@@ -50,7 +69,7 @@ violation and MUST be rejected or redesigned, even if it simplifies the implemen
 ### II. Clean Layered Architecture (NON-NEGOTIABLE)
 
 The solution MUST be split into strictly separated projects: **Core** (domain entities, budget
-and tithe calculation logic, invariants), **Infrastructure** (EF Core, SQLite persistence,
+and tithe calculation logic, invariants), **Infrastructure** (EF Core, PostgreSQL persistence,
 external integrations such as Excel import), and **API** (HTTP endpoints, request/response
 models). Dependencies MUST point inward only — Core has zero references to Infrastructure or
 API. Business/domain logic (budget math, tithe engine, fund invariants) MUST be independently
@@ -58,10 +77,12 @@ unit-testable without a database, an HTTP host, or any UI in scope.
 
 ### III. Fixed Technology Stack
 
-The project MUST be implemented in C# on .NET 8. The database MUST be SQLite, accessed
-exclusively through Entity Framework Core (no raw ADO.NET or alternate ORMs). Source control
-MUST live in a dedicated, organized GitHub repository. These choices are fixed for the
-lifetime of this project and MUST NOT be changed without a MAJOR constitution amendment.
+The project MUST be implemented in C# on .NET 8. The database MUST be PostgreSQL, accessed
+exclusively through Entity Framework Core (no raw ADO.NET or alternate ORMs). SQLite MAY be used
+as an in-memory test double in automated integration tests (see Principle II's testability
+requirement) but MUST NOT be used as a deployed data store. Source control MUST live in a
+dedicated, organized GitHub repository. These choices are fixed for the lifetime of this project
+and MUST NOT be changed without a MAJOR constitution amendment.
 
 ### IV. Financial Data Integrity (NON-NEGOTIABLE)
 
@@ -143,4 +164,4 @@ follows semantic versioning:
 Compliance is reviewed at every `/speckit-plan` invocation via the Constitution Check gate, and
 may be re-verified at `/speckit-analyze` time for cross-artifact consistency.
 
-**Version**: 1.2.0 | **Ratified**: 2026-07-13 | **Last Amended**: 2026-07-15
+**Version**: 2.0.0 | **Ratified**: 2026-07-13 | **Last Amended**: 2026-07-17

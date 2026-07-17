@@ -72,7 +72,8 @@ reopening it if a previously-Closed debt's corrected amount leaves a positive ba
 - Disallowing amount edits once any repayment has been recorded — rejected: more restrictive than
   FR-003 requires, and correcting a typo in the original amount is a legitimate, common edit.
 
-## Decision: xUnit + real SQLite for tests (unchanged from features 001-003)
+## Decision: xUnit + real SQLite as the test double (unchanged from features 001-003)
 
 **Rationale**: No new information changes the existing testing decision — Constitution Principle
-III still fixes SQLite as the only supported store. Reused without modification.
+III fixes PostgreSQL as the production store, but tests still run against an in-memory SQLite
+connection as a fast stand-in. Reused without modification.

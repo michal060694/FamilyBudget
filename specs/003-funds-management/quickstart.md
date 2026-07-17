@@ -4,7 +4,7 @@
 
 - .NET 8 SDK installed
 - Solution restored: `dotnet restore` from the repo root
-- SQLite database migrated (adds `Funds` and `FundEarmarks` tables to the existing database):
+- PostgreSQL database migrated (adds `Funds` and `FundEarmarks` tables to the existing database):
   `dotnet ef database update --project src/FamilyBudget.Infrastructure --startup-project src/FamilyBudget.Api`
 
 ## Run
