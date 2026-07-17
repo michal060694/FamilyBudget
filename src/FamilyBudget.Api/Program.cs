@@ -64,6 +64,14 @@ if (!string.IsNullOrEmpty(basicAuthUsername) && !string.IsNullOrEmpty(basicAuthP
 {
     app.Use(async (context, next) =>
     {
+        // Render's health check hits this path with no credentials; it must stay open or every
+        // deploy times out waiting for a 200 that Basic Auth will never let through.
+        if (context.Request.Path == "/healthz")
+        {
+            await next();
+            return;
+        }
+
         var header = context.Request.Headers.Authorization.ToString();
         if (header.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
         {
@@ -92,6 +100,8 @@ if (!string.IsNullOrEmpty(basicAuthUsername) && !string.IsNullOrEmpty(basicAuthP
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
+
+app.MapGet("/healthz", () => Results.Ok());
 
 app.MapDashboardEndpoints();
 app.MapAnnualBudgetEndpoints();
