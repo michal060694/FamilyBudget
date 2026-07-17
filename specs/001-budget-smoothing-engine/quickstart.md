@@ -4,6 +4,10 @@
 
 - .NET 8 SDK installed
 - Solution restored: `dotnet restore` from the repo root
+- A reachable PostgreSQL instance, with its connection string set as `ConnectionStrings:FamilyBudget`
+  (e.g. `dotnet user-secrets set "ConnectionStrings:FamilyBudget" "Host=localhost;Database=familybudget;Username=postgres;Password=postgres"`
+  from `src/FamilyBudget.Api`, or a `postgres://user:pass@host/db` URI pasted as-is — see
+  `NormalizeConnectionString` in Program.cs)
 - PostgreSQL database created via EF Core migrations: `dotnet ef database update --project src/FamilyBudget.Infrastructure --startup-project src/FamilyBudget.Api`
 
 ## Seed data (for manual validation)

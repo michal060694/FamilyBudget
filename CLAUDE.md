@@ -36,7 +36,10 @@ Run the API locally (serves the SPA from `wwwroot/` and the JSON API on the same
 ```
 dotnet run --project src/FamilyBudget.Api
 ```
-In `Development`, Basic Auth is skipped entirely (see Program.cs). No frontend build step exists —
+Basic Auth middleware is only wired up when `BasicAuth:Username`/`BasicAuth:Password` are
+configured; the checked-in `Development` config leaves them empty, so local runs have no auth by
+default (see Program.cs) — set them via `dotnet user-secrets` if you need to exercise auth
+locally. No frontend build step exists —
 `wwwroot/index.html` is a single hand-written HTML/CSS/vanilla-JS file with no bundler; edit it directly
 and reload.
 

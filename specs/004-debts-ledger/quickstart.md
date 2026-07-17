@@ -4,6 +4,8 @@
 
 - .NET 8 SDK installed
 - Solution restored: `dotnet restore` from the repo root
+- A reachable PostgreSQL instance, with its connection string set as `ConnectionStrings:FamilyBudget`
+  (e.g. via `dotnet user-secrets` from `src/FamilyBudget.Api` — see feature 001's quickstart)
 - PostgreSQL database migrated (adds the `Debts` table): `dotnet ef database update --project src/FamilyBudget.Infrastructure --startup-project src/FamilyBudget.Api`
 
 ## Run

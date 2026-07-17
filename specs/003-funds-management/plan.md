@@ -32,16 +32,17 @@ two new tables (`Funds`, `FundEarmarks`) to the same database/DbContext used by 
 `Microsoft.AspNetCore.Mvc.Testing` (`WebApplicationFactory`) for API integration tests against an
 in-memory SQLite connection used as a test double, consistent with features 001/002.
 
-**Target Platform**: Self-hosted local ASP.NET Core Web API (single-household deployment) — same
-host as features 001/002.
+**Target Platform**: ASP.NET Core Web API deployed on Render (containerized via Dockerfile)
+against a hosted PostgreSQL instance; also runnable locally against any reachable PostgreSQL
+instance (single-household deployment) — same host as features 001/002.
 
 **Project Type**: web-service (API backend) + the existing single-page HTML client.
 
 **Performance Goals**: Not a high-throughput system — single household; a handful of funds, each
 with a handful of earmark lines. Screen must respond well under 1s.
 
-**Constraints**: Persistence requires a reachable PostgreSQL instance (no external network/
-brokerage feed); the reconciliation figure (balance minus earmarked sum) must recompute
+**Constraints**: Persistence requires a reachable PostgreSQL instance (no external
+network/brokerage feed); the reconciliation figure (balance minus earmarked sum) must recompute
 deterministically on every read, with no cached/stale state.
 
 **Scale/Scope**: Single household/user context; on the order of 2-10 funds, each with a handful of

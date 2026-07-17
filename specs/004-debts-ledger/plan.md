@@ -35,8 +35,9 @@ over-payment); `Microsoft.AspNetCore.Mvc.Testing` (`WebApplicationFactory`) for 
 tests against an in-memory SQLite connection used as a test double, consistent with features
 001-003.
 
-**Target Platform**: Self-hosted local ASP.NET Core Web API (single-household deployment) — same
-host as features 001-003.
+**Target Platform**: ASP.NET Core Web API deployed on Render (containerized via Dockerfile)
+against a hosted PostgreSQL instance; also runnable locally against any reachable PostgreSQL
+instance (single-household deployment) — same host as features 001-003.
 
 **Project Type**: web-service (API backend) + the existing single-page HTML client.
 

@@ -36,8 +36,9 @@ carry-forward, credit carry-forward, income tithe-applicable split); `Microsoft.
 (`WebApplicationFactory`) for API integration tests against an in-memory SQLite connection used as
 a test double, consistent with feature 001.
 
-**Target Platform**: Self-hosted local ASP.NET Core Web API (single-household deployment, no
-cloud dependency required for this feature) — same host as feature 001.
+**Target Platform**: ASP.NET Core Web API deployed on Render (containerized via Dockerfile)
+against a hosted PostgreSQL instance; also runnable locally against any reachable PostgreSQL
+instance (single-household deployment) — same host as feature 001.
 
 **Project Type**: web-service (API backend) + the existing single-page HTML client.
 

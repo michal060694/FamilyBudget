@@ -33,8 +33,9 @@ store.
 overrun/shortfall logic); `Microsoft.AspNetCore.Mvc.Testing` (`WebApplicationFactory`) for API
 integration tests against an in-memory SQLite connection.
 
-**Target Platform**: Self-hosted local ASP.NET Core Web API (single-household deployment, no
-cloud dependency required for this feature).
+**Target Platform**: ASP.NET Core Web API deployed on Render (containerized via Dockerfile)
+against a hosted PostgreSQL instance; also runnable locally against any reachable PostgreSQL
+instance (single-household deployment, no multi-tenant concerns).
 
 **Project Type**: web-service (API backend); a presentation client for the dashboard/table
 screens is out of scope for this feature and will consume these endpoints later.
