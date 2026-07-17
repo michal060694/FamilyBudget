@@ -39,6 +39,7 @@ builder.Services.AddScoped<FundSummaryQueryService>();
 builder.Services.AddScoped<DebtRepaymentService>();
 builder.Services.AddScoped<MonthlyTemplateApplyService>();
 builder.Services.AddScoped<ExcelExportService>();
+builder.Services.AddScoped<ExcelImportService>();
 
 var app = builder.Build();
 
@@ -113,6 +114,7 @@ app.MapFundEndpoints();
 app.MapDebtEndpoints();
 app.MapMonthlyTemplateEndpoints();
 app.MapExportEndpoints();
+app.MapImportEndpoints();
 
 app.Run();
 

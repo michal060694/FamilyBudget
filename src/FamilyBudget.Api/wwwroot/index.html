@@ -387,6 +387,7 @@
   }
 
   .error { color: var(--status-critical); font-size: 0.88rem; margin: 8px 0; }
+  .import-error-list { color: var(--status-critical); font-size: 0.85rem; margin: 6px 0 0; padding-inline-start: 20px; }
 
   button.is-pending { opacity: 0.6; cursor: default; }
   .save-flash {
@@ -467,9 +468,15 @@
       </div>
       <button id="refresh">רענן</button>
       <button class="secondary" id="open-copy-year-modal">העתקה משנה קודמת/אחרת</button>
+      <button class="secondary" id="annual-download-template-btn">הורד תבנית</button>
+      <button class="secondary" id="annual-import-btn">ייבוא מאקסל</button>
+      <input type="file" id="annual-import-file" accept=".xlsx" hidden />
     </div>
 
     <div id="error" class="error" hidden></div>
+    <p class="hint" style="margin: 0 0 12px;">ייבוא פריטי תקציב שנתי מקובץ אקסל: הורידי את הקובץ, מלאי שורה לכל רשומה מתחת לכותרות, ושמרי כ-.xlsx. הפריטים ייווספו לשנה המוצגת למעלה — קטגוריות קיימות לא נמחקות או מתעדכנות.</p>
+    <div id="annual-import-status" style="font-weight:600; color: var(--status-good); margin: 0 0 12px;" hidden></div>
+    <ul id="annual-import-errors" class="import-error-list" hidden></ul>
 
     <dialog id="modal-copy-year" class="modal" style="width:min(420px,92vw);">
       <h3>העתקת תקציב משנה אחרת</h3>
@@ -580,9 +587,15 @@
       </div>
       <button id="ov-refresh">רענן</button>
       <button id="open-template-modal">הכנס תבנית לחודש הנוכחי</button>
+      <button class="secondary" id="transactions-download-template-btn">הורד תבנית תנועות</button>
+      <button class="secondary" id="transactions-import-btn">ייבוא תנועות מאקסל</button>
+      <input type="file" id="transactions-import-file" accept=".xlsx" hidden />
     </div>
 
     <div id="ov-error" class="error" hidden></div>
+    <p class="hint" style="margin: 0 0 12px;">ייבוא תנועות (הכנסות, הוצאות הו"ק, הוצאות שוטפות, תרומות קבועות, תרומות מעבר להו"ק והחזרי חובות) מקובץ אקסל אחד: הורידי את הקובץ, מלאי שורה לכל תנועה מתחת לכותרות, ושמרי כ-.xlsx. התנועות ייווספו לחודש המוצג למעלה.</p>
+    <div id="transactions-import-status" style="font-weight:600; color: var(--status-good); margin: 0 0 12px;" hidden></div>
+    <ul id="transactions-import-errors" class="import-error-list" hidden></ul>
 
     <details class="card card-gold" open>
       <summary>הכנסות <span class="chevron">▾</span></summary>
@@ -661,6 +674,14 @@
 
     <dialog id="modal-fixed-donations" class="modal">
       <h3>תרומות קבועות (הוראות קבע)</h3>
+      <div class="controls" style="margin-bottom: 8px;">
+        <button class="secondary" id="standing-orders-download-template-btn">הורד תבנית</button>
+        <button class="secondary" id="standing-orders-import-btn">ייבוא מאקסל</button>
+        <input type="file" id="standing-orders-import-file" accept=".xlsx" hidden />
+      </div>
+      <p class="hint" style="margin: 0 0 8px;">הורידי את הקובץ, מלאי שורה לכל תרומה קבועה מתחת לכותרות, ושמרי כ-.xlsx.</p>
+      <div id="standing-orders-import-status" style="font-weight:600; color: var(--status-good); margin: 0 0 8px;" hidden></div>
+      <ul id="standing-orders-import-errors" class="import-error-list" hidden></ul>
       <table>
         <thead><tr><th>שם</th><th class="num">סכום</th><th>בתוקף עד (ריק = ללא הגבלה)</th><th></th></tr></thead>
         <tbody id="ov-standing-orders"></tbody>
@@ -726,6 +747,15 @@
       </table>
     </details>
 
+    <div class="controls" style="margin-bottom: 8px;">
+      <button class="secondary" id="expense-budgets-download-template-btn">הורד תבנית הוצאות</button>
+      <button class="secondary" id="expense-budgets-import-btn">ייבוא הוצאות מאקסל</button>
+      <input type="file" id="expense-budgets-import-file" accept=".xlsx" hidden />
+    </div>
+    <p class="hint" style="margin: 0 0 8px;">ייבוא קטגוריות הוצאה (הו"ק ושוטפות יחד, לפי עמודת "סוג" בקובץ) לחודש המוצג למעלה: הורידי את הקובץ, מלאי שורה לכל קטגוריה מתחת לכותרות, ושמרי כ-.xlsx.</p>
+    <div id="expense-budgets-import-status" style="font-weight:600; color: var(--status-good); margin: 0 0 12px;" hidden></div>
+    <ul id="expense-budgets-import-errors" class="import-error-list" hidden></ul>
+
     <div class="overview-columns">
       <details class="card card-berry" open>
         <summary>הוצאות בהוראת קבע (הו"ק) <span class="chevron">▾</span></summary>
@@ -753,9 +783,15 @@
     <div class="controls">
       <button id="funds-refresh">רענן</button>
       <button id="funds-add-toggle" class="secondary">+ הוסף קרן</button>
+      <button class="secondary" id="funds-download-template-btn">הורד תבנית קרנות</button>
+      <button class="secondary" id="funds-import-btn">ייבוא קרנות מאקסל</button>
+      <input type="file" id="funds-import-file" accept=".xlsx" hidden />
     </div>
 
     <div id="funds-error" class="error" hidden></div>
+    <p class="hint" style="margin: 0 0 12px;">ייבוא קרנות חדשות מקובץ אקסל: הורידי את הקובץ, מלאי שורה לכל קרן מתחת לכותרות, ושמרי כ-.xlsx.</p>
+    <div id="funds-import-status" style="font-weight:600; color: var(--status-good); margin: 0 0 12px;" hidden></div>
+    <ul id="funds-import-errors" class="import-error-list" hidden></ul>
 
     <div id="funds-add-form" class="card" hidden>
       <h2>הוספת קרן</h2>
@@ -792,6 +828,14 @@
     <div class="overview-columns">
       <div class="card card-sage">
         <h2>חייבים לנו</h2>
+        <div class="controls" style="margin-bottom: 8px;">
+          <button class="icon" id="debts-receivables-download-template-btn">הורד תבנית</button>
+          <button class="icon" id="debts-receivables-import-btn">ייבוא מאקסל</button>
+          <input type="file" id="debts-receivables-import-file" accept=".xlsx" hidden />
+        </div>
+        <p class="hint" style="margin: 0 0 8px;">הורידי את הקובץ, מלאי שורה לכל חוב מתחת לכותרות, ושמרי כ-.xlsx.</p>
+        <div id="debts-receivables-import-status" style="font-weight:600; color: var(--status-good); margin: 0 0 8px;" hidden></div>
+        <ul id="debts-receivables-import-errors" class="import-error-list" hidden></ul>
         <table>
           <thead>
             <tr><th>שם</th><th class="num">יתרה</th><th>תאריך יעד</th><th>סטטוס</th><th>החזר</th><th></th></tr>
@@ -802,6 +846,14 @@
       </div>
       <div class="card card-berry">
         <h2>אנחנו חייבים</h2>
+        <div class="controls" style="margin-bottom: 8px;">
+          <button class="icon" id="debts-payables-download-template-btn">הורד תבנית</button>
+          <button class="icon" id="debts-payables-import-btn">ייבוא מאקסל</button>
+          <input type="file" id="debts-payables-import-file" accept=".xlsx" hidden />
+        </div>
+        <p class="hint" style="margin: 0 0 8px;">הורידי את הקובץ, מלאי שורה לכל חוב מתחת לכותרות, ושמרי כ-.xlsx.</p>
+        <div id="debts-payables-import-status" style="font-weight:600; color: var(--status-good); margin: 0 0 8px;" hidden></div>
+        <ul id="debts-payables-import-errors" class="import-error-list" hidden></ul>
         <table>
           <thead>
             <tr><th>שם</th><th class="num">יתרה</th><th>קצב החזר</th><th>סטטוס</th><th>החזר</th><th></th></tr>
@@ -932,6 +984,105 @@
       }
       const text = await res.text();
       return text ? JSON.parse(text) : null;
+    }
+
+    // ---- Excel import (shared across all import targets) ----
+
+    // Like fetchJson, but for a multipart file upload instead of a JSON body — the browser sets
+    // its own Content-Type (with the multipart boundary) for FormData, so none is set here.
+    async function uploadFile(url, file) {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(url, { method: "POST", body: formData });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`${res.status}: ${text || res.statusText}`);
+      }
+      const text = await res.text();
+      return text ? JSON.parse(text) : null;
+    }
+
+    // Downloads a blob response (used for the .xlsx template downloads) via a throwaway <a download>,
+    // the same trick the "ייצוא לאקסל" button already uses.
+    async function downloadFile(url, filename) {
+      const res = await fetch(url);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`${res.status}: ${text || res.statusText}`);
+      }
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    }
+
+    // Renders the add-only import result (added count + per-row skip reasons) into a status line
+    // and a capped error list, shared by every import control on the page.
+    function renderImportResult(statusEl, listEl, result) {
+      const errors = result.errors || [];
+      const addedCount = result.addedCount || 0;
+
+      if (addedCount > 0) {
+        statusEl.textContent = `נוספו ${addedCount} שורות ✓` + (errors.length > 0 ? ` (${errors.length} שורות דולגו)` : "");
+      } else if (errors.length > 0) {
+        statusEl.textContent = "לא נוסף כלום — כל השורות דולגו.";
+      } else {
+        statusEl.textContent = "הקובץ לא הכיל שורות.";
+      }
+      statusEl.hidden = false;
+
+      if (errors.length === 0) {
+        listEl.innerHTML = "";
+        listEl.hidden = true;
+      } else {
+        const shown = errors.slice(0, 20);
+        let html = shown.map(e => `<li>שורה ${e.rowNumber}: ${escapeHtml(e.message)}</li>`).join("");
+        if (errors.length > 20) {
+          html += `<li>ועוד ${errors.length - 20} שורות נוספות דולגו</li>`;
+        }
+        listEl.innerHTML = html;
+        listEl.hidden = false;
+      }
+    }
+
+    // Wires one "הורד תבנית" / "ייבוא" control pair: downloading the blank template, picking a file,
+    // uploading it, rendering the result, and reloading the section's own data. `templateUrl` and
+    // `uploadUrl` may be plain strings or zero-arg functions (for URLs that need current state, like
+    // year/month or a fund id, resolved fresh at click/change time rather than once at wiring time).
+    function setupImportControls({ downloadBtn, templateUrl, templateFilename, importBtn, fileInput, uploadUrl, statusEl, listEl, showError, clearError, reload }) {
+      downloadBtn.addEventListener("click", () => withPending(downloadBtn, async () => {
+        try {
+          const url = typeof templateUrl === "function" ? templateUrl() : templateUrl;
+          await downloadFile(url, templateFilename);
+          clearError();
+        } catch (err) {
+          showError(err.message);
+        }
+      }));
+
+      importBtn.addEventListener("click", () => fileInput.click());
+
+      fileInput.addEventListener("change", () => {
+        const file = fileInput.files[0];
+        fileInput.value = "";
+        if (!file) return;
+        withPending(importBtn, async () => {
+          try {
+            const url = typeof uploadUrl === "function" ? uploadUrl() : uploadUrl;
+            const result = await uploadFile(url, file);
+            clearError();
+            renderImportResult(statusEl, listEl, result);
+            await reload();
+          } catch (err) {
+            showError(err.message);
+          }
+        });
+      });
     }
 
     // ---- "Show me the math": click a computed value to highlight the fields behind it ----
@@ -1300,6 +1451,20 @@
       formRow.querySelector(".cancel-btn").addEventListener("click", () => formRow.remove());
       const generalSaveBtn = formRow.querySelector(".save-btn");
       generalSaveBtn.addEventListener("click", () => withPending(generalSaveBtn, () => submitNewItem(formRow, null)));
+    });
+
+    setupImportControls({
+      downloadBtn: document.getElementById("annual-download-template-btn"),
+      templateUrl: "/api/import/annual-budget-items/template",
+      templateFilename: "annual-budget-items-template.xlsx",
+      importBtn: document.getElementById("annual-import-btn"),
+      fileInput: document.getElementById("annual-import-file"),
+      uploadUrl: () => `/api/import/annual-budget-items?year=${currentYear()}`,
+      statusEl: document.getElementById("annual-import-status"),
+      listEl: document.getElementById("annual-import-errors"),
+      showError,
+      clearError,
+      reload: refresh,
     });
 
     refresh();
@@ -2140,6 +2305,34 @@
 
     document.getElementById("ov-refresh").addEventListener("click", refreshOverview);
 
+    setupImportControls({
+      downloadBtn: document.getElementById("transactions-download-template-btn"),
+      templateUrl: "/api/import/transactions/template",
+      templateFilename: "transactions-template.xlsx",
+      importBtn: document.getElementById("transactions-import-btn"),
+      fileInput: document.getElementById("transactions-import-file"),
+      uploadUrl: "/api/import/transactions",
+      statusEl: document.getElementById("transactions-import-status"),
+      listEl: document.getElementById("transactions-import-errors"),
+      showError: ovShowError,
+      clearError: ovClearError,
+      reload: refreshOverview,
+    });
+
+    setupImportControls({
+      downloadBtn: document.getElementById("expense-budgets-download-template-btn"),
+      templateUrl: "/api/import/monthly-expense-budgets/template",
+      templateFilename: "monthly-expense-budgets-template.xlsx",
+      importBtn: document.getElementById("expense-budgets-import-btn"),
+      fileInput: document.getElementById("expense-budgets-import-file"),
+      uploadUrl: () => `/api/import/monthly-expense-budgets?year=${ovYear()}&month=${ovMonth()}`,
+      statusEl: document.getElementById("expense-budgets-import-status"),
+      listEl: document.getElementById("expense-budgets-import-errors"),
+      showError: ovShowError,
+      clearError: ovClearError,
+      reload: refreshOverview,
+    });
+
     document.getElementById("save-rate").addEventListener("click", (e) => withPending(e.currentTarget, async () => {
       const rate = parseFloat(document.getElementById("rate-input").value);
       if (!(rate > 0) || rate > 1) {
@@ -2197,6 +2390,20 @@
 
     document.getElementById("add-standing-order").addEventListener("click", () => {
       toggleStandingOrderAddRow();
+    });
+
+    setupImportControls({
+      downloadBtn: document.getElementById("standing-orders-download-template-btn"),
+      templateUrl: "/api/import/fixed-donation-standing-orders/template",
+      templateFilename: "fixed-donation-standing-orders-template.xlsx",
+      importBtn: document.getElementById("standing-orders-import-btn"),
+      fileInput: document.getElementById("standing-orders-import-file"),
+      uploadUrl: "/api/import/fixed-donation-standing-orders",
+      statusEl: document.getElementById("standing-orders-import-status"),
+      listEl: document.getElementById("standing-orders-import-errors"),
+      showError: ovShowError,
+      clearError: ovClearError,
+      reload: refreshOverview,
     });
 
     document.getElementById("add-prior-month-donation").addEventListener("click", () => {
@@ -2456,6 +2663,12 @@
           </table>
           <div class="fund-card-footer">
             <button class="icon fund-add-earmark-toggle">+ הוסף ייעוד</button>
+            <button class="icon fund-earmarks-download-template-btn">הורד תבנית ייעודים</button>
+            <button class="icon fund-earmarks-import-btn">ייבוא ייעודים</button>
+            <input type="file" class="fund-earmarks-import-file" accept=".xlsx" hidden />
+            <p class="hint" style="margin: 4px 0 0;">קובץ אחד לכל ייעודי הקרן הזו.</p>
+            <div class="fund-earmarks-import-status" style="font-weight:600; color: var(--status-good); margin-top:4px;" hidden></div>
+            <ul class="fund-earmarks-import-errors import-error-list" hidden></ul>
           </div>
         </div>
       `;
@@ -2646,6 +2859,20 @@
 
           card.querySelector(".fund-add-earmark-toggle").addEventListener("click", () =>
             toggleEarmarkAddRow(earmarksBody, fund.fundId));
+
+          setupImportControls({
+            downloadBtn: card.querySelector(".fund-earmarks-download-template-btn"),
+            templateUrl: "/api/import/funds/earmarks/template",
+            templateFilename: "fund-earmarks-template.xlsx",
+            importBtn: card.querySelector(".fund-earmarks-import-btn"),
+            fileInput: card.querySelector(".fund-earmarks-import-file"),
+            uploadUrl: `/api/import/funds/${fund.fundId}/earmarks`,
+            statusEl: card.querySelector(".fund-earmarks-import-status"),
+            listEl: card.querySelector(".fund-earmarks-import-errors"),
+            showError: fundsShowError,
+            clearError: fundsClearError,
+            reload: refreshFunds,
+          });
         });
       } catch (err) {
         fundsShowError(err.message);
@@ -2685,6 +2912,20 @@
         fundsShowError(err.message);
       }
     }));
+
+    setupImportControls({
+      downloadBtn: document.getElementById("funds-download-template-btn"),
+      templateUrl: "/api/import/funds/template",
+      templateFilename: "funds-template.xlsx",
+      importBtn: document.getElementById("funds-import-btn"),
+      fileInput: document.getElementById("funds-import-file"),
+      uploadUrl: "/api/import/funds",
+      statusEl: document.getElementById("funds-import-status"),
+      listEl: document.getElementById("funds-import-errors"),
+      showError: fundsShowError,
+      clearError: fundsClearError,
+      reload: refreshFunds,
+    });
 
     // ---- Debts Ledger ----
 
@@ -2986,6 +3227,34 @@
         <input type="number" class="new-amount" min="0.01" step="0.01" placeholder="סכום" />
         <input type="number" class="new-rate" min="0" step="0.01" placeholder="קצב החזר (לא חובה)" />
       `, "Payable");
+    });
+
+    setupImportControls({
+      downloadBtn: document.getElementById("debts-receivables-download-template-btn"),
+      templateUrl: "/api/import/debts/template",
+      templateFilename: "debts-template.xlsx",
+      importBtn: document.getElementById("debts-receivables-import-btn"),
+      fileInput: document.getElementById("debts-receivables-import-file"),
+      uploadUrl: "/api/import/debts/receivables",
+      statusEl: document.getElementById("debts-receivables-import-status"),
+      listEl: document.getElementById("debts-receivables-import-errors"),
+      showError: debtsShowError,
+      clearError: debtsClearError,
+      reload: refreshDebts,
+    });
+
+    setupImportControls({
+      downloadBtn: document.getElementById("debts-payables-download-template-btn"),
+      templateUrl: "/api/import/debts/template",
+      templateFilename: "debts-template.xlsx",
+      importBtn: document.getElementById("debts-payables-import-btn"),
+      fileInput: document.getElementById("debts-payables-import-file"),
+      uploadUrl: "/api/import/debts/payables",
+      statusEl: document.getElementById("debts-payables-import-status"),
+      listEl: document.getElementById("debts-payables-import-errors"),
+      showError: debtsShowError,
+      clearError: debtsClearError,
+      reload: refreshDebts,
     });
 
     // ---- Excel export (one workbook, one sheet per tab) ----
