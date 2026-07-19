@@ -31,7 +31,7 @@ public class MonthlyActionItemEndpointsTests : IClassFixture<FamilyBudgetApiFact
 
         var createResponse = await client.PostAsJsonAsync(
             "/api/monthly-action-items",
-            new CreateMonthlyActionItemRequest(2071, 1, "שלחי כסף לתרומה", new DateOnly(2071, 1, 10)));
+            new CreateMonthlyActionItemRequest(2071, 1, "שלחי כסף לתרומה", DeadlineDate: new DateOnly(2071, 1, 10)));
 
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
         var created = await createResponse.Content.ReadFromJsonAsync<MonthlyActionItemView>(JsonOptions);
@@ -74,7 +74,7 @@ public class MonthlyActionItemEndpointsTests : IClassFixture<FamilyBudgetApiFact
 
         var updateResponse = await client.PutAsJsonAsync(
             $"/api/monthly-action-items/{created!.Id}",
-            new UpdateMonthlyActionItemRequest("הפקידי לקרן כספית", new DateOnly(2071, 3, 15)));
+            new UpdateMonthlyActionItemRequest("הפקידי לקרן כספית", null, new DateOnly(2071, 3, 15)));
 
         Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
         var updated = await updateResponse.Content.ReadFromJsonAsync<MonthlyActionItemView>(JsonOptions);
@@ -89,7 +89,7 @@ public class MonthlyActionItemEndpointsTests : IClassFixture<FamilyBudgetApiFact
 
         var response = await client.PutAsJsonAsync(
             $"/api/monthly-action-items/{Guid.NewGuid()}",
-            new UpdateMonthlyActionItemRequest("משהו", null));
+            new UpdateMonthlyActionItemRequest("משהו", null, null));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -132,7 +132,7 @@ public class MonthlyActionItemEndpointsTests : IClassFixture<FamilyBudgetApiFact
         var client = _factory.CreateClient();
         var createResponse = await client.PostAsJsonAsync(
             "/api/monthly-action-items",
-            new CreateMonthlyActionItemRequest(2020, 6, "פעולה ישנה", new DateOnly(2020, 6, 1)));
+            new CreateMonthlyActionItemRequest(2020, 6, "פעולה ישנה", DeadlineDate: new DateOnly(2020, 6, 1)));
         var created = await createResponse.Content.ReadFromJsonAsync<MonthlyActionItemView>(JsonOptions);
 
         var list = await client.GetFromJsonAsync<MonthlyActionItemListResponse>(
@@ -152,7 +152,7 @@ public class MonthlyActionItemEndpointsTests : IClassFixture<FamilyBudgetApiFact
         {
             var db = scope.ServiceProvider.GetRequiredService<FamilyBudgetDbContext>();
             db.MonthlyActionItems.Add(new FamilyBudget.Core.Entities.MonthlyActionItem(
-                Guid.NewGuid(), 2022, 1, $"פעולה שעברה דד-ליין {marker}", new DateOnly(2022, 1, 1)));
+                Guid.NewGuid(), 2022, 1, $"פעולה שעברה דד-ליין {marker}", deadlineDate: new DateOnly(2022, 1, 1)));
             await db.SaveChangesAsync();
         }
 
@@ -190,7 +190,7 @@ public class MonthlyActionItemEndpointsTests : IClassFixture<FamilyBudgetApiFact
         {
             var db = scope.ServiceProvider.GetRequiredService<FamilyBudgetDbContext>();
             var item = new FamilyBudget.Core.Entities.MonthlyActionItem(
-                Guid.NewGuid(), 2023, 1, $"פעולה שהושלמה {marker}", new DateOnly(2023, 1, 1));
+                Guid.NewGuid(), 2023, 1, $"פעולה שהושלמה {marker}", deadlineDate: new DateOnly(2023, 1, 1));
             item.SetCompleted(true);
             db.MonthlyActionItems.Add(item);
             await db.SaveChangesAsync();
@@ -212,7 +212,7 @@ public class MonthlyActionItemEndpointsTests : IClassFixture<FamilyBudgetApiFact
         {
             var db = scope.ServiceProvider.GetRequiredService<FamilyBudgetDbContext>();
             db.MonthlyActionItems.Add(new FamilyBudget.Core.Entities.MonthlyActionItem(
-                Guid.NewGuid(), 2090, 1, $"פעולה עתידית {marker}", new DateOnly(2090, 1, 1)));
+                Guid.NewGuid(), 2090, 1, $"פעולה עתידית {marker}", deadlineDate: new DateOnly(2090, 1, 1)));
             await db.SaveChangesAsync();
         }
 

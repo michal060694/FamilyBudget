@@ -19,6 +19,7 @@ public class MonthlyActionItemRepository : IMonthlyActionItemRepository
     {
         return await _dbContext.MonthlyActionItems
             .Where(i => i.Year == year && i.Month == month)
+            .OrderBy(i => i.Description)
             .ToListAsync(cancellationToken);
     }
 

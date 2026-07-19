@@ -18,6 +18,7 @@ public class FundEarmarkRepository : IFundEarmarkRepository
     {
         return await _dbContext.FundEarmarks
             .Where(e => e.FundId == fundId)
+            .OrderBy(e => e.PurposeLabel)
             .ToListAsync(cancellationToken);
     }
 

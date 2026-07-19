@@ -36,9 +36,7 @@ public record FixedDonationsSection(IReadOnlyList<FixedDonationStandingOrderView
 
 public record PriorMonthDonationsSection(IReadOnlyList<TransactionResponse> Lines, decimal Total);
 
-public record AnnualWithdrawalLine(Guid AnnualBudgetItemId, string Name, decimal TotalAmount);
-
-public record AnnualWithdrawalSection(IReadOnlyList<AnnualWithdrawalLine> Lines, decimal Total);
+public record AnnualWithdrawalSection(IReadOnlyList<TransactionResponse> Lines, decimal Total);
 
 public record TitheSettingResponse(decimal Rate);
 

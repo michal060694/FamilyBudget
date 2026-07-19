@@ -22,7 +22,7 @@ public static class MonthlyActionItemEndpoints
         var today = DateOnly.FromDateTime(DateTime.Now);
         var isOverdue = item.DeadlineDate is { } deadline && deadline < today && !item.IsCompleted;
 
-        return new MonthlyActionItemView(item.Id, item.Year, item.Month, item.Description, item.DeadlineDate, item.IsCompleted, isOverdue);
+        return new MonthlyActionItemView(item.Id, item.Year, item.Month, item.Description, item.Amount, item.DeadlineDate, item.IsCompleted, isOverdue);
     }
 
     private static async Task<IResult> GetMonthlyActionItems(int year, int month, IMonthlyActionItemRepository repository)
@@ -49,7 +49,7 @@ public static class MonthlyActionItemEndpoints
             return Results.BadRequest("month must be between 1 and 12.");
         }
 
-        var item = new MonthlyActionItem(Guid.NewGuid(), request.Year, request.Month, request.Description, request.DeadlineDate);
+        var item = new MonthlyActionItem(Guid.NewGuid(), request.Year, request.Month, request.Description, request.Amount, request.DeadlineDate);
         await repository.AddAsync(item);
 
         return Results.Created($"/api/monthly-action-items/{item.Id}", ToView(item));
@@ -70,6 +70,7 @@ public static class MonthlyActionItemEndpoints
         }
 
         item.Rename(request.Description);
+        item.SetAmount(request.Amount);
         item.SetDeadline(request.DeadlineDate);
         await repository.SaveChangesAsync();
 

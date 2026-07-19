@@ -42,6 +42,27 @@ public class DebtEndpointsTests : IClassFixture<FamilyBudgetApiFactory>
     }
 
     [Fact]
+    public async Task GetDebts_ReturnsReceivablesSortedAlphabeticallyByCounterpartyName()
+    {
+        var client = _factory.CreateClient();
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var names = new[] { $"Zebra {marker}", $"Apple {marker}", $"Mango {marker}" };
+
+        foreach (var name in names)
+        {
+            await client.PostAsJsonAsync("/api/debts", new CreateDebtRequest(DebtDirection.Receivable, name, 100m));
+        }
+
+        var ledger = await client.GetFromJsonAsync<DebtsLedgerResponse>("/api/debts", JsonOptions);
+        var orderedNames = ledger!.Receivables
+            .Select(d => d.CounterpartyName)
+            .Where(n => n.Contains(marker))
+            .ToList();
+
+        Assert.Equal([$"Apple {marker}", $"Mango {marker}", $"Zebra {marker}"], orderedNames);
+    }
+
+    [Fact]
     public async Task CreateDebt_Payable_AppearsInPayablesList()
     {
         var client = _factory.CreateClient();

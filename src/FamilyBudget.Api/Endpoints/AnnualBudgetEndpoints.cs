@@ -12,6 +12,7 @@ public static class AnnualBudgetEndpoints
         app.MapGet("/api/annual-budget", GetAnnualBudget);
         app.MapPost("/api/annual-budget-items", CreateAnnualBudgetItem);
         app.MapPatch("/api/annual-budget-items/{id:guid}/usage", SetUsage);
+        app.MapPatch("/api/annual-budget-items/{id:guid}/notes", SetNotes);
         app.MapDelete("/api/annual-budget-items/{id:guid}", DeleteAnnualBudgetItem);
         app.MapPut("/api/reserve", SetReserve);
         app.MapPost("/api/annual-budget/copy", CopyYear);
@@ -26,6 +27,7 @@ public static class AnnualBudgetEndpoints
         item.AmountAlreadySetAside,
         item.AmountUsed,
         item.AmountUsedFormula,
+        item.Notes,
         item.AmountUsed >= item.TotalAmount);
 
     private static async Task<IResult> GetAnnualBudget(int year, AnnualBudgetQueryService queryService, CalendarYearCycle calendarYearCycle)
@@ -39,6 +41,7 @@ public static class AnnualBudgetEndpoints
         return Results.Ok(new AnnualBudgetResponse(
             year,
             summary.ReserveOnHand,
+            summary.ReserveOnHandFormula,
             summary.TotalAnnualBudget,
             summary.NotYetCovered,
             summary.MonthlyAllocation,
@@ -71,11 +74,26 @@ public static class AnnualBudgetEndpoints
             request.TotalAmount,
             request.TargetMonth,
             amountAlreadySetAside: 0m,
-            totalAmountFormula: request.TotalAmountFormula);
+            totalAmountFormula: request.TotalAmountFormula,
+            notes: request.Notes);
 
         await repository.AddAsync(item);
 
         return Results.Created($"/api/annual-budget-items/{item.Id}", ToView(item));
+    }
+
+    private static async Task<IResult> SetNotes(Guid id, SetAnnualBudgetItemNotesRequest request, IAnnualBudgetItemRepository repository)
+    {
+        var item = await repository.GetByIdAsync(id);
+        if (item is null)
+        {
+            return Results.NotFound();
+        }
+
+        item.SetNotes(request.Notes);
+        await repository.SaveChangesAsync();
+
+        return Results.Ok(ToView(item));
     }
 
     private static async Task<IResult> SetUsage(Guid id, SetUsageRequest request, IAnnualBudgetItemRepository repository)
@@ -110,8 +128,8 @@ public static class AnnualBudgetEndpoints
             return Results.BadRequest("amount must be >= 0.");
         }
 
-        await repository.SetAmountAsync(year, request.Amount);
-        return Results.Ok(new { year, amount = request.Amount });
+        await repository.SetAmountAsync(year, request.Amount, request.AmountFormula);
+        return Results.Ok(new { year, amount = request.Amount, amountFormula = request.AmountFormula });
     }
 
     private static async Task<IResult> CopyYear(CopyAnnualBudgetYearRequest request, AnnualBudgetCopyService copyService)

@@ -25,6 +25,8 @@ public class AnnualBudgetItem
     /// <summary>Raw formula the user typed for <see cref="AmountUsed"/>, or null if entered as a plain number.</summary>
     public string? AmountUsedFormula { get; private set; }
 
+    public string? Notes { get; private set; }
+
     private AnnualBudgetItem()
     {
         Name = string.Empty;
@@ -39,7 +41,8 @@ public class AnnualBudgetItem
         decimal amountAlreadySetAside,
         decimal amountUsed = 0,
         string? totalAmountFormula = null,
-        string? amountUsedFormula = null)
+        string? amountUsedFormula = null,
+        string? notes = null)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -75,6 +78,7 @@ public class AnnualBudgetItem
         AmountAlreadySetAside = amountAlreadySetAside;
         AmountUsed = amountUsed;
         AmountUsedFormula = amountUsedFormula;
+        Notes = notes;
     }
 
     /// <summary>Normal (non-overrun) smoothing requirement still owed toward the deposit target (FR-002).</summary>
@@ -104,5 +108,10 @@ public class AnnualBudgetItem
 
         AmountUsed = amount;
         AmountUsedFormula = formula;
+    }
+
+    public void SetNotes(string? notes)
+    {
+        Notes = notes;
     }
 }

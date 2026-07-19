@@ -3,6 +3,7 @@ namespace FamilyBudget.Api.Contracts;
 public record AnnualBudgetResponse(
     int Year,
     decimal ReserveOnHand,
+    string? ReserveOnHandFormula,
     decimal TotalAnnualBudget,
     decimal NotYetCovered,
     decimal MonthlyAllocation,
@@ -17,14 +18,17 @@ public record AnnualBudgetItemView(
     decimal AmountAlreadySetAside,
     decimal AmountUsed,
     string? AmountUsedFormula,
+    string? Notes,
     bool IsFullyUsed);
 
 public record CreateAnnualBudgetItemRequest(
-    int Year, string Name, decimal TotalAmount, int? TargetMonth, string? TotalAmountFormula = null);
+    int Year, string Name, decimal TotalAmount, int? TargetMonth, string? TotalAmountFormula = null, string? Notes = null);
 
-public record SetReserveRequest(decimal Amount);
+public record SetReserveRequest(decimal Amount, string? AmountFormula = null);
 
 public record SetUsageRequest(decimal Amount, string? AmountFormula = null);
+
+public record SetAnnualBudgetItemNotesRequest(string? Notes);
 
 public record CopyAnnualBudgetYearRequest(int SourceYear, int TargetYear);
 

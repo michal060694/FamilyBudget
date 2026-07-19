@@ -7,7 +7,7 @@ public class MonthlyActionItemTests
     [Fact]
     public void Constructor_ValidInput_InitializesAsIncompleteWithNoReminderSent()
     {
-        var item = new MonthlyActionItem(Guid.NewGuid(), 2026, 7, "שלחי כסף לתרומה", new DateOnly(2026, 7, 10));
+        var item = new MonthlyActionItem(Guid.NewGuid(), 2026, 7, "שלחי כסף לתרומה", deadlineDate: new DateOnly(2026, 7, 10));
 
         Assert.False(item.IsCompleted);
         Assert.Null(item.ReminderSentAt);
@@ -57,7 +57,7 @@ public class MonthlyActionItemTests
     [Fact]
     public void SetDeadline_CanClearToNull()
     {
-        var item = new MonthlyActionItem(Guid.NewGuid(), 2026, 7, "משהו", new DateOnly(2026, 7, 10));
+        var item = new MonthlyActionItem(Guid.NewGuid(), 2026, 7, "משהו", deadlineDate: new DateOnly(2026, 7, 10));
 
         item.SetDeadline(null);
 
@@ -79,10 +79,35 @@ public class MonthlyActionItemTests
     [Fact]
     public void MarkReminderSent_SetsReminderSentAt()
     {
-        var item = new MonthlyActionItem(Guid.NewGuid(), 2026, 7, "משהו", new DateOnly(2026, 7, 1));
+        var item = new MonthlyActionItem(Guid.NewGuid(), 2026, 7, "משהו", deadlineDate: new DateOnly(2026, 7, 1));
 
         item.MarkReminderSent(new DateOnly(2026, 7, 5));
 
         Assert.Equal(new DateOnly(2026, 7, 5), item.ReminderSentAt);
+    }
+
+    [Fact]
+    public void Constructor_WithAmount_SetsAmount()
+    {
+        var item = new MonthlyActionItem(Guid.NewGuid(), 2026, 7, "הפקידי לקרן כספית", amount: 500m);
+
+        Assert.Equal(500m, item.Amount);
+    }
+
+    [Fact]
+    public void Constructor_NegativeAmount_Throws()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new MonthlyActionItem(Guid.NewGuid(), 2026, 7, "משהו", amount: -1m));
+    }
+
+    [Fact]
+    public void SetAmount_CanClearToNull()
+    {
+        var item = new MonthlyActionItem(Guid.NewGuid(), 2026, 7, "משהו", amount: 500m);
+
+        item.SetAmount(null);
+
+        Assert.Null(item.Amount);
     }
 }

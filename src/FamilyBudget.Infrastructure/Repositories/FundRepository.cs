@@ -16,7 +16,7 @@ public class FundRepository : IFundRepository
 
     public async Task<IReadOnlyList<Fund>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Funds.ToListAsync(cancellationToken);
+        return await _dbContext.Funds.OrderBy(f => f.Name).ToListAsync(cancellationToken);
     }
 
     public async Task<Fund?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

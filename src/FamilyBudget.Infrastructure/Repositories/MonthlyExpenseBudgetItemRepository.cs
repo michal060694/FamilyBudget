@@ -24,7 +24,7 @@ public class MonthlyExpenseBudgetItemRepository : IMonthlyExpenseBudgetItemRepos
             query = query.Where(i => i.Type == requestedType);
         }
 
-        return await query.ToListAsync(cancellationToken);
+        return await query.OrderBy(i => i.Name).ToListAsync(cancellationToken);
     }
 
     public async Task<MonthlyExpenseBudgetItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

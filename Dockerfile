@@ -14,6 +14,10 @@ WORKDIR /app
 COPY --from=build /app .
 
 ENV ASPNETCORE_ENVIRONMENT=Production
+# Disable appsettings.json hot-reload: it registers a FileSystemWatcher at startup, and
+# constrained container hosts (e.g. Render) can exhaust their inotify instance limit,
+# crashing WebApplication.CreateBuilder before app code even runs.
+ENV DOTNET_hostBuilder__reloadConfigOnChange=false
 EXPOSE 8080
 
 # Render (and most PaaS hosts) inject a PORT env var and expect the app to listen on it; default to

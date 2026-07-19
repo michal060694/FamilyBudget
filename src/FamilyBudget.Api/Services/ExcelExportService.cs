@@ -167,9 +167,7 @@ public class ExcelExportService
         AmountCell(sheet, row, 2, obligation.StillToDonateAfterFixed);
         row += 2;
 
-        row = WriteTable(sheet, row, "הוצאות שצריך להביא מהקופה השנתית", ["שם", "סכום למשיכה"],
-            overview.AnnualWithdrawalItems,
-            i => [i.Name, i.TotalAmount]);
+        row = WriteTransactionsTable(sheet, row, "הוצאות שצריך להביא מהקופה השנתית", overview.AnnualWithdrawalItems);
 
         row = WriteTable(sheet, row, "הוצאות בהוראת קבע", ["שם", "מתוכנן"],
             overview.FixedExpenseItems,

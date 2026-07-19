@@ -71,9 +71,7 @@ public static class MonthlyOverviewEndpoints
             new ExpenseBudgetSection(overview.FixedExpenseItems.Select(ToView).ToList(), overview.FixedExpenseUsedTotal),
             new ExpenseBudgetSection(overview.RegularExpenseItems.Select(ToView).ToList(), overview.RegularExpenseUsedTotal),
             new AnnualWithdrawalSection(
-                overview.AnnualWithdrawalItems
-                    .Select(i => new AnnualWithdrawalLine(i.Id, i.Name, i.TotalAmount))
-                    .ToList(),
+                overview.AnnualWithdrawalItems.Select(ToResponse).ToList(),
                 overview.AnnualWithdrawalsTotal),
             overview.DebtRepaymentsSummary,
             overview.TotalOutflow,

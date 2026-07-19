@@ -11,11 +11,14 @@ public class AnnualReserve
     public int Year { get; private set; }
     public decimal Amount { get; private set; }
 
+    /// <summary>Raw formula the user typed for <see cref="Amount"/> (e.g. "600-200"), or null if entered as a plain number.</summary>
+    public string? AmountFormula { get; private set; }
+
     private AnnualReserve()
     {
     }
 
-    public AnnualReserve(int year, decimal amount)
+    public AnnualReserve(int year, decimal amount, string? amountFormula = null)
     {
         if (amount < 0)
         {
@@ -24,9 +27,10 @@ public class AnnualReserve
 
         Year = year;
         Amount = amount;
+        AmountFormula = amountFormula;
     }
 
-    public void Update(decimal amount)
+    public void Update(decimal amount, string? amountFormula = null)
     {
         if (amount < 0)
         {
@@ -34,5 +38,6 @@ public class AnnualReserve
         }
 
         Amount = amount;
+        AmountFormula = amountFormula;
     }
 }

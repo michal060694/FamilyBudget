@@ -21,6 +21,7 @@ public class FixedDonationStandingOrderRepository : IFixedDonationStandingOrderR
 
         return await _dbContext.FixedDonationStandingOrders
             .Where(o => o.ValidUntilYear == null || ((o.ValidUntilYear!.Value * 12) + o.ValidUntilMonth!.Value) >= targetIndex)
+            .OrderBy(o => o.Name)
             .ToListAsync(cancellationToken);
     }
 

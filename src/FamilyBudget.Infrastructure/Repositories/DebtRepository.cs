@@ -16,7 +16,7 @@ public class DebtRepository : IDebtRepository
 
     public async Task<IReadOnlyList<Debt>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        return await _dbContext.Debts.ToListAsync(cancellationToken);
+        return await _dbContext.Debts.OrderBy(d => d.CounterpartyName).ToListAsync(cancellationToken);
     }
 
     public async Task<Debt?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)

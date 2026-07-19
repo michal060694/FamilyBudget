@@ -1,7 +1,6 @@
 using ClosedXML.Excel;
 using FamilyBudget.Api.Contracts;
 using FamilyBudget.Api.Services;
-using FamilyBudget.Core.Abstractions;
 using FamilyBudget.Core.Entities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,11 +13,8 @@ public static class ImportEndpoints
 
     public static void MapImportEndpoints(this WebApplication app)
     {
-        app.MapPost("/api/import/transactions", ImportTransactions).DisableAntiforgery().WithMetadata(new RequestSizeLimitAttribute(MaxUploadBytes));
-        app.MapGet("/api/import/transactions/template", GetTransactionsTemplate);
-
-        app.MapPost("/api/import/monthly-expense-budgets", ImportMonthlyExpenseBudgets).DisableAntiforgery().WithMetadata(new RequestSizeLimitAttribute(MaxUploadBytes));
-        app.MapGet("/api/import/monthly-expense-budgets/template", GetMonthlyExpenseBudgetsTemplate);
+        app.MapPost("/api/import/monthly-template-items", ImportMonthlyTemplateItems).DisableAntiforgery().WithMetadata(new RequestSizeLimitAttribute(MaxUploadBytes));
+        app.MapGet("/api/import/monthly-template-items/template", GetMonthlyTemplateItemsTemplate);
 
         app.MapPost("/api/import/fixed-donation-standing-orders", ImportFixedDonationStandingOrders).DisableAntiforgery().WithMetadata(new RequestSizeLimitAttribute(MaxUploadBytes));
         app.MapGet("/api/import/fixed-donation-standing-orders/template", GetFixedDonationStandingOrdersTemplate);
@@ -28,9 +24,6 @@ public static class ImportEndpoints
 
         app.MapPost("/api/import/funds", ImportFunds).DisableAntiforgery().WithMetadata(new RequestSizeLimitAttribute(MaxUploadBytes));
         app.MapGet("/api/import/funds/template", GetFundsTemplate);
-
-        app.MapPost("/api/import/funds/{fundId:guid}/earmarks", ImportFundEarmarks).DisableAntiforgery().WithMetadata(new RequestSizeLimitAttribute(MaxUploadBytes));
-        app.MapGet("/api/import/funds/earmarks/template", GetFundEarmarksTemplate);
 
         app.MapPost("/api/import/debts/receivables", ImportReceivableDebts).DisableAntiforgery().WithMetadata(new RequestSizeLimitAttribute(MaxUploadBytes));
         app.MapPost("/api/import/debts/payables", ImportPayableDebts).DisableAntiforgery().WithMetadata(new RequestSizeLimitAttribute(MaxUploadBytes));
@@ -92,34 +85,15 @@ public static class ImportEndpoints
         }
     }
 
-    // ---------- Transactions ----------
+    // ---------- Monthly template items ----------
 
-    private static Task<IResult> ImportTransactions(IFormFile file, ExcelImportService importService, CancellationToken cancellationToken) =>
-        HandleImportAsync(file, workbook => importService.ImportTransactionsAsync(workbook, cancellationToken));
+    private static Task<IResult> ImportMonthlyTemplateItems(IFormFile file, ExcelImportService importService, CancellationToken cancellationToken) =>
+        HandleImportAsync(file, workbook => importService.ImportMonthlyTemplateItemsAsync(workbook, cancellationToken));
 
-    private static async Task<IResult> GetTransactionsTemplate(ExcelImportService importService)
+    private static async Task<IResult> GetMonthlyTemplateItemsTemplate(ExcelImportService importService)
     {
-        var bytes = await importService.BuildTransactionsTemplateAsync();
-        return Results.File(bytes, XlsxContentType, "תבנית-עסקאות.xlsx");
-    }
-
-    // ---------- Monthly expense budget items ----------
-
-    private static Task<IResult> ImportMonthlyExpenseBudgets(
-        int year, int month, IFormFile file, ExcelImportService importService, CancellationToken cancellationToken)
-    {
-        if (month is < 1 or > 12)
-        {
-            return Task.FromResult(Results.BadRequest("month must be between 1 and 12."));
-        }
-
-        return HandleImportAsync(file, workbook => importService.ImportMonthlyExpenseBudgetsAsync(workbook, year, month, cancellationToken));
-    }
-
-    private static async Task<IResult> GetMonthlyExpenseBudgetsTemplate(ExcelImportService importService)
-    {
-        var bytes = await importService.BuildMonthlyExpenseBudgetsTemplateAsync();
-        return Results.File(bytes, XlsxContentType, "תבנית-הוצאות-חודשיות.xlsx");
+        var bytes = await importService.BuildMonthlyTemplateItemsTemplateAsync();
+        return Results.File(bytes, XlsxContentType, "תבנית-פריטי-תבנית-חודשית.xlsx");
     }
 
     // ---------- Fixed donation standing orders ----------
@@ -152,27 +126,7 @@ public static class ImportEndpoints
     private static async Task<IResult> GetFundsTemplate(ExcelImportService importService)
     {
         var bytes = await importService.BuildFundsTemplateAsync();
-        return Results.File(bytes, XlsxContentType, "תבנית-קרנות.xlsx");
-    }
-
-    // ---------- Fund earmarks ----------
-
-    private static async Task<IResult> ImportFundEarmarks(
-        Guid fundId, IFormFile file, IFundRepository fundRepository, ExcelImportService importService, CancellationToken cancellationToken)
-    {
-        var fund = await fundRepository.GetByIdAsync(fundId, cancellationToken);
-        if (fund is null)
-        {
-            return Results.NotFound();
-        }
-
-        return await HandleImportAsync(file, workbook => importService.ImportFundEarmarksAsync(workbook, fundId, cancellationToken));
-    }
-
-    private static async Task<IResult> GetFundEarmarksTemplate(ExcelImportService importService)
-    {
-        var bytes = await importService.BuildFundEarmarksTemplateAsync();
-        return Results.File(bytes, XlsxContentType, "תבנית-ייעודי-קרן.xlsx");
+        return Results.File(bytes, XlsxContentType, "תבנית-קרנות-וייעודים.xlsx");
     }
 
     // ---------- Debts ----------

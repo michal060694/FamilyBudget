@@ -23,6 +23,26 @@ public class MonthlyExpenseBudgetEndpointsTests : IClassFixture<FamilyBudgetApiF
     }
 
     [Fact]
+    public async Task GetByMonth_ReturnsItemsSortedAlphabeticallyByName()
+    {
+        const int year = 2061;
+        const int month = 6;
+        var client = _factory.CreateClient();
+
+        foreach (var name in new[] { "Zebra Expense", "Apple Expense", "Mango Expense" })
+        {
+            await client.PostAsJsonAsync(
+                "/api/monthly-expense-budgets",
+                new CreateMonthlyExpenseBudgetItemRequest(year, month, name, TransactionType.RegularExpense, 100m));
+        }
+
+        var list = await client.GetFromJsonAsync<MonthlyExpenseBudgetListResponse>(
+            $"/api/monthly-expense-budgets?year={year}&month={month}", JsonOptions);
+
+        Assert.Equal(["Apple Expense", "Mango Expense", "Zebra Expense"], list!.Items.Select(i => i.Name).ToList());
+    }
+
+    [Fact]
     public async Task CreateAndGet_PersistsAndAppearsInMonthList()
     {
         const int year = 2060;

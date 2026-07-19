@@ -12,6 +12,7 @@ public class MonthlyActionItem
     public int Year { get; private set; }
     public int Month { get; private set; }
     public string Description { get; private set; }
+    public decimal? Amount { get; private set; }
     public DateOnly? DeadlineDate { get; private set; }
     public bool IsCompleted { get; private set; }
     public DateOnly? ReminderSentAt { get; private set; }
@@ -21,15 +22,17 @@ public class MonthlyActionItem
         Description = string.Empty;
     }
 
-    public MonthlyActionItem(Guid id, int year, int month, string description, DateOnly? deadlineDate = null)
+    public MonthlyActionItem(Guid id, int year, int month, string description, decimal? amount = null, DateOnly? deadlineDate = null)
     {
         ValidateMonth(month);
         ValidateDescription(description);
+        ValidateAmount(amount);
 
         Id = id;
         Year = year;
         Month = month;
         Description = description;
+        Amount = amount;
         DeadlineDate = deadlineDate;
         IsCompleted = false;
         ReminderSentAt = null;
@@ -39,6 +42,12 @@ public class MonthlyActionItem
     {
         ValidateDescription(description);
         Description = description;
+    }
+
+    public void SetAmount(decimal? amount)
+    {
+        ValidateAmount(amount);
+        Amount = amount;
     }
 
     public void SetDeadline(DateOnly? deadlineDate)
@@ -69,6 +78,14 @@ public class MonthlyActionItem
         if (string.IsNullOrWhiteSpace(description))
         {
             throw new ArgumentException("Description must not be empty.", nameof(description));
+        }
+    }
+
+    private static void ValidateAmount(decimal? amount)
+    {
+        if (amount is < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be >= 0 when specified.");
         }
     }
 }

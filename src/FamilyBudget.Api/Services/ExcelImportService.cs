@@ -34,16 +34,7 @@ public class ExcelImportService
         ["החזר חוב"] = TransactionType.DebtRepayment,
     };
 
-    private static readonly Dictionary<string, PaymentMethod> PaymentMethodByHebrew = new()
-    {
-        ["אשראי"] = PaymentMethod.CreditCard,
-        ["העברה בנקאית"] = PaymentMethod.BankTransfer,
-        ["מזומן"] = PaymentMethod.Cash,
-        ["צ'ק"] = PaymentMethod.Check,
-    };
-
-    private readonly ITransactionRepository _transactionRepository;
-    private readonly IMonthlyExpenseBudgetItemRepository _monthlyExpenseBudgetItemRepository;
+    private readonly IMonthlyTemplateItemRepository _monthlyTemplateItemRepository;
     private readonly IFixedDonationStandingOrderRepository _fixedDonationStandingOrderRepository;
     private readonly IAnnualBudgetItemRepository _annualBudgetItemRepository;
     private readonly IFundRepository _fundRepository;
@@ -51,16 +42,14 @@ public class ExcelImportService
     private readonly IDebtRepository _debtRepository;
 
     public ExcelImportService(
-        ITransactionRepository transactionRepository,
-        IMonthlyExpenseBudgetItemRepository monthlyExpenseBudgetItemRepository,
+        IMonthlyTemplateItemRepository monthlyTemplateItemRepository,
         IFixedDonationStandingOrderRepository fixedDonationStandingOrderRepository,
         IAnnualBudgetItemRepository annualBudgetItemRepository,
         IFundRepository fundRepository,
         IFundEarmarkRepository fundEarmarkRepository,
         IDebtRepository debtRepository)
     {
-        _transactionRepository = transactionRepository;
-        _monthlyExpenseBudgetItemRepository = monthlyExpenseBudgetItemRepository;
+        _monthlyTemplateItemRepository = monthlyTemplateItemRepository;
         _fixedDonationStandingOrderRepository = fixedDonationStandingOrderRepository;
         _annualBudgetItemRepository = annualBudgetItemRepository;
         _fundRepository = fundRepository;
@@ -68,22 +57,20 @@ public class ExcelImportService
         _debtRepository = debtRepository;
     }
 
-    // ---------- Transactions ----------
+    // ---------- Monthly template items (recurring plan — applied to a specific month separately via MonthlyTemplateApplyService) ----------
 
-    private static readonly string[] TransactionColumns = ["תאריך", "סוג", "סכום", "אמצעי תשלום", "חייב מעשר", "תיאור"];
+    private static readonly string[] MonthlyTemplateItemColumns = ["סוג", "שם", "סכום", "חייב מעשר"];
 
-    public async Task<ImportResult> ImportTransactionsAsync(XLWorkbook workbook, CancellationToken cancellationToken = default)
+    public async Task<ImportResult> ImportMonthlyTemplateItemsAsync(XLWorkbook workbook, CancellationToken cancellationToken = default)
     {
-        var sheet = ExcelTableReader.GetSheetOrThrow(workbook, TransactionColumns[0]);
+        var sheet = ExcelTableReader.GetSheetOrThrow(workbook, MonthlyTemplateItemColumns[0]);
 
         return await ExcelTableReader.ProcessRowsAsync(sheet, async row =>
         {
-            var date = ExcelTableReader.RequiredDate(row, 1, "תאריך");
-            var type = ParseTransactionType(row, 2);
+            var type = ParseTemplateItemType(row, 1);
+            var name = ExcelTableReader.RequiredText(row, 2, "שם");
             var amount = ExcelTableReader.RequiredDecimal(row, 3, "סכום");
-            var paymentMethod = ParsePaymentMethod(row, 4);
-            var isTitheApplicableText = ExcelTableReader.OptionalText(row, 5);
-            var description = ExcelTableReader.OptionalText(row, 6);
+            var isTitheApplicableText = ExcelTableReader.OptionalText(row, 4);
 
             bool? isTitheApplicable;
             if (type == TransactionType.Income)
@@ -105,37 +92,18 @@ public class ExcelImportService
                 isTitheApplicable = null;
             }
 
-            var transaction = new Transaction(Guid.NewGuid(), date, amount, type, paymentMethod, isTitheApplicable, description);
-            await _transactionRepository.AddAsync(transaction, cancellationToken);
+            var item = new MonthlyTemplateItem(Guid.NewGuid(), type, name, amount, isTitheApplicable);
+            await _monthlyTemplateItemRepository.AddAsync(item, cancellationToken);
         });
     }
 
-    public Task<byte[]> BuildTransactionsTemplateAsync() => Task.FromResult(BuildTemplate(TransactionColumns));
+    private static readonly string[] MonthlyTemplateItemTypeOptions = ["הכנסה", "הוצאת הו\"ק", "הוצאה שוטפת"];
+    private static readonly string[] YesNoOptions = ["כן", "לא"];
 
-    // ---------- Monthly expense budget items ----------
-
-    private static readonly string[] MonthlyExpenseBudgetColumns = ["סוג", "שם", "תקציב", "נוצל", "כלול בסה\"כ"];
-
-    public async Task<ImportResult> ImportMonthlyExpenseBudgetsAsync(
-        XLWorkbook workbook, int year, int month, CancellationToken cancellationToken = default)
-    {
-        var sheet = ExcelTableReader.GetSheetOrThrow(workbook, MonthlyExpenseBudgetColumns[0]);
-
-        return await ExcelTableReader.ProcessRowsAsync(sheet, async row =>
-        {
-            var type = ParseExpenseType(row, 1);
-            var name = ExcelTableReader.RequiredText(row, 2, "שם");
-            var budgeted = ExcelTableReader.RequiredDecimal(row, 3, "תקציב");
-            var used = ExcelTableReader.OptionalDecimal(row, 4, "נוצל");
-            var include = ExcelTableReader.OptionalBool(row, 5, "כלול בסה\"כ");
-
-            var item = new MonthlyExpenseBudgetItem(
-                Guid.NewGuid(), year, month, name, type, budgeted, used, includeInOutflowTotal: include);
-            await _monthlyExpenseBudgetItemRepository.AddAsync(item, cancellationToken);
-        });
-    }
-
-    public Task<byte[]> BuildMonthlyExpenseBudgetsTemplateAsync() => Task.FromResult(BuildTemplate(MonthlyExpenseBudgetColumns));
+    public Task<byte[]> BuildMonthlyTemplateItemsTemplateAsync() => Task.FromResult(BuildTemplate(
+        MonthlyTemplateItemColumns,
+        (Column: 1, Options: MonthlyTemplateItemTypeOptions),
+        (Column: 4, Options: YesNoOptions)));
 
     // ---------- Fixed donation standing orders ----------
 
@@ -179,17 +147,29 @@ public class ExcelImportService
         });
     }
 
-    public Task<byte[]> BuildAnnualBudgetItemsTemplateAsync() => Task.FromResult(BuildTemplate(AnnualBudgetItemColumns));
+    private static readonly string[] TargetMonthOptions = ["כללי", .. HebrewMonthNames.Skip(1)];
 
-    // ---------- Funds ----------
+    public Task<byte[]> BuildAnnualBudgetItemsTemplateAsync() => Task.FromResult(BuildTemplate(
+        AnnualBudgetItemColumns,
+        (Column: 2, Options: TargetMonthOptions)));
 
+    // ---------- Funds + earmarks (one workbook, two sheets) ----------
+
+    private const string FundsSheetName = "קרנות";
+    private const string FundEarmarksSheetName = "ייעודים";
     private static readonly string[] FundColumns = ["שם", "יתרה כוללת"];
+    private static readonly string[] FundEarmarkColumns = ["שם קרן", "מטרה", "סכום"];
 
+    /// <summary>
+    /// Imports both new funds and their earmarks from one workbook: a "<c>קרנות</c>" sheet (new
+    /// funds) processed first, then a "<c>ייעודים</c>" sheet whose rows reference a fund by
+    /// <see cref="Fund.Name"/> — including a fund created moments earlier by the same file's own
+    /// funds sheet, since the name lookup is built only after the funds sheet finishes.
+    /// </summary>
     public async Task<ImportResult> ImportFundsAsync(XLWorkbook workbook, CancellationToken cancellationToken = default)
     {
-        var sheet = ExcelTableReader.GetSheetOrThrow(workbook, FundColumns[0]);
-
-        return await ExcelTableReader.ProcessRowsAsync(sheet, async row =>
+        var fundsSheet = ExcelTableReader.GetSheetOrThrow(workbook, FundsSheetName, FundColumns[0]);
+        var fundsResult = await ExcelTableReader.ProcessRowsAsync(fundsSheet, async row =>
         {
             var name = ExcelTableReader.RequiredText(row, 1, "שם");
             var totalBalance = ExcelTableReader.RequiredDecimal(row, 2, "יתרה כוללת");
@@ -197,29 +177,35 @@ public class ExcelImportService
             var fund = new Fund(Guid.NewGuid(), name, totalBalance);
             await _fundRepository.AddAsync(fund, cancellationToken);
         });
-    }
 
-    public Task<byte[]> BuildFundsTemplateAsync() => Task.FromResult(BuildTemplate(FundColumns));
+        var earmarksSheet = ExcelTableReader.GetSheetOrThrow(workbook, FundEarmarksSheetName, FundEarmarkColumns[0]);
+        var funds = await _fundRepository.GetAllAsync(cancellationToken);
+        var fundIdByName = funds.ToDictionary(f => f.Name, f => f.Id);
 
-    // ---------- Fund earmarks ----------
-
-    private static readonly string[] FundEarmarkColumns = ["מטרה", "סכום"];
-
-    public async Task<ImportResult> ImportFundEarmarksAsync(XLWorkbook workbook, Guid fundId, CancellationToken cancellationToken = default)
-    {
-        var sheet = ExcelTableReader.GetSheetOrThrow(workbook, FundEarmarkColumns[0]);
-
-        return await ExcelTableReader.ProcessRowsAsync(sheet, async row =>
+        var earmarksResult = await ExcelTableReader.ProcessRowsAsync(earmarksSheet, async row =>
         {
-            var purposeLabel = ExcelTableReader.RequiredText(row, 1, "מטרה");
-            var amount = ExcelTableReader.RequiredDecimal(row, 2, "סכום");
+            var fundName = ExcelTableReader.RequiredText(row, 1, "שם קרן");
+            var purposeLabel = ExcelTableReader.RequiredText(row, 2, "מטרה");
+            var amount = ExcelTableReader.RequiredDecimal(row, 3, "סכום");
+
+            if (!fundIdByName.TryGetValue(fundName, out var fundId))
+            {
+                throw new FormatException($"Unrecognized שם קרן value: '{fundName}'.");
+            }
 
             var earmark = new FundEarmark(Guid.NewGuid(), fundId, purposeLabel, amount);
             await _fundEarmarkRepository.AddAsync(earmark, cancellationToken);
         });
+
+        var combinedErrors = fundsResult.Errors.Select(e => new ImportRowError(e.RowNumber, $"[{FundsSheetName}] {e.Message}"))
+            .Concat(earmarksResult.Errors.Select(e => new ImportRowError(e.RowNumber, $"[{FundEarmarksSheetName}] {e.Message}")))
+            .ToList();
+
+        return new ImportResult(fundsResult.AddedCount + earmarksResult.AddedCount, combinedErrors);
     }
 
-    public Task<byte[]> BuildFundEarmarksTemplateAsync() => Task.FromResult(BuildTemplate(FundEarmarkColumns));
+    public Task<byte[]> BuildFundsTemplateAsync() => Task.FromResult(BuildTwoSheetTemplate(
+        FundsSheetName, FundColumns, FundEarmarksSheetName, FundEarmarkColumns));
 
     // ---------- Debts ----------
 
@@ -254,23 +240,15 @@ public class ExcelImportService
             : throw new FormatException($"Unrecognized סוג value: '{text}'.");
     }
 
-    private static TransactionType ParseExpenseType(IXLRow row, int column)
+    private static TransactionType ParseTemplateItemType(IXLRow row, int column)
     {
         var type = ParseTransactionType(row, column);
-        if (type is not (TransactionType.FixedExpense or TransactionType.RegularExpense))
+        if (type is not (TransactionType.Income or TransactionType.FixedExpense or TransactionType.RegularExpense))
         {
-            throw new FormatException("סוג must be הוצאת הו\"ק or הוצאה שוטפת.");
+            throw new FormatException("סוג must be הכנסה, הוצאת הו\"ק, or הוצאה שוטפת.");
         }
 
         return type;
-    }
-
-    private static PaymentMethod ParsePaymentMethod(IXLRow row, int column)
-    {
-        var text = ExcelTableReader.RequiredText(row, column, "אמצעי תשלום");
-        return PaymentMethodByHebrew.TryGetValue(text, out var method)
-            ? method
-            : throw new FormatException($"Unrecognized אמצעי תשלום value: '{text}'.");
     }
 
     private static int? ParseTargetMonth(IXLRow row, int column)
@@ -310,10 +288,37 @@ public class ExcelImportService
         return (year, month);
     }
 
-    private static byte[] BuildTemplate(string[] columns)
+    /// <summary>Row count the dropdown validation covers below the header — generous enough for any realistic hand-filled sheet.</summary>
+    private const int DropdownRowCount = 500;
+
+    private static byte[] BuildTemplate(string[] columns, params (int Column, string[] Options)[] dropdowns)
     {
         using var workbook = new XLWorkbook();
-        var sheet = workbook.Worksheets.Add("תבנית");
+        var sheet = AddTemplateSheet(workbook, "תבנית", columns);
+        foreach (var (column, options) in dropdowns)
+        {
+            ApplyDropdown(workbook, sheet, column, options);
+        }
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return stream.ToArray();
+    }
+
+    private static byte[] BuildTwoSheetTemplate(string sheetName1, string[] columns1, string sheetName2, string[] columns2)
+    {
+        using var workbook = new XLWorkbook();
+        AddTemplateSheet(workbook, sheetName1, columns1);
+        AddTemplateSheet(workbook, sheetName2, columns2);
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return stream.ToArray();
+    }
+
+    private static IXLWorksheet AddTemplateSheet(XLWorkbook workbook, string sheetName, string[] columns)
+    {
+        var sheet = workbook.Worksheets.Add(sheetName);
         sheet.RightToLeft = true;
 
         for (var i = 0; i < columns.Length; i++)
@@ -325,9 +330,33 @@ public class ExcelImportService
         }
 
         sheet.Columns().AdjustToContents();
+        return sheet;
+    }
 
-        using var stream = new MemoryStream();
-        workbook.SaveAs(stream);
-        return stream.ToArray();
+    /// <summary>
+    /// Restricts a column to an Excel in-cell dropdown of <paramref name="options"/>, so the user
+    /// picks a value instead of guessing what's valid (e.g. the exact spelling of "הוצאת הו\"ק").
+    /// The options are written into a hidden helper sheet and referenced by range rather than as an
+    /// inline literal list, since some option text (like the embedded quote in "הו\"ק") isn't safe to
+    /// splice into an inline comma-separated validation formula.
+    /// </summary>
+    private static void ApplyDropdown(XLWorkbook workbook, IXLWorksheet sheet, int column, string[] options)
+    {
+        const string listSheetName = "רשימות";
+        if (!workbook.Worksheets.TryGetWorksheet(listSheetName, out var listSheet))
+        {
+            listSheet = workbook.Worksheets.Add(listSheetName);
+            listSheet.Visibility = XLWorksheetVisibility.VeryHidden;
+        }
+
+        var listColumn = (listSheet.LastColumnUsed()?.ColumnNumber() ?? 0) + 1;
+        for (var i = 0; i < options.Length; i++)
+        {
+            listSheet.Cell(i + 1, listColumn).Value = options[i];
+        }
+
+        var optionsRange = listSheet.Range(1, listColumn, options.Length, listColumn);
+        var targetRange = sheet.Range(2, column, DropdownRowCount, column);
+        targetRange.CreateDataValidation().List(optionsRange, true);
     }
 }

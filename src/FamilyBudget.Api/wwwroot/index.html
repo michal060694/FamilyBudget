@@ -254,7 +254,7 @@
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   .annual-table { table-layout: fixed; }
   .annual-table .col-num { width: 100px; }
-  .annual-table .col-action { width: 36px; }
+  .annual-table .col-action { width: 92px; }
   th, td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--gridline); font-size: 0.88rem; }
   th { color: var(--text-muted); font-weight: 600; font-size: 0.78rem; }
   td.num { text-align: left; }
@@ -284,6 +284,8 @@
   .month-toggle[aria-expanded="true"] .chevron { transform: rotate(180deg); }
 
   tr.empty-hint td { color: var(--text-muted); font-size: 0.82rem; font-style: italic; }
+
+  tr.totals-row td { font-weight: 700; border-top: 2px solid var(--gridline); }
 
   tr.add-form td { background: color-mix(in srgb, var(--card-accent) 6%, transparent); }
   .add-form-fields { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -349,27 +351,77 @@
     outline: none;
   }
 
-  button.delete-row {
-    position: relative;
-    background: transparent;
-    color: var(--text-muted);
-    border: none;
-    padding: 2px 8px;
-    font-size: 0.9rem;
-  }
-  button.delete-row:hover { color: var(--status-critical); }
+  button.delete-row,
   button.notes-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    margin: 0;
     background: transparent;
     color: var(--text-muted);
     border: none;
-    padding: 2px 8px;
-    font-size: 0.9rem;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    transition: background-color 0.15s ease-out, color 0.15s ease-out;
   }
-  button.notes-btn:hover { color: var(--card-accent, var(--series-1)); }
+  button.delete-row:hover { background: color-mix(in srgb, var(--status-critical) 12%, transparent); color: var(--status-critical); }
+  button.notes-btn:hover { background: color-mix(in srgb, var(--card-accent, var(--series-1)) 12%, transparent); color: var(--card-accent, var(--series-1)); }
   button.notes-btn.has-notes { color: var(--card-accent, var(--series-1)); }
-  /* The armed "לאשר מחיקה?" label is wider than a narrow table action column (especially
-     .annual-table's fixed 36px one), so it pops out as an absolutely-positioned overlay
-     anchored inside its own cell instead of stretching/escaping the table's column layout. */
+  .notes-star { color: var(--status-critical); font-weight: 700; font-size: 1.1em; margin-inline-start: 1px; }
+
+  /* A notes button carrying the note's own text pops it up as a lightweight hover/focus
+     tooltip (same surface-1 + shadow-card popover look as the delete-row confirm state
+     below), so reading a note never requires opening its edit modal first. */
+  button.notes-btn[data-tooltip] { overflow: visible; }
+  button.notes-btn[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 50%;
+    transform: translateX(50%) translateY(4px);
+    width: max-content;
+    max-width: 220px;
+    padding: 8px 12px;
+    border: 1px solid var(--baseline);
+    border-radius: 8px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.4;
+    text-align: right;
+    white-space: pre-line;
+    box-shadow: var(--shadow-card);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+    z-index: 40;
+  }
+  button.notes-btn[data-tooltip]:hover::after,
+  button.notes-btn[data-tooltip]:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(50%) translateY(0);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    button.notes-btn[data-tooltip]::after { transition: opacity 0.12s linear; }
+  }
+
+  .row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  /* The armed "לאשר מחיקה?" label is wider than the table's action column, so it pops
+     out as an absolutely-positioned overlay anchored inside its own cell instead of
+     stretching/escaping the table's column layout. */
   td:has(> button.delete-row) { position: relative; }
   button.delete-row.confirming {
     position: absolute;
@@ -388,6 +440,49 @@
 
   .error { color: var(--status-critical); font-size: 0.88rem; margin: 8px 0; }
   .import-error-list { color: var(--status-critical); font-size: 0.85rem; margin: 6px 0 0; padding-inline-start: 20px; }
+
+  .action-complete-col { width: 40px; }
+  .action-complete-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    border: 2px solid var(--baseline);
+    background: var(--surface-1);
+    cursor: pointer;
+    position: relative;
+    transition: background 0.15s ease-out, border-color 0.15s ease-out;
+  }
+  .action-complete-checkbox:checked {
+    background: var(--status-good);
+    border-color: var(--status-good);
+  }
+  .action-complete-checkbox:checked::after {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 6px;
+    height: 11px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .global-loading {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 1000;
+    background: var(--surface-1);
+    color: var(--text-secondary);
+    border: 1px solid var(--baseline);
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
 
   button.is-pending { opacity: 0.6; cursor: default; }
   .save-flash {
@@ -446,6 +541,7 @@
 </style>
 </head>
 <body>
+  <div id="global-loading" class="global-loading" hidden>טוען...</div>
   <h1>תקציב הבית</h1>
   <p class="subtitle">תקציב שנתי, מעשרות, קרנות וחובות — הכל במקום אחד</p>
 
@@ -497,6 +593,18 @@
       </div>
     </dialog>
 
+    <dialog id="modal-annual-item-notes" class="modal" style="width:min(420px,92vw);">
+      <h3>הערות</h3>
+      <div class="field">
+        <textarea id="annual-item-notes-input" rows="5" style="width:100%; font: inherit; padding: 6px 10px; border: 1px solid var(--baseline); border-radius: 8px; background: var(--page-plane); color: var(--text-primary);"></textarea>
+      </div>
+      <div id="annual-item-notes-error" class="error" hidden></div>
+      <div class="modal-actions">
+        <button class="secondary" id="close-annual-item-notes-modal">סגור</button>
+        <button id="save-annual-item-notes-btn">שמור</button>
+      </div>
+    </dialog>
+
     <div class="stat-row" style="margin-bottom: 20px;">
       <div class="stat-tile">
         <div class="label">סה"כ תקציב שנתי</div>
@@ -506,7 +614,7 @@
         <div class="label">כמה יש לנו בקופה</div>
         <div class="value" id="stat-reserve">—</div>
         <div class="edit-row">
-          <input id="reserve-input" type="number" min="0" step="1" />
+          <input id="reserve-input" type="text" title="אפשר להזין גם נוסחה, למשל 600-200" />
           <button id="save-reserve" class="secondary">שמור</button>
         </div>
       </div>
@@ -521,7 +629,7 @@
     </div>
 
     <div class="overview-columns">
-      <details class="card card-berry" open>
+      <details class="card card-berry">
         <summary>הוצאות לפי חודש <span class="chevron">▾</span></summary>
         <table class="annual-table">
           <colgroup>
@@ -541,10 +649,19 @@
             </tr>
           </thead>
           <tbody id="monthly-rows"></tbody>
+          <tfoot>
+            <tr class="totals-row">
+              <td>סה"כ</td>
+              <td class="num" id="monthly-total-amount">—</td>
+              <td class="num" id="monthly-total-used">—</td>
+              <td class="num" id="monthly-total-remaining">—</td>
+              <td></td>
+            </tr>
+          </tfoot>
         </table>
       </details>
 
-      <details class="card card-berry" open>
+      <details class="card card-berry">
         <summary>הוצאות כלליות (לא תלויות חודש) <span class="chevron">▾</span></summary>
         <table class="annual-table">
           <colgroup>
@@ -565,6 +682,13 @@
           </thead>
           <tbody id="general-rows"></tbody>
           <tfoot>
+            <tr class="totals-row">
+              <td>סה"כ</td>
+              <td class="num" id="general-total-amount">—</td>
+              <td class="num" id="general-total-used">—</td>
+              <td class="num" id="general-total-remaining">—</td>
+              <td></td>
+            </tr>
             <tr>
               <td colspan="5">
                 <button id="general-add-toggle" class="icon">+ הוסף הוצאה כללית</button>
@@ -588,17 +712,11 @@
       </div>
       <button id="ov-refresh">רענן</button>
       <button id="open-template-modal">הכנס תבנית לחודש הנוכחי</button>
-      <button class="secondary" id="transactions-download-template-btn">הורד תבנית תנועות</button>
-      <button class="secondary" id="transactions-import-btn">ייבוא תנועות מאקסל</button>
-      <input type="file" id="transactions-import-file" accept=".xlsx" hidden />
     </div>
 
     <div id="ov-error" class="error" hidden></div>
-    <p class="hint" style="margin: 0 0 12px;">ייבוא תנועות (הכנסות, הוצאות הו"ק, הוצאות שוטפות, תרומות קבועות, תרומות מעבר להו"ק והחזרי חובות) מקובץ אקסל אחד: הורידי את הקובץ, מלאי שורה לכל תנועה מתחת לכותרות, ושמרי כ-.xlsx. התנועות ייווספו לחודש המוצג למעלה.</p>
-    <div id="transactions-import-status" style="font-weight:600; color: var(--status-good); margin: 0 0 12px;" hidden></div>
-    <ul id="transactions-import-errors" class="import-error-list" hidden></ul>
 
-    <details class="card card-gold" open>
+    <details class="card card-gold">
       <summary>הכנסות <span class="chevron">▾</span></summary>
       <p class="hint" style="margin: 0 0 12px;">סכום אפשר להזין גם כנוסחה, למשל <code>600-200</code> — הערך המחושב הוא שמשמש לחישובים, והנוסחה נשמרת ומוצגת שוב בכניסה לשדה.</p>
       <div class="overview-columns">
@@ -607,7 +725,10 @@
           <table>
             <thead><tr><th>תאריך</th><th>תיאור</th><th class="num">סכום</th><th></th></tr></thead>
             <tbody id="ov-income-tithe"></tbody>
-            <tfoot><tr><td colspan="4"><button class="icon add-row-toggle" data-target="income-tithe">+ הוסף הכנסה</button></td></tr></tfoot>
+            <tfoot>
+              <tr class="totals-row"><td colspan="2">סה"כ</td><td class="num" id="ov-income-tithe-total">—</td><td></td></tr>
+              <tr><td colspan="4"><button class="icon add-row-toggle" data-target="income-tithe">+ הוסף הכנסה</button></td></tr>
+            </tfoot>
           </table>
         </div>
         <div>
@@ -615,7 +736,10 @@
           <table>
             <thead><tr><th>תאריך</th><th>תיאור</th><th class="num">סכום</th><th></th></tr></thead>
             <tbody id="ov-income-exempt"></tbody>
-            <tfoot><tr><td colspan="4"><button class="icon add-row-toggle" data-target="income-exempt">+ הוסף הכנסה</button></td></tr></tfoot>
+            <tfoot>
+              <tr class="totals-row"><td colspan="2">סה"כ</td><td class="num" id="ov-income-exempt-total">—</td><td></td></tr>
+              <tr><td colspan="4"><button class="icon add-row-toggle" data-target="income-exempt">+ הוסף הכנסה</button></td></tr>
+            </tfoot>
           </table>
         </div>
       </div>
@@ -643,7 +767,7 @@
       </div>
     </div>
 
-    <details class="card card-sage" open>
+    <details class="card card-sage">
       <summary>מעשרות <span class="chevron">▾</span></summary>
       <div class="stat-row">
         <div class="stat-tile">
@@ -686,7 +810,10 @@
       <table>
         <thead><tr><th>שם</th><th class="num">סכום</th><th>בתוקף עד (ריק = ללא הגבלה)</th><th></th></tr></thead>
         <tbody id="ov-standing-orders"></tbody>
-        <tfoot><tr><td colspan="4"><button class="icon" id="add-standing-order">+ הוסף תרומה קבועה</button></td></tr></tfoot>
+        <tfoot>
+          <tr class="totals-row"><td>סה"כ</td><td class="num" id="ov-standing-orders-total">—</td><td></td><td></td></tr>
+          <tr><td colspan="4"><button class="icon" id="add-standing-order">+ הוסף תרומה קבועה</button></td></tr>
+        </tfoot>
       </table>
       <div class="modal-actions">
         <button class="secondary" id="close-fixed-donations-modal">סגור</button>
@@ -698,7 +825,10 @@
       <table>
         <thead><tr><th>תאריך</th><th>תיאור</th><th class="num">סכום</th><th></th></tr></thead>
         <tbody id="ov-prior-month-donations"></tbody>
-        <tfoot><tr><td colspan="4"><button class="icon" id="add-prior-month-donation">+ הוסף תרומה</button></td></tr></tfoot>
+        <tfoot>
+          <tr class="totals-row"><td colspan="2">סה"כ</td><td class="num" id="ov-prior-month-donations-total">—</td><td></td></tr>
+          <tr><td colspan="4"><button class="icon" id="add-prior-month-donation">+ הוסף תרומה</button></td></tr>
+        </tfoot>
       </table>
       <div class="modal-actions">
         <button class="secondary" id="close-prior-month-modal">סגור</button>
@@ -712,25 +842,43 @@
       <div id="template-error" class="error" hidden></div>
       <div id="template-apply-status" style="font-weight:600; color: var(--status-good); margin-bottom: 12px;" hidden></div>
 
+      <div class="controls" style="margin-bottom: 8px;">
+        <button class="secondary" id="template-download-template-btn">הורד תבנית אקסל</button>
+        <button class="secondary" id="template-import-btn">ייבוא מאקסל לתבנית</button>
+        <input type="file" id="template-import-file" accept=".xlsx" hidden />
+      </div>
+      <p class="hint" style="margin: 0 0 12px;">מייבא הכנסות/הוצאות קבועות/הוצאות שוטפות לתוך התבנית עצמה (לא לחודש ספציפי) — לאחר הייבוא, לחצי "הוסף פריטים אלה לחודש" למטה כדי להכניס אותם בפועל לחודש הרצוי.</p>
+      <div id="template-import-status" style="font-weight:600; color: var(--status-good); margin: 0 0 12px;" hidden></div>
+      <ul id="template-import-errors" class="import-error-list" hidden></ul>
+
       <h4>הכנסות</h4>
       <table>
         <thead><tr><th>תיאור</th><th class="num">סכום</th><th>חייב מעשר?</th><th></th></tr></thead>
         <tbody id="template-income"></tbody>
-        <tfoot><tr><td colspan="4"><button class="icon" id="template-add-income">+ הוסף הכנסה לתבנית</button></td></tr></tfoot>
+        <tfoot>
+          <tr class="totals-row"><td>סה"כ</td><td class="num" id="template-income-total">—</td><td></td><td></td></tr>
+          <tr><td colspan="4"><button class="icon" id="template-add-income">+ הוסף הכנסה לתבנית</button></td></tr>
+        </tfoot>
       </table>
 
       <h4 style="margin-top:16px;">הוצאות בהוראת קבע</h4>
       <table>
         <thead><tr><th>שם</th><th class="num">סכום</th><th></th></tr></thead>
         <tbody id="template-fixed"></tbody>
-        <tfoot><tr><td colspan="3"><button class="icon" id="template-add-fixed">+ הוסף הוצאת הו"ק לתבנית</button></td></tr></tfoot>
+        <tfoot>
+          <tr class="totals-row"><td>סה"כ</td><td class="num" id="template-fixed-total">—</td><td></td></tr>
+          <tr><td colspan="3"><button class="icon" id="template-add-fixed">+ הוסף הוצאת הו"ק לתבנית</button></td></tr>
+        </tfoot>
       </table>
 
       <h4 style="margin-top:16px;">הוצאות שוטפות</h4>
       <table>
         <thead><tr><th>שם</th><th class="num">סכום</th><th></th></tr></thead>
         <tbody id="template-regular"></tbody>
-        <tfoot><tr><td colspan="3"><button class="icon" id="template-add-regular">+ הוסף הוצאה שוטפת לתבנית</button></td></tr></tfoot>
+        <tfoot>
+          <tr class="totals-row"><td>סה"כ</td><td class="num" id="template-regular-total">—</td><td></td></tr>
+          <tr><td colspan="3"><button class="icon" id="template-add-regular">+ הוסף הוצאה שוטפת לתבנית</button></td></tr>
+        </tfoot>
       </table>
 
       <div class="modal-actions">
@@ -740,41 +888,49 @@
     </dialog>
 
     <details class="card">
-      <summary>הוצאות שצריך להביא מהקופה השנתית <span class="chevron">▾</span></summary>
-      <p class="hint" style="margin: 0 0 12px;">פריטי תקציב שנתי (ממסך "תקציב שנתי") שהחודש הנוכחי הוא החודש היעד שלהם — צריך למשוך את הסכום מהקופה כדי לממן אותם.</p>
+      <summary>משיכות מהקופה השנתית <span class="chevron">▾</span></summary>
+      <p class="hint" style="margin: 0 0 12px;">רשמי כאן כל סכום שמשכת מהקופה השנתית החודש, כדי לעקוב אחרי הסה"כ.</p>
       <table>
-        <thead><tr><th>שם</th><th class="num">סכום למשיכה</th></tr></thead>
+        <thead><tr><th>תאריך</th><th>תיאור</th><th class="num">סכום</th><th></th></tr></thead>
         <tbody id="ov-annual-withdrawals"></tbody>
+        <tfoot>
+          <tr class="totals-row"><td colspan="2">סה"כ</td><td class="num" id="ov-annual-withdrawals-total">—</td><td></td></tr>
+          <tr><td colspan="4"><button class="icon" id="add-annual-withdrawal">+ הוסף משיכה</button></td></tr>
+        </tfoot>
       </table>
     </details>
 
-    <div class="controls" style="margin-bottom: 8px;">
-      <button class="secondary" id="expense-budgets-download-template-btn">הורד תבנית הוצאות</button>
-      <button class="secondary" id="expense-budgets-import-btn">ייבוא הוצאות מאקסל</button>
-      <input type="file" id="expense-budgets-import-file" accept=".xlsx" hidden />
-    </div>
-    <p class="hint" style="margin: 0 0 8px;">ייבוא קטגוריות הוצאה (הו"ק ושוטפות יחד, לפי עמודת "סוג" בקובץ) לחודש המוצג למעלה: הורידי את הקובץ, מלאי שורה לכל קטגוריה מתחת לכותרות, ושמרי כ-.xlsx.</p>
-    <div id="expense-budgets-import-status" style="font-weight:600; color: var(--status-good); margin: 0 0 12px;" hidden></div>
-    <ul id="expense-budgets-import-errors" class="import-error-list" hidden></ul>
-
     <div class="overview-columns">
-      <details class="card card-berry" open>
+      <details class="card card-berry">
         <summary>הוצאות בהוראת קבע (הו"ק) <span class="chevron">▾</span></summary>
         <p class="hint" style="margin: 0 0 12px;">הוצאה חודשית קבועה — בלי מעקב ניצול, כמו בהוראת קבע אמיתית.</p>
         <table>
           <thead><tr><th>שם</th><th class="num">מתוכנן</th><th></th></tr></thead>
           <tbody id="ov-fixed-expenses"></tbody>
-          <tfoot><tr><td colspan="3"><button class="icon add-row-toggle" data-target="fixed-expense">+ הוסף הוצאת הו"ק</button></td></tr></tfoot>
+          <tfoot>
+            <tr class="totals-row"><td>סה"כ</td><td class="num" id="ov-fixed-expenses-total">—</td><td></td></tr>
+            <tr><td colspan="3"><button class="icon add-row-toggle" data-target="fixed-expense">+ הוסף הוצאת הו"ק</button></td></tr>
+          </tfoot>
         </table>
       </details>
 
-      <details class="card card-berry" open>
+      <details class="card card-berry">
         <summary>הוצאות שוטפות <span class="chevron">▾</span></summary>
         <p class="hint" style="margin: 0 0 12px;">סמני "כלול בסה"כ" כבוי עבור סכום שאת רוצה לנהל ולעקוב אחריו כאן, אבל שלא ייספר בתוך סה"כ ההוצאות של החודש (למשל הוצאה חד-פעמית שממומנת מחיסכון).</p>
         <table>
           <thead><tr><th>שם</th><th class="num">מתוכנן</th><th class="num">נוצל</th><th class="num">יתרה</th><th>כלול בסה"כ</th><th></th></tr></thead>
           <tbody id="ov-regular-expenses"></tbody>
-          <tfoot><tr><td colspan="6"><button class="icon add-row-toggle" data-target="regular-expense">+ הוסף קטגוריית הוצאה</button></td></tr></tfoot>
+          <tfoot>
+            <tr class="totals-row">
+              <td>סה"כ</td>
+              <td class="num" id="ov-regular-expenses-total-budgeted">—</td>
+              <td class="num" id="ov-regular-expenses-total-used">—</td>
+              <td class="num" id="ov-regular-expenses-total-remaining">—</td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr><td colspan="6"><button class="icon add-row-toggle" data-target="regular-expense">+ הוסף קטגוריית הוצאה</button></td></tr>
+          </tfoot>
         </table>
       </details>
     </div>
@@ -784,13 +940,13 @@
     <div class="controls">
       <button id="funds-refresh">רענן</button>
       <button id="funds-add-toggle" class="secondary">+ הוסף קרן</button>
-      <button class="secondary" id="funds-download-template-btn">הורד תבנית קרנות</button>
-      <button class="secondary" id="funds-import-btn">ייבוא קרנות מאקסל</button>
+      <button class="secondary" id="funds-download-template-btn">הורד תבנית קרנות + ייעודים</button>
+      <button class="secondary" id="funds-import-btn">ייבוא קרנות + ייעודים מאקסל</button>
       <input type="file" id="funds-import-file" accept=".xlsx" hidden />
     </div>
 
     <div id="funds-error" class="error" hidden></div>
-    <p class="hint" style="margin: 0 0 12px;">ייבוא קרנות חדשות מקובץ אקסל: הורידי את הקובץ, מלאי שורה לכל קרן מתחת לכותרות, ושמרי כ-.xlsx.</p>
+    <p class="hint" style="margin: 0 0 12px;">קובץ אקסל אחד עם שני גיליונות: "קרנות" (קרנות חדשות) ו"ייעודים" (כל שורה מציינת את שם הקרן שלה בעמודה "שם קרן" — אפשר גם קרן שנוספה באותו קובץ). הורידי את הקובץ, מלאי שורה לכל רשומה, ושמרי כ-.xlsx.</p>
     <div id="funds-import-status" style="font-weight:600; color: var(--status-good); margin: 0 0 12px;" hidden></div>
     <ul id="funds-import-errors" class="import-error-list" hidden></ul>
 
@@ -842,7 +998,10 @@
             <tr><th>שם</th><th class="num">יתרה</th><th>תאריך יעד</th><th>סטטוס</th><th>החזר</th><th></th></tr>
           </thead>
           <tbody id="debts-receivables"></tbody>
-          <tfoot><tr><td colspan="6"><button class="icon" id="add-receivable-toggle">+ הוסף חוב</button></td></tr></tfoot>
+          <tfoot>
+            <tr class="totals-row"><td>סה"כ</td><td class="num" id="debts-receivables-total">—</td><td></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="6"><button class="icon" id="add-receivable-toggle">+ הוסף חוב</button></td></tr>
+          </tfoot>
         </table>
       </div>
       <div class="card card-berry">
@@ -860,7 +1019,10 @@
             <tr><th>שם</th><th class="num">יתרה</th><th>קצב החזר</th><th>סטטוס</th><th>החזר</th><th></th></tr>
           </thead>
           <tbody id="debts-payables"></tbody>
-          <tfoot><tr><td colspan="6"><button class="icon" id="add-payable-toggle">+ הוסף חוב</button></td></tr></tfoot>
+          <tfoot>
+            <tr class="totals-row"><td>סה"כ</td><td class="num" id="debts-payables-total">—</td><td></td><td></td><td></td><td></td></tr>
+            <tr><td colspan="6"><button class="icon" id="add-payable-toggle">+ הוסף חוב</button></td></tr>
+          </tfoot>
         </table>
       </div>
     </div>
@@ -886,10 +1048,13 @@
     <div class="card">
       <table>
         <thead>
-          <tr><th>תיאור</th><th>דד-ליין</th><th>הושלם</th><th></th></tr>
+          <tr><th class="action-complete-col"></th><th>תיאור</th><th class="num">סכום</th><th>דד-ליין</th><th></th></tr>
         </thead>
         <tbody id="action-items-body"></tbody>
-        <tfoot><tr><td colspan="4"><button class="icon" id="add-action-item-toggle">+ הוסף פעולה</button></td></tr></tfoot>
+        <tfoot>
+          <tr class="totals-row"><td></td><td>סה"כ</td><td class="num" id="action-items-body-total">—</td><td></td><td></td></tr>
+          <tr><td colspan="5"><button class="icon" id="add-action-item-toggle">+ הוסף פעולה</button></td></tr>
+        </tfoot>
       </table>
     </div>
   </div>
@@ -903,6 +1068,19 @@
 
     function fmtNum(n) {
       return new Intl.NumberFormat("he-IL", { maximumFractionDigits: 0 }).format(n);
+    }
+
+    // Sums a numeric field across a list of items for table totals-row footers; tolerates
+    // null/undefined lists and null/undefined field values (e.g. an optional action-item amount).
+    function sumBy(items, selector) {
+      return (items || []).reduce((sum, item) => sum + (Number(selector(item)) || 0), 0);
+    }
+
+    // Sets a totals-row footer cell's text if that cell exists on the page (some tables' totals
+    // cells are optional per-table, so callers don't need to guard this themselves).
+    function setTotalText(elId, value) {
+      const el = document.getElementById(elId);
+      if (el) el.textContent = fmtMoney(value);
     }
 
     // ---- Hardening utilities: escaping, pending state, save acknowledgment, delete confirmation ----
@@ -1005,14 +1183,37 @@
       document.getElementById("error").hidden = true;
     }
 
-    async function fetchJson(url, options) {
-      const res = await fetch(url, options);
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`${res.status}: ${text || res.statusText}`);
+    // Every network call in the app funnels through fetchJson/uploadFile/downloadFile, so tracking
+    // in-flight requests here (rather than per-tab) gives a single "טוען..." indicator that covers
+    // every fetch, including the initial load of whichever tab is active. A counter (not a boolean)
+    // handles overlapping requests correctly.
+    let activeRequestCount = 0;
+
+    function beginLoading() {
+      activeRequestCount++;
+      document.getElementById("global-loading").hidden = false;
+    }
+
+    function endLoading() {
+      activeRequestCount = Math.max(0, activeRequestCount - 1);
+      if (activeRequestCount === 0) {
+        document.getElementById("global-loading").hidden = true;
       }
-      const text = await res.text();
-      return text ? JSON.parse(text) : null;
+    }
+
+    async function fetchJson(url, options) {
+      beginLoading();
+      try {
+        const res = await fetch(url, options);
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`${res.status}: ${text || res.statusText}`);
+        }
+        const text = await res.text();
+        return text ? JSON.parse(text) : null;
+      } finally {
+        endLoading();
+      }
     }
 
     // ---- Excel import (shared across all import targets) ----
@@ -1020,34 +1221,44 @@
     // Like fetchJson, but for a multipart file upload instead of a JSON body — the browser sets
     // its own Content-Type (with the multipart boundary) for FormData, so none is set here.
     async function uploadFile(url, file) {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch(url, { method: "POST", body: formData });
-      if (!res.ok) {
+      beginLoading();
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch(url, { method: "POST", body: formData });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`${res.status}: ${text || res.statusText}`);
+        }
         const text = await res.text();
-        throw new Error(`${res.status}: ${text || res.statusText}`);
+        return text ? JSON.parse(text) : null;
+      } finally {
+        endLoading();
       }
-      const text = await res.text();
-      return text ? JSON.parse(text) : null;
     }
 
     // Downloads a blob response (used for the .xlsx template downloads) via a throwaway <a download>,
     // the same trick the "ייצוא לאקסל" button already uses.
     async function downloadFile(url, filename) {
-      const res = await fetch(url);
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`${res.status}: ${text || res.statusText}`);
+      beginLoading();
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`${res.status}: ${text || res.statusText}`);
+        }
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+      } finally {
+        endLoading();
       }
-      const blob = await res.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = objectUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(objectUrl);
     }
 
     // Renders the add-only import result (added count + per-row skip reasons) into a status line
@@ -1174,7 +1385,7 @@
     function renderSummary(data) {
       document.getElementById("stat-total-budget").textContent = fmtMoney(data.totalAnnualBudget);
       document.getElementById("stat-reserve").textContent = fmtMoney(data.reserveOnHand);
-      document.getElementById("reserve-input").value = data.reserveOnHand;
+      document.getElementById("reserve-input").value = data.reserveOnHandFormula || data.reserveOnHand;
       document.getElementById("stat-not-covered").textContent = fmtMoney(data.notYetCovered);
       document.getElementById("stat-monthly").textContent = fmtMoney(data.monthlyAllocation);
     }
@@ -1194,7 +1405,7 @@
         <td class="num annual-total-cell">${fmtMoney(item.totalAmount)}</td>
         <td class="num"><input class="usage-input" type="text" /></td>
         <td class="num annual-remaining-cell">${fmtMoney(item.totalAmount - item.amountUsed)}</td>
-        <td><button class="delete-row" title="מחק שורה" aria-label="מחק את ${escapeHtml(item.name)}">✕</button></td>
+        <td class="row-actions">${annualItemNotesButtonHtml(item)}<button class="delete-row" title="מחק שורה" aria-label="מחק את ${escapeHtml(item.name)}">✕</button></td>
       `;
     }
 
@@ -1204,7 +1415,65 @@
       attachConfirmDelete(row.querySelector(".delete-row"), () => deleteItem(item.annualBudgetItemId));
       wireCalcTrigger(row.querySelector(".annual-remaining-cell"), () =>
         [row.querySelector(".annual-total-cell"), row.querySelector(".usage-input")]);
+      attachAnnualNotesHandler(row, item);
     }
+
+    // ---- Annual budget item notes (popup, same pattern as the Debts ledger's notes modal) ----
+
+    let currentNotesItem = null;
+
+    function annualItemNotesButtonHtml(item) {
+      const star = item.notes ? '<span class="notes-star">*</span>' : "";
+      const tooltip = escapeHtml(item.notes || "אין הערה עדיין");
+      return `<button class="icon notes-btn${item.notes ? " has-notes" : ""}" data-tooltip="${tooltip}" aria-label="הערות עבור ${escapeHtml(item.name)}">📝${star}</button>`;
+    }
+
+    function openAnnualItemNotesModal(item) {
+      currentNotesItem = item;
+      document.getElementById("annual-item-notes-input").value = item.notes ?? "";
+      document.getElementById("annual-item-notes-error").hidden = true;
+      document.getElementById("modal-annual-item-notes").showModal();
+    }
+
+    function attachAnnualNotesHandler(row, item) {
+      row.querySelector(".notes-btn").addEventListener("click", () => openAnnualItemNotesModal(item));
+    }
+
+    async function saveNotes(item, notes) {
+      try {
+        await fetchJson(`/api/annual-budget-items/${item.annualBudgetItemId}/notes`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notes }),
+        });
+        clearError();
+        await refresh();
+        return true;
+      } catch (err) {
+        showError(err.message);
+        return false;
+      }
+    }
+
+    document.getElementById("close-annual-item-notes-modal").addEventListener("click", () => {
+      document.getElementById("modal-annual-item-notes").close();
+    });
+
+    document.getElementById("save-annual-item-notes-btn").addEventListener("click", () => {
+      if (!currentNotesItem) return;
+      withPending(document.getElementById("save-annual-item-notes-btn"), async () => {
+        const notes = document.getElementById("annual-item-notes-input").value;
+        const notesErrorEl = document.getElementById("annual-item-notes-error");
+        const ok = await saveNotes(currentNotesItem, notes || null);
+        if (ok) {
+          notesErrorEl.hidden = true;
+          document.getElementById("modal-annual-item-notes").close();
+        } else {
+          notesErrorEl.textContent = document.getElementById("error").textContent;
+          notesErrorEl.hidden = false;
+        }
+      });
+    });
 
     async function deleteItem(id) {
       try {
@@ -1246,7 +1515,7 @@
         headerRow.innerHTML = `
           <td colspan="5">
             <div class="month-name">
-              <button class="month-toggle" data-month="${month}" aria-expanded="${hasItems}">
+              <button class="month-toggle" data-month="${month}" aria-expanded="false">
                 <span class="chevron">▾</span> ${monthNames[month]}
                 ${hasItems ? `<span class="hint">(${monthItems.length})</span>` : ""}
               </button>
@@ -1268,6 +1537,7 @@
           for (const item of monthItems) {
             const row = document.createElement("tr");
             row.innerHTML = itemRowHtml(item);
+            row.hidden = true;
             tbody.appendChild(row);
             attachItemRowHandlers(row, item);
             contentRows.push(row);
@@ -1292,6 +1562,10 @@
           toggleAddForm(tbody, month, btn);
         });
       });
+
+      setTotalText("monthly-total-amount", sumBy(items, i => i.totalAmount));
+      setTotalText("monthly-total-used", sumBy(items, i => i.amountUsed));
+      setTotalText("monthly-total-remaining", sumBy(items, i => i.totalAmount - i.amountUsed));
     }
 
     function toggleAddForm(tbody, month, anchorBtn) {
@@ -1382,6 +1656,10 @@
           attachItemRowHandlers(row, item);
         }
       }
+
+      setTotalText("general-total-amount", sumBy(generalItems, i => i.totalAmount));
+      setTotalText("general-total-used", sumBy(generalItems, i => i.amountUsed));
+      setTotalText("general-total-remaining", sumBy(generalItems, i => i.totalAmount - i.amountUsed));
     }
 
     document.getElementById("refresh").addEventListener("click", refresh);
@@ -1437,8 +1715,15 @@
     });
 
     document.getElementById("save-reserve").addEventListener("click", (e) => withPending(e.currentTarget, async () => {
-      const amount = parseFloat(document.getElementById("reserve-input").value);
-      if (!(amount >= 0)) {
+      const text = document.getElementById("reserve-input").value.trim();
+      let parsed;
+      try {
+        parsed = parseAmountText(text);
+      } catch (err) {
+        showError(err.message);
+        return;
+      }
+      if (!(parsed.amount >= 0)) {
         showError("סכום הקופה חייב להיות מספר אי-שלילי.");
         return;
       }
@@ -1446,7 +1731,7 @@
         await fetchJson(`/api/reserve?year=${currentYear()}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount }),
+          body: JSON.stringify({ amount: parsed.amount, amountFormula: parsed.formula }),
         });
         clearError();
         await refresh();
@@ -1737,6 +2022,7 @@
     function renderTransactionRows(tbodyId, lines, colCount, onSave, onDelete, extraCellHtml, enableDrag) {
       const tbody = document.getElementById(tbodyId);
       tbody.innerHTML = "";
+      setTotalText(`${tbodyId}-total`, sumBy(lines, l => l.amount));
       if (!lines || lines.length === 0) {
         const row = document.createElement("tr");
         row.innerHTML = `<td colspan="${colCount}" style="color: var(--text-muted); font-style: italic;">אין תנועות החודש.</td>`;
@@ -1913,6 +2199,7 @@
     function renderStandingOrders(items) {
       const tbody = document.getElementById("ov-standing-orders");
       tbody.innerHTML = "";
+      setTotalText("ov-standing-orders-total", sumBy(items, i => i.amount));
       if (!items || items.length === 0) {
         const row = document.createElement("tr");
         row.innerHTML = `<td colspan="4" style="color: var(--text-muted); font-style: italic;">אין תרומות קבועות מוגדרות.</td>`;
@@ -2096,6 +2383,7 @@
     function renderFixedExpenseRows(tbodyId, items, onSave, onDelete) {
       const tbody = document.getElementById(tbodyId);
       tbody.innerHTML = "";
+      setTotalText(`${tbodyId}-total`, sumBy(items, i => i.budgetedAmount));
       if (!items || items.length === 0) {
         const row = document.createElement("tr");
         row.innerHTML = `<td colspan="3" style="color: var(--text-muted); font-style: italic;">אין קטגוריות מוגדרות החודש.</td>`;
@@ -2133,6 +2421,9 @@
     function renderRegularExpenseRows(tbodyId, items, onSave, onDelete) {
       const tbody = document.getElementById(tbodyId);
       tbody.innerHTML = "";
+      setTotalText(`${tbodyId}-total-budgeted`, sumBy(items, i => i.budgetedAmount));
+      setTotalText(`${tbodyId}-total-used`, sumBy(items, i => i.usedAmount));
+      setTotalText(`${tbodyId}-total-remaining`, sumBy(items, i => i.remaining));
       if (!items || items.length === 0) {
         const row = document.createElement("tr");
         row.innerHTML = `<td colspan="6" style="color: var(--text-muted); font-style: italic;">אין קטגוריות מוגדרות החודש.</td>`;
@@ -2259,22 +2550,51 @@
       }));
     }
 
-    // ---- Annual kupa withdrawals (read-only, sourced from the Annual Budget screen) ----
+    // ---- Annual kupa withdrawals (manually logged) ----
 
-    function renderAnnualWithdrawals(lines) {
+    function toggleNewAnnualWithdrawalRow() {
       const tbody = document.getElementById("ov-annual-withdrawals");
-      tbody.innerHTML = "";
-      if (!lines || lines.length === 0) {
-        const row = document.createElement("tr");
-        row.innerHTML = `<td colspan="2" style="color: var(--text-muted); font-style: italic;">אין פריטי תקציב שנתי שהיעד שלהם הוא החודש הזה.</td>`;
-        tbody.appendChild(row);
-        return;
-      }
-      for (const line of lines) {
-        const row = document.createElement("tr");
-        row.innerHTML = `<td>${escapeHtml(line.name)}</td><td class="num annual-withdrawal-amount">${fmtMoney(line.totalAmount)}</td>`;
-        tbody.appendChild(row);
-      }
+      const row = toggleAddRow(tbody, 4, `
+        <input type="date" class="new-date" value="${dateInputValue()}" />
+        <input type="text" class="new-desc" placeholder="תיאור" />
+        <input type="text" class="new-amount" placeholder="סכום (או נוסחה)" />
+      `);
+      if (!row) return;
+
+      const saveBtn = row.querySelector(".save-btn");
+      saveBtn.addEventListener("click", () => withPending(saveBtn, async () => {
+        const date = row.querySelector(".new-date").value;
+        const description = row.querySelector(".new-desc").value.trim() || null;
+        const paymentMethod = DEFAULT_PAYMENT_METHOD;
+        const amountText = row.querySelector(".new-amount").value.trim();
+
+        let parsed;
+        try {
+          parsed = parseAmountText(amountText);
+        } catch (err) {
+          ovShowError(err.message);
+          return;
+        }
+        if (!date || !(parsed.amount > 0)) {
+          ovShowError("יש להזין תאריך וסכום חיובי.");
+          return;
+        }
+
+        try {
+          await fetchJson("/api/transactions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              date, amount: parsed.amount, amountFormula: parsed.formula,
+              type: "AnnualReserveWithdrawal", paymentMethod, isTitheApplicable: null, description,
+            }),
+          });
+          ovClearError();
+          await refreshOverview();
+        } catch (err) {
+          ovShowError(err.message);
+        }
+      }));
     }
 
     // ---- Main refresh ----
@@ -2299,7 +2619,7 @@
         renderFixedExpenseRows("ov-fixed-expenses", overview.fixedExpenses.items, saveBudgetItemPatch, deleteBudgetItem);
         renderRegularExpenseRows("ov-regular-expenses", overview.regularExpenses.items, saveBudgetItemPatch, deleteBudgetItem);
 
-        renderAnnualWithdrawals(overview.annualWithdrawals.lines);
+        renderTransactionRows("ov-annual-withdrawals", overview.annualWithdrawals.lines, 4, saveTransactionPatch, deleteTransaction);
 
         document.getElementById("ov-gross-target").textContent = fmtMoney(overview.titheObligation.grossTitheTarget);
         document.getElementById("ov-fixed-donations").textContent = fmtMoney(overview.titheObligation.fixedDonationsThisMonth.total);
@@ -2336,34 +2656,6 @@
     wireCalcTrigger(document.getElementById("ov-still-to-donate"), () => byId("ov-gross-target", "ov-fixed-donations"));
 
     document.getElementById("ov-refresh").addEventListener("click", refreshOverview);
-
-    setupImportControls({
-      downloadBtn: document.getElementById("transactions-download-template-btn"),
-      templateUrl: "/api/import/transactions/template",
-      templateFilename: "transactions-template.xlsx",
-      importBtn: document.getElementById("transactions-import-btn"),
-      fileInput: document.getElementById("transactions-import-file"),
-      uploadUrl: "/api/import/transactions",
-      statusEl: document.getElementById("transactions-import-status"),
-      listEl: document.getElementById("transactions-import-errors"),
-      showError: ovShowError,
-      clearError: ovClearError,
-      reload: refreshOverview,
-    });
-
-    setupImportControls({
-      downloadBtn: document.getElementById("expense-budgets-download-template-btn"),
-      templateUrl: "/api/import/monthly-expense-budgets/template",
-      templateFilename: "monthly-expense-budgets-template.xlsx",
-      importBtn: document.getElementById("expense-budgets-import-btn"),
-      fileInput: document.getElementById("expense-budgets-import-file"),
-      uploadUrl: () => `/api/import/monthly-expense-budgets?year=${ovYear()}&month=${ovMonth()}`,
-      statusEl: document.getElementById("expense-budgets-import-status"),
-      listEl: document.getElementById("expense-budgets-import-errors"),
-      showError: ovShowError,
-      clearError: ovClearError,
-      reload: refreshOverview,
-    });
 
     document.getElementById("save-rate").addEventListener("click", (e) => withPending(e.currentTarget, async () => {
       const rate = parseFloat(document.getElementById("rate-input").value);
@@ -2442,6 +2734,10 @@
       toggleNewPriorMonthDonationRow();
     });
 
+    document.getElementById("add-annual-withdrawal").addEventListener("click", () => {
+      toggleNewAnnualWithdrawalRow();
+    });
+
     // ---- Monthly Template (recurring income/expense categories, applied to a month on demand) ----
 
     function templateShowError(message) {
@@ -2487,6 +2783,7 @@
     function renderTemplateIncomeRows(items) {
       const tbody = document.getElementById("template-income");
       tbody.innerHTML = "";
+      setTotalText("template-income-total", sumBy(items, i => i.amount));
       if (!items || items.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" style="color: var(--text-muted); font-style: italic;">אין הכנסות קבועות בתבנית.</td></tr>`;
         return;
@@ -2526,6 +2823,7 @@
     function renderTemplateExpenseRows(tbodyId, items) {
       const tbody = document.getElementById(tbodyId);
       tbody.innerHTML = "";
+      setTotalText(`${tbodyId}-total`, sumBy(items, i => i.amount));
       if (!items || items.length === 0) {
         tbody.innerHTML = `<tr><td colspan="3" style="color: var(--text-muted); font-style: italic;">אין קטגוריות בתבנית.</td></tr>`;
         return;
@@ -2659,6 +2957,20 @@
       });
     });
 
+    setupImportControls({
+      downloadBtn: document.getElementById("template-download-template-btn"),
+      templateUrl: "/api/import/monthly-template-items/template",
+      templateFilename: "monthly-template-items-template.xlsx",
+      importBtn: document.getElementById("template-import-btn"),
+      fileInput: document.getElementById("template-import-file"),
+      uploadUrl: "/api/import/monthly-template-items",
+      statusEl: document.getElementById("template-import-status"),
+      listEl: document.getElementById("template-import-errors"),
+      showError: templateShowError,
+      clearError: templateClearError,
+      reload: refreshTemplate,
+    });
+
     // ---- Funds (savings/investment accounts) ----
 
     function fundsShowError(message) {
@@ -2695,12 +3007,6 @@
           </table>
           <div class="fund-card-footer">
             <button class="icon fund-add-earmark-toggle">+ הוסף ייעוד</button>
-            <button class="icon fund-earmarks-download-template-btn">הורד תבנית ייעודים</button>
-            <button class="icon fund-earmarks-import-btn">ייבוא ייעודים</button>
-            <input type="file" class="fund-earmarks-import-file" accept=".xlsx" hidden />
-            <p class="hint" style="margin: 4px 0 0;">קובץ אחד לכל ייעודי הקרן הזו.</p>
-            <div class="fund-earmarks-import-status" style="font-weight:600; color: var(--status-good); margin-top:4px;" hidden></div>
-            <ul class="fund-earmarks-import-errors import-error-list" hidden></ul>
           </div>
         </div>
       `;
@@ -2891,20 +3197,6 @@
 
           card.querySelector(".fund-add-earmark-toggle").addEventListener("click", () =>
             toggleEarmarkAddRow(earmarksBody, fund.fundId));
-
-          setupImportControls({
-            downloadBtn: card.querySelector(".fund-earmarks-download-template-btn"),
-            templateUrl: "/api/import/funds/earmarks/template",
-            templateFilename: "fund-earmarks-template.xlsx",
-            importBtn: card.querySelector(".fund-earmarks-import-btn"),
-            fileInput: card.querySelector(".fund-earmarks-import-file"),
-            uploadUrl: `/api/import/funds/${fund.fundId}/earmarks`,
-            statusEl: card.querySelector(".fund-earmarks-import-status"),
-            listEl: card.querySelector(".fund-earmarks-import-errors"),
-            showError: fundsShowError,
-            clearError: fundsClearError,
-            reload: refreshFunds,
-          });
         });
       } catch (err) {
         fundsShowError(err.message);
@@ -2948,7 +3240,7 @@
     setupImportControls({
       downloadBtn: document.getElementById("funds-download-template-btn"),
       templateUrl: "/api/import/funds/template",
-      templateFilename: "funds-template.xlsx",
+      templateFilename: "funds-and-earmarks-template.xlsx",
       importBtn: document.getElementById("funds-import-btn"),
       fileInput: document.getElementById("funds-import-file"),
       uploadUrl: "/api/import/funds",
@@ -3035,7 +3327,9 @@
     }
 
     function notesButtonHtml(debt) {
-      return `<button class="icon notes-btn${debt.notes ? " has-notes" : ""}" title="הערות" aria-label="הערות עבור ${escapeHtml(debt.counterpartyName)}">📝</button>`;
+      const star = debt.notes ? '<span class="notes-star">*</span>' : "";
+      const tooltip = escapeHtml(debt.notes || "אין הערה עדיין");
+      return `<button class="icon notes-btn${debt.notes ? " has-notes" : ""}" data-tooltip="${tooltip}" aria-label="הערות עבור ${escapeHtml(debt.counterpartyName)}">📝${star}</button>`;
     }
 
     function openDebtNotesModal(debt) {
@@ -3085,6 +3379,7 @@
 
     function renderReceivableRows(tbody, debts) {
       tbody.innerHTML = "";
+      setTotalText(`${tbody.id}-total`, sumBy(debts, d => d.currentBalance));
       if (!debts || debts.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="color: var(--text-muted); font-style: italic;">אין חובות כאלה עדיין.</td></tr>`;
         return;
@@ -3097,7 +3392,7 @@
           <td><input class="date-input desc-input" type="date" value="${escapeHtml(debt.targetDate ?? "")}" /></td>
           <td>${debtStatusBadgeHtml(debt.status)}</td>
           <td>${repayCellHtml(debt)}</td>
-          <td>${notesButtonHtml(debt)}<button class="delete-row" title="מחק" aria-label="מחק את החוב עם ${escapeHtml(debt.counterpartyName)}">✕</button></td>
+          <td class="row-actions">${notesButtonHtml(debt)}<button class="delete-row" title="מחק" aria-label="מחק את החוב עם ${escapeHtml(debt.counterpartyName)}">✕</button></td>
         `;
         tbody.appendChild(row);
 
@@ -3120,6 +3415,7 @@
 
     function renderPayableRows(tbody, debts) {
       tbody.innerHTML = "";
+      setTotalText(`${tbody.id}-total`, sumBy(debts, d => d.currentBalance));
       if (!debts || debts.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="color: var(--text-muted); font-style: italic;">אין חובות כאלה עדיין.</td></tr>`;
         return;
@@ -3132,7 +3428,7 @@
           <td><input class="rate-input usage-input" type="number" min="0" step="0.01" value="${debt.repaymentRate ?? ""}" placeholder="—" /></td>
           <td>${debtStatusBadgeHtml(debt.status)}</td>
           <td>${repayCellHtml(debt)}</td>
-          <td>${notesButtonHtml(debt)}<button class="delete-row" title="מחק" aria-label="מחק את החוב עם ${escapeHtml(debt.counterpartyName)}">✕</button></td>
+          <td class="row-actions">${notesButtonHtml(debt)}<button class="delete-row" title="מחק" aria-label="מחק את החוב עם ${escapeHtml(debt.counterpartyName)}">✕</button></td>
         `;
         tbody.appendChild(row);
 
@@ -3316,23 +3612,10 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             description: item.description,
+            amount: item.amount,
             deadlineDate: item.deadlineDate,
             ...patch,
           }),
-        });
-        actionsClearError();
-        await refreshActionItems();
-      } catch (err) {
-        actionsShowError(err.message);
-      }
-    }
-
-    async function completeActionItem(item, isCompleted) {
-      try {
-        await fetchJson(`/api/monthly-action-items/${item.id}/complete`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ isCompleted }),
         });
         actionsClearError();
         await refreshActionItems();
@@ -3353,38 +3636,49 @@
 
     function renderActionItemRows(tbody, items) {
       tbody.innerHTML = "";
+      setTotalText(`${tbody.id}-total`, sumBy(items, i => i.amount));
       if (!items || items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="color: var(--text-muted); font-style: italic;">אין פעולות לחודש זה עדיין.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="color: var(--text-muted); font-style: italic;">אין פעולות לחודש זה עדיין.</td></tr>`;
         return;
       }
       for (const item of items) {
         const row = document.createElement("tr");
         const deadlineStyle = item.isOverdue ? ' style="color: var(--status-critical);"' : "";
         row.innerHTML = `
+          <td style="text-align:center;"><input type="checkbox" class="action-complete-checkbox" ${item.isCompleted ? "checked" : ""} /></td>
           <td><input class="name-input" type="text" value="${escapeHtml(item.description)}" /></td>
+          <td class="num"><input class="amount-input" type="number" min="0" step="0.01" value="${item.amount ?? ""}" placeholder="לא חובה" /></td>
           <td${deadlineStyle}><input class="date-input desc-input" type="date" value="${escapeHtml(item.deadlineDate ?? "")}" /></td>
-          <td style="text-align:center;"><input type="checkbox" class="completed-checkbox" ${item.isCompleted ? "checked" : ""} /></td>
           <td><button class="delete-row" title="מחק" aria-label="מחק את הפעולה ${escapeHtml(item.description)}">✕</button></td>
         `;
         tbody.appendChild(row);
 
         const nameInput = row.querySelector(".name-input");
+        const amountInput = row.querySelector(".amount-input");
         const dateInput = row.querySelector(".date-input");
-        const completedCheckbox = row.querySelector(".completed-checkbox");
+        const completedCheckbox = row.querySelector(".action-complete-checkbox");
 
         nameInput.addEventListener("blur", () => {
           const trimmed = nameInput.value.trim();
           if (trimmed && trimmed !== item.description) {
-            guardedSave(nameInput, () => saveActionItemPatch(item, { description: trimmed, deadlineDate: item.deadlineDate }));
+            guardedSave(nameInput, () => saveActionItemPatch(item, { description: trimmed }));
           }
         });
         nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
 
-        dateInput.addEventListener("change", () => guardedSave(dateInput, () =>
-          saveActionItemPatch(item, { description: item.description, deadlineDate: dateInput.value || null })));
+        amountInput.addEventListener("change", () => guardedSave(amountInput, () =>
+          saveActionItemPatch(item, { amount: amountInput.value === "" ? null : Number(amountInput.value) })));
 
-        completedCheckbox.addEventListener("change", () => guardedSave(completedCheckbox, () =>
-          completeActionItem(item, completedCheckbox.checked)));
+        dateInput.addEventListener("change", () => guardedSave(dateInput, () =>
+          saveActionItemPatch(item, { deadlineDate: dateInput.value || null })));
+
+        // Checking a task off removes it from the list entirely (there's no "undo" — once done, it's
+        // done) rather than leaving a struck-through completed row behind.
+        completedCheckbox.addEventListener("change", () => {
+          if (completedCheckbox.checked) {
+            guardedSave(completedCheckbox, () => deleteActionItem(item));
+          }
+        });
 
         attachConfirmDelete(row.querySelector(".delete-row"), () => deleteActionItem(item));
       }
@@ -3402,8 +3696,9 @@
 
     function toggleActionItemAddRow() {
       const tbody = document.getElementById("action-items-body");
-      const row = toggleAddRow(tbody, 4, `
+      const row = toggleAddRow(tbody, 5, `
         <input type="text" class="new-desc" placeholder="תיאור הפעולה" />
+        <input type="number" min="0" step="0.01" class="new-amount" placeholder="סכום (לא חובה)" />
         <input type="date" class="new-deadline" title="דד-ליין (לא חובה)" />
       `);
       if (!row) return;
@@ -3411,6 +3706,8 @@
       const saveBtn = row.querySelector(".save-btn");
       saveBtn.addEventListener("click", () => withPending(saveBtn, async () => {
         const description = row.querySelector(".new-desc").value.trim();
+        const amountText = row.querySelector(".new-amount").value;
+        const amount = amountText === "" ? null : Number(amountText);
         const deadlineDate = row.querySelector(".new-deadline").value || null;
 
         if (!description) {
@@ -3423,7 +3720,7 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              year: Number(actionsYear()), month: Number(actionsMonth()), description, deadlineDate,
+              year: Number(actionsYear()), month: Number(actionsMonth()), description, amount, deadlineDate,
             }),
           });
           actionsClearError();

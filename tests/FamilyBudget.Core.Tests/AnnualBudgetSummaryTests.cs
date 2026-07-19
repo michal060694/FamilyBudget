@@ -174,7 +174,10 @@ public class AnnualBudgetSummaryTests
         public Task<decimal> GetAmountAsync(int year, CancellationToken cancellationToken = default) =>
             Task.FromResult(_amount);
 
-        public Task SetAmountAsync(int year, decimal amount, CancellationToken cancellationToken = default) =>
+        public Task<string?> GetFormulaAsync(int year, CancellationToken cancellationToken = default) =>
+            Task.FromResult<string?>(null);
+
+        public Task SetAmountAsync(int year, decimal amount, string? amountFormula = null, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();
     }
 }

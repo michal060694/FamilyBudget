@@ -44,8 +44,8 @@ public class MonthlyOverviewEndpointsTests : IClassFixture<FamilyBudgetApiFactor
             db.MonthlyExpenseBudgetItems.AddRange(
                 new MonthlyExpenseBudgetItem(Guid.NewGuid(), year, month, "Rent", TransactionType.FixedExpense, budgetedAmount: 400m, usedAmount: 400m),
                 new MonthlyExpenseBudgetItem(Guid.NewGuid(), year, month, "Groceries", TransactionType.RegularExpense, budgetedAmount: 200m, usedAmount: 150m));
-            db.AnnualBudgetItems.Add(
-                new AnnualBudgetItem(Guid.NewGuid(), year, "December-style Holiday", 900m, month, amountAlreadySetAside: 900m));
+            db.Transactions.Add(
+                new Transaction(Guid.NewGuid(), new DateOnly(year, month, 5), 900m, TransactionType.AnnualReserveWithdrawal, PaymentMethod.BankTransfer, null, "December-style Holiday"));
             await db.SaveChangesAsync();
         }
 
@@ -76,8 +76,8 @@ public class MonthlyOverviewEndpointsTests : IClassFixture<FamilyBudgetApiFactor
         Assert.Equal(50m, groceriesLine.Remaining);
 
         var withdrawalLine = Assert.Single(response.AnnualWithdrawals.Lines);
-        Assert.Equal("December-style Holiday", withdrawalLine.Name);
-        Assert.Equal(900m, withdrawalLine.TotalAmount);
+        Assert.Equal("December-style Holiday", withdrawalLine.Description);
+        Assert.Equal(900m, withdrawalLine.Amount);
         Assert.Equal(900m, response.AnnualWithdrawals.Total);
 
         var totalIncome = 1000m + 300m;

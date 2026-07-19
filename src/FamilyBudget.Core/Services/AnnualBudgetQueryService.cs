@@ -21,7 +21,7 @@ public class AnnualBudgetQueryService
     }
 
     public static IReadOnlyList<AnnualBudgetItem> OrderForDisplay(IEnumerable<AnnualBudgetItem> items) =>
-        items.OrderBy(item => item.TargetMonth ?? int.MaxValue).ToList();
+        items.OrderBy(item => item.TargetMonth ?? int.MaxValue).ThenBy(item => item.Name).ToList();
 
     public async Task<IReadOnlyList<AnnualBudgetItem>> GetOrderedForYearAsync(int year, CancellationToken cancellationToken = default)
     {
@@ -53,6 +53,7 @@ public class AnnualBudgetQueryService
     {
         var items = await _itemRepository.GetByYearAsync(year, cancellationToken);
         var reserveOnHand = await _reserveRepository.GetAmountAsync(year, cancellationToken);
+        var reserveOnHandFormula = await _reserveRepository.GetFormulaAsync(year, cancellationToken);
 
         var totalAnnualBudget = items.Sum(item => item.TotalAmount);
         var notYetCovered = items.Sum(item => Math.Abs(item.TotalAmount - item.AmountUsed));
@@ -61,12 +62,13 @@ public class AnnualBudgetQueryService
         var monthsRemaining = Math.Max(1, _calendarYearCycle.GetMonthsRemaining(effectiveMonth, targetMonth: null));
         var monthlyAllocation = stillNeedToDeposit / monthsRemaining;
 
-        return new AnnualBudgetSummary(reserveOnHand, totalAnnualBudget, notYetCovered, monthlyAllocation);
+        return new AnnualBudgetSummary(reserveOnHand, reserveOnHandFormula, totalAnnualBudget, notYetCovered, monthlyAllocation);
     }
 }
 
 public record AnnualBudgetSummary(
     decimal ReserveOnHand,
+    string? ReserveOnHandFormula,
     decimal TotalAnnualBudget,
     decimal NotYetCovered,
     decimal MonthlyAllocation);

@@ -46,6 +46,7 @@ public class FamilyBudgetDbContext : DbContext
             builder.Property(item => item.AmountAlreadySetAside).HasColumnType("decimal(18,2)").IsRequired();
             builder.Property(item => item.AmountUsed).HasColumnType("decimal(18,2)").IsRequired();
             builder.Property(item => item.AmountUsedFormula).HasMaxLength(200);
+            builder.Property(item => item.Notes).HasMaxLength(1000);
 
             builder.HasIndex(item => item.Year);
         });
@@ -56,6 +57,7 @@ public class FamilyBudgetDbContext : DbContext
             builder.HasKey(reserve => reserve.Year);
             builder.Property(reserve => reserve.Year).ValueGeneratedNever();
             builder.Property(reserve => reserve.Amount).HasColumnType("decimal(18,2)").IsRequired();
+            builder.Property(reserve => reserve.AmountFormula).HasMaxLength(200);
         });
 
         modelBuilder.Entity<Transaction>(builder =>
@@ -166,6 +168,7 @@ public class FamilyBudgetDbContext : DbContext
             builder.Property(i => i.Year).IsRequired();
             builder.Property(i => i.Month).IsRequired();
             builder.Property(i => i.Description).IsRequired().HasMaxLength(500);
+            builder.Property(i => i.Amount).HasColumnType("decimal(18,2)");
             builder.Property(i => i.DeadlineDate);
             builder.Property(i => i.IsCompleted).IsRequired();
             builder.Property(i => i.ReminderSentAt);

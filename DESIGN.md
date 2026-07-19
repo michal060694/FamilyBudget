@@ -176,7 +176,8 @@ No longer flat-by-default. Cards and stat-tiles carry a soft, layered `box-shado
 - **Hover:** brightness darken plus a 1px lift (`translateY(-1px)`) — a small tactile "press" cue; respects `prefers-reduced-motion`.
 - **Focus:** a 2px Dusk Slate `outline` at 2px offset, universal across every button and the two clickable stat-tiles regardless of the card's board color — focus is a system-wide signal, not a themed one.
 - **Secondary (ghost):** transparent background, `text-secondary` text, 1px `baseline` border.
-- **Delete-row:** text-only, `text-muted` at rest. First click arms an inline "לאשר מחיקה?" state (`status-critical`, bold); a second click within 3 seconds commits.
+- **Delete-row / notes-btn (row icon actions):** 30×30px circular icon buttons (`rounded.pill`), `text-muted` at rest, no border — a fifth revision from the earlier text-only glyphs, which read as cramped when two sat side by side in one table cell. Hover fills a soft 12%-tint circle of the button's own meaning color (`status-critical` for delete, the card's `--card-accent` for notes) instead of just recoloring the glyph. Row cells holding more than one of these buttons use `.row-actions` (flex, `gap: 6px`) so they never touch. Delete-row's confirm behavior is unchanged: first click arms an inline "לאשר מחיקה?" state (`status-critical`, bold); a second click within 3 seconds commits.
+- **Notes-btn tooltip:** hovering (or focusing, for keyboard users) a notes button that already has a saved note pops up its actual text via a `surface-1` + `shadow-card` popover — the same look as the delete-row confirm overlay — so reading a note never requires opening its edit modal first. Empty notes show a plain "אין הערה עדיין" hint instead.
 
 ### Cards
 - **Corner style:** 16px radius (up from 12px).

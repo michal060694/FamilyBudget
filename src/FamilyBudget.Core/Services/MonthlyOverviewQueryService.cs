@@ -9,7 +9,6 @@ public class MonthlyOverviewQueryService
     private readonly ITransactionRepository _transactionRepository;
     private readonly IMonthlyExpenseBudgetItemRepository _monthlyExpenseBudgetItemRepository;
     private readonly IFixedDonationStandingOrderRepository _standingOrderRepository;
-    private readonly IAnnualBudgetItemRepository _annualBudgetItemRepository;
     private readonly IDebtRepository _debtRepository;
     private readonly TitheEngine _titheEngine;
 
@@ -17,14 +16,12 @@ public class MonthlyOverviewQueryService
         ITransactionRepository transactionRepository,
         IMonthlyExpenseBudgetItemRepository monthlyExpenseBudgetItemRepository,
         IFixedDonationStandingOrderRepository standingOrderRepository,
-        IAnnualBudgetItemRepository annualBudgetItemRepository,
         IDebtRepository debtRepository,
         TitheEngine titheEngine)
     {
         _transactionRepository = transactionRepository;
         _monthlyExpenseBudgetItemRepository = monthlyExpenseBudgetItemRepository;
         _standingOrderRepository = standingOrderRepository;
-        _annualBudgetItemRepository = annualBudgetItemRepository;
         _debtRepository = debtRepository;
         _titheEngine = titheEngine;
     }
@@ -52,10 +49,9 @@ public class MonthlyOverviewQueryService
         var regularExpenseItems = await _monthlyExpenseBudgetItemRepository.GetByMonthAsync(
             year, month, TransactionType.RegularExpense, cancellationToken);
 
-        var annualItemsDueThisMonth = (await _annualBudgetItemRepository.GetByYearAsync(year, cancellationToken))
-            .Where(i => i.TargetMonth == month)
-            .ToList();
-        var annualWithdrawalsTotal = annualItemsDueThisMonth.Sum(i => i.TotalAmount);
+        var annualWithdrawalItems = await _transactionRepository.GetByMonthAsync(
+            year, month, TransactionType.AnnualReserveWithdrawal, cancellationToken: cancellationToken);
+        var annualWithdrawalsTotal = annualWithdrawalItems.Sum(i => i.Amount);
 
         var fixedExpenseUsedTotal = fixedExpenseItems.Sum(i => i.UsedAmount);
         var regularExpenseUsedTotal = regularExpenseItems.Sum(i => i.UsedAmount);
@@ -90,7 +86,7 @@ public class MonthlyOverviewQueryService
             priorMonthDonations,
             fixedExpenseItems, fixedExpenseUsedTotal,
             regularExpenseItems, regularExpenseUsedTotal,
-            annualItemsDueThisMonth, annualWithdrawalsTotal,
+            annualWithdrawalItems, annualWithdrawalsTotal,
             debtRepaymentsSummary, totalOutflow, totalIncome, remainingToSave);
     }
 }
@@ -107,7 +103,7 @@ public record MonthlyOverview(
     decimal FixedExpenseUsedTotal,
     IReadOnlyList<MonthlyExpenseBudgetItem> RegularExpenseItems,
     decimal RegularExpenseUsedTotal,
-    IReadOnlyList<AnnualBudgetItem> AnnualWithdrawalItems,
+    IReadOnlyList<Transaction> AnnualWithdrawalItems,
     decimal AnnualWithdrawalsTotal,
     decimal DebtRepaymentsSummary,
     decimal TotalOutflow,

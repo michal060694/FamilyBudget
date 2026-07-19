@@ -14,6 +14,12 @@ public enum TransactionType
     /// the Monthly Overview's debt-repayments figure.
     /// </summary>
     DebtRepayment,
+
+    /// <summary>
+    /// A manually-logged withdrawal from the annual reserve (קופה שנתית) during the month, entered
+    /// by the user rather than auto-derived from Annual Budget items due this month.
+    /// </summary>
+    AnnualReserveWithdrawal,
 }
 
 public enum PaymentMethod

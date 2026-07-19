@@ -49,6 +49,23 @@ internal static class ExcelTableReader
     public static IXLWorksheet GetSheetOrThrow(XLWorkbook workbook, string expectedFirstColumn)
     {
         var sheet = workbook.Worksheets.First();
+        return ValidateHeader(sheet, expectedFirstColumn);
+    }
+
+    /// <summary>Same as <see cref="GetSheetOrThrow(XLWorkbook, string)"/>, but for a workbook with multiple named sheets (e.g. funds + earmarks sharing one file) — looks the sheet up by name instead of just taking the first one.</summary>
+    public static IXLWorksheet GetSheetOrThrow(XLWorkbook workbook, string sheetName, string expectedFirstColumn)
+    {
+        if (!workbook.Worksheets.TryGetWorksheet(sheetName, out var sheet))
+        {
+            throw new ImportTemplateMismatchException(
+                $"This file doesn't look like the expected import template (missing a sheet named '{sheetName}').");
+        }
+
+        return ValidateHeader(sheet, expectedFirstColumn);
+    }
+
+    private static IXLWorksheet ValidateHeader(IXLWorksheet sheet, string expectedFirstColumn)
+    {
         var firstHeaderCell = sheet.Cell(1, 1).GetString().Trim();
         if (firstHeaderCell != expectedFirstColumn)
         {

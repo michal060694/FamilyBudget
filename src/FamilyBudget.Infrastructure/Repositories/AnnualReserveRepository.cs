@@ -21,18 +21,25 @@ public class AnnualReserveRepository : IAnnualReserveRepository
         return reserve?.Amount ?? 0m;
     }
 
-    public async Task SetAmountAsync(int year, decimal amount, CancellationToken cancellationToken = default)
+    public async Task<string?> GetFormulaAsync(int year, CancellationToken cancellationToken = default)
+    {
+        var reserve = await _dbContext.AnnualReserves
+            .FirstOrDefaultAsync(r => r.Year == year, cancellationToken);
+        return reserve?.AmountFormula;
+    }
+
+    public async Task SetAmountAsync(int year, decimal amount, string? amountFormula = null, CancellationToken cancellationToken = default)
     {
         var reserve = await _dbContext.AnnualReserves
             .FirstOrDefaultAsync(r => r.Year == year, cancellationToken);
 
         if (reserve is null)
         {
-            _dbContext.AnnualReserves.Add(new AnnualReserve(year, amount));
+            _dbContext.AnnualReserves.Add(new AnnualReserve(year, amount, amountFormula));
         }
         else
         {
-            reserve.Update(amount);
+            reserve.Update(amount, amountFormula);
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
