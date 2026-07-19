@@ -30,6 +30,8 @@ public class FamilyBudgetDbContext : DbContext
 
     public DbSet<MonthlyTemplateItem> MonthlyTemplateItems => Set<MonthlyTemplateItem>();
 
+    public DbSet<MonthlyActionItem> MonthlyActionItems => Set<MonthlyActionItem>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AnnualBudgetItem>(builder =>
@@ -155,6 +157,20 @@ public class FamilyBudgetDbContext : DbContext
             builder.Property(i => i.Amount).HasColumnType("decimal(18,2)").IsRequired();
             builder.Property(i => i.AmountFormula).HasMaxLength(200);
             builder.Property(i => i.IsTitheApplicable);
+        });
+
+        modelBuilder.Entity<MonthlyActionItem>(builder =>
+        {
+            builder.ToTable("MonthlyActionItems");
+            builder.HasKey(i => i.Id);
+            builder.Property(i => i.Year).IsRequired();
+            builder.Property(i => i.Month).IsRequired();
+            builder.Property(i => i.Description).IsRequired().HasMaxLength(500);
+            builder.Property(i => i.DeadlineDate);
+            builder.Property(i => i.IsCompleted).IsRequired();
+            builder.Property(i => i.ReminderSentAt);
+
+            builder.HasIndex(i => new { i.Year, i.Month });
         });
     }
 }

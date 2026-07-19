@@ -29,6 +29,7 @@ builder.Services.AddScoped<IFundRepository, FundRepository>();
 builder.Services.AddScoped<IFundEarmarkRepository, FundEarmarkRepository>();
 builder.Services.AddScoped<IDebtRepository, DebtRepository>();
 builder.Services.AddScoped<IMonthlyTemplateItemRepository, MonthlyTemplateItemRepository>();
+builder.Services.AddScoped<IMonthlyActionItemRepository, MonthlyActionItemRepository>();
 builder.Services.AddSingleton<CalendarYearCycle>();
 builder.Services.AddScoped<BudgetSmoothingEngine>();
 builder.Services.AddScoped<AnnualBudgetQueryService>();
@@ -40,6 +41,9 @@ builder.Services.AddScoped<DebtRepaymentService>();
 builder.Services.AddScoped<MonthlyTemplateApplyService>();
 builder.Services.AddScoped<ExcelExportService>();
 builder.Services.AddScoped<ExcelImportService>();
+builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<MonthlyActionItemReminderService>();
+builder.Services.AddHostedService<MonthlyActionItemReminderBackgroundService>();
 
 var app = builder.Build();
 
@@ -115,6 +119,7 @@ app.MapDebtEndpoints();
 app.MapMonthlyTemplateEndpoints();
 app.MapExportEndpoints();
 app.MapImportEndpoints();
+app.MapMonthlyActionItemEndpoints();
 
 app.Run();
 

@@ -455,6 +455,7 @@
       <button class="tab-btn" data-tab="overview">סקירה חודשית</button>
       <button class="tab-btn" data-tab="funds">קרנות</button>
       <button class="tab-btn" data-tab="debts">חובות</button>
+      <button class="tab-btn" data-tab="actions">פעולות לביצוע</button>
     </div>
     <button class="secondary" id="export-excel-btn" title="מייצא את תקציב השנה (מהטאב 'תקציב שנתי') והחודש (מהטאב 'סקירה חודשית') הנבחרים, יחד עם הקרנות והחובות">📥 ייצוא לאקסל</button>
   </div>
@@ -862,6 +863,34 @@
           <tfoot><tr><td colspan="6"><button class="icon" id="add-payable-toggle">+ הוסף חוב</button></td></tr></tfoot>
         </table>
       </div>
+    </div>
+  </div>
+
+  <div id="tab-actions" class="tab-panel" hidden>
+    <div class="controls">
+      <div class="field">
+        <label for="actions-year">שנה</label>
+        <input id="actions-year" type="number" value="2026" />
+      </div>
+      <div class="field">
+        <label for="actions-month">חודש</label>
+        <input id="actions-month" type="number" min="1" max="12" value="7" />
+      </div>
+      <button id="actions-refresh">רענן</button>
+      <button id="actions-send-reminders-btn">שלח תזכורות עכשיו</button>
+    </div>
+
+    <div id="actions-error" class="error" hidden></div>
+    <div id="actions-reminders-status" style="font-weight:600; color: var(--status-good);" hidden></div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr><th>תיאור</th><th>דד-ליין</th><th>הושלם</th><th></th></tr>
+        </thead>
+        <tbody id="action-items-body"></tbody>
+        <tfoot><tr><td colspan="4"><button class="icon" id="add-action-item-toggle">+ הוסף פעולה</button></td></tr></tfoot>
+      </table>
     </div>
   </div>
 
@@ -1479,12 +1508,15 @@
         document.getElementById("tab-overview").hidden = btn.dataset.tab !== "overview";
         document.getElementById("tab-funds").hidden = btn.dataset.tab !== "funds";
         document.getElementById("tab-debts").hidden = btn.dataset.tab !== "debts";
+        document.getElementById("tab-actions").hidden = btn.dataset.tab !== "actions";
         if (btn.dataset.tab === "overview") {
           refreshOverview();
         } else if (btn.dataset.tab === "funds") {
           refreshFunds();
         } else if (btn.dataset.tab === "debts") {
           refreshDebts();
+        } else if (btn.dataset.tab === "actions") {
+          refreshActionItems();
         }
       });
     });
@@ -3255,6 +3287,173 @@
       showError: debtsShowError,
       clearError: debtsClearError,
       reload: refreshDebts,
+    });
+
+    // ---- Monthly action items checklist (פעולות לביצוע) ----
+
+    function actionsShowError(message) {
+      const el = document.getElementById("actions-error");
+      el.textContent = "שגיאה: " + message;
+      el.hidden = false;
+    }
+
+    function actionsClearError() {
+      document.getElementById("actions-error").hidden = true;
+    }
+
+    function actionsYear() {
+      return document.getElementById("actions-year").value;
+    }
+
+    function actionsMonth() {
+      return document.getElementById("actions-month").value;
+    }
+
+    async function saveActionItemPatch(item, patch) {
+      try {
+        await fetchJson(`/api/monthly-action-items/${item.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            description: item.description,
+            deadlineDate: item.deadlineDate,
+            ...patch,
+          }),
+        });
+        actionsClearError();
+        await refreshActionItems();
+      } catch (err) {
+        actionsShowError(err.message);
+      }
+    }
+
+    async function completeActionItem(item, isCompleted) {
+      try {
+        await fetchJson(`/api/monthly-action-items/${item.id}/complete`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isCompleted }),
+        });
+        actionsClearError();
+        await refreshActionItems();
+      } catch (err) {
+        actionsShowError(err.message);
+      }
+    }
+
+    async function deleteActionItem(item) {
+      try {
+        await fetchJson(`/api/monthly-action-items/${item.id}`, { method: "DELETE" });
+        actionsClearError();
+        await refreshActionItems();
+      } catch (err) {
+        actionsShowError(err.message);
+      }
+    }
+
+    function renderActionItemRows(tbody, items) {
+      tbody.innerHTML = "";
+      if (!items || items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color: var(--text-muted); font-style: italic;">אין פעולות לחודש זה עדיין.</td></tr>`;
+        return;
+      }
+      for (const item of items) {
+        const row = document.createElement("tr");
+        const deadlineStyle = item.isOverdue ? ' style="color: var(--status-critical);"' : "";
+        row.innerHTML = `
+          <td><input class="name-input" type="text" value="${escapeHtml(item.description)}" /></td>
+          <td${deadlineStyle}><input class="date-input desc-input" type="date" value="${escapeHtml(item.deadlineDate ?? "")}" /></td>
+          <td style="text-align:center;"><input type="checkbox" class="completed-checkbox" ${item.isCompleted ? "checked" : ""} /></td>
+          <td><button class="delete-row" title="מחק" aria-label="מחק את הפעולה ${escapeHtml(item.description)}">✕</button></td>
+        `;
+        tbody.appendChild(row);
+
+        const nameInput = row.querySelector(".name-input");
+        const dateInput = row.querySelector(".date-input");
+        const completedCheckbox = row.querySelector(".completed-checkbox");
+
+        nameInput.addEventListener("blur", () => {
+          const trimmed = nameInput.value.trim();
+          if (trimmed && trimmed !== item.description) {
+            guardedSave(nameInput, () => saveActionItemPatch(item, { description: trimmed, deadlineDate: item.deadlineDate }));
+          }
+        });
+        nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.blur(); });
+
+        dateInput.addEventListener("change", () => guardedSave(dateInput, () =>
+          saveActionItemPatch(item, { description: item.description, deadlineDate: dateInput.value || null })));
+
+        completedCheckbox.addEventListener("change", () => guardedSave(completedCheckbox, () =>
+          completeActionItem(item, completedCheckbox.checked)));
+
+        attachConfirmDelete(row.querySelector(".delete-row"), () => deleteActionItem(item));
+      }
+    }
+
+    async function refreshActionItems() {
+      actionsClearError();
+      try {
+        const data = await fetchJson(`/api/monthly-action-items?year=${actionsYear()}&month=${actionsMonth()}`);
+        renderActionItemRows(document.getElementById("action-items-body"), data.items);
+      } catch (err) {
+        actionsShowError(err.message);
+      }
+    }
+
+    function toggleActionItemAddRow() {
+      const tbody = document.getElementById("action-items-body");
+      const row = toggleAddRow(tbody, 4, `
+        <input type="text" class="new-desc" placeholder="תיאור הפעולה" />
+        <input type="date" class="new-deadline" title="דד-ליין (לא חובה)" />
+      `);
+      if (!row) return;
+
+      const saveBtn = row.querySelector(".save-btn");
+      saveBtn.addEventListener("click", () => withPending(saveBtn, async () => {
+        const description = row.querySelector(".new-desc").value.trim();
+        const deadlineDate = row.querySelector(".new-deadline").value || null;
+
+        if (!description) {
+          actionsShowError("יש להזין תיאור.");
+          return;
+        }
+
+        try {
+          await fetchJson("/api/monthly-action-items", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              year: Number(actionsYear()), month: Number(actionsMonth()), description, deadlineDate,
+            }),
+          });
+          actionsClearError();
+          await refreshActionItems();
+        } catch (err) {
+          actionsShowError(err.message);
+        }
+      }));
+    }
+
+    document.getElementById("actions-refresh").addEventListener("click", refreshActionItems);
+    document.getElementById("actions-year").addEventListener("change", refreshActionItems);
+    document.getElementById("actions-month").addEventListener("change", refreshActionItems);
+    document.getElementById("add-action-item-toggle").addEventListener("click", toggleActionItemAddRow);
+
+    document.getElementById("actions-send-reminders-btn").addEventListener("click", (e) => {
+      const btn = e.currentTarget;
+      withPending(btn, async () => {
+        try {
+          const result = await fetchJson("/api/monthly-action-items/send-reminders-now", { method: "POST" });
+          const statusEl = document.getElementById("actions-reminders-status");
+          statusEl.textContent = result.remindersSent > 0
+            ? `נשלחו ${result.remindersSent} תזכורות ✓`
+            : "אין תזכורות לשליחה כרגע.";
+          statusEl.hidden = false;
+          actionsClearError();
+        } catch (err) {
+          actionsShowError(err.message);
+        }
+      });
     });
 
     // ---- Excel export (one workbook, one sheet per tab) ----

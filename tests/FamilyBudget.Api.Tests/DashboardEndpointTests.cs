@@ -90,6 +90,12 @@ public class FamilyBudgetApiFactory : WebApplicationFactory<Program>
             services.AddDbContext<FamilyBudgetDbContext>((provider, options) =>
                 options.UseSqlite(provider.GetRequiredService<Microsoft.Data.Sqlite.SqliteConnection>()));
 
+            // Swap the real SMTP sender for a recording test double — no test should ever depend on
+            // (or accidentally trigger) a real outbound email.
+            services.RemoveAll<FamilyBudget.Api.Services.IEmailSender>();
+            services.AddSingleton<RecordingEmailSender>();
+            services.AddSingleton<FamilyBudget.Api.Services.IEmailSender>(sp => sp.GetRequiredService<RecordingEmailSender>());
+
             using var scope = services.BuildServiceProvider().CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<FamilyBudgetDbContext>();
             // Migrate() is idempotent (tracked via __EFMigrationsHistory), so this and Program.cs's
