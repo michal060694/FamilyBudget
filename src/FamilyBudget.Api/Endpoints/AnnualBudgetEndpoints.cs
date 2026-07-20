@@ -12,6 +12,7 @@ public static class AnnualBudgetEndpoints
         app.MapGet("/api/annual-budget", GetAnnualBudget);
         app.MapPost("/api/annual-budget-items", CreateAnnualBudgetItem);
         app.MapPatch("/api/annual-budget-items/{id:guid}/usage", SetUsage);
+        app.MapPatch("/api/annual-budget-items/{id:guid}/total-amount", SetTotalAmount);
         app.MapPatch("/api/annual-budget-items/{id:guid}/notes", SetNotes);
         app.MapDelete("/api/annual-budget-items/{id:guid}", DeleteAnnualBudgetItem);
         app.MapPut("/api/reserve", SetReserve);
@@ -110,6 +111,25 @@ public static class AnnualBudgetEndpoints
         }
 
         item.SetAmountUsed(request.Amount, request.AmountFormula);
+        await repository.SaveChangesAsync();
+
+        return Results.Ok(ToView(item));
+    }
+
+    private static async Task<IResult> SetTotalAmount(Guid id, SetTotalAmountRequest request, IAnnualBudgetItemRepository repository)
+    {
+        if (request.Amount <= 0)
+        {
+            return Results.BadRequest("amount must be strictly positive.");
+        }
+
+        var item = await repository.GetByIdAsync(id);
+        if (item is null)
+        {
+            return Results.NotFound();
+        }
+
+        item.SetTotalAmount(request.Amount, request.AmountFormula);
         await repository.SaveChangesAsync();
 
         return Results.Ok(ToView(item));

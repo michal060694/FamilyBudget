@@ -21,9 +21,10 @@ public record ExpenseBudgetSection(IReadOnlyList<MonthlyExpenseBudgetItemView> I
 /// <summary>
 /// The redesigned "מעשרות" (tithes) card: four figures — (א) gross target, (ב) this month's fixed
 /// donation standing orders with drill-down, (ג) prior month's ad-hoc/small-charity donations with
-/// drill-down, and (ד) the unprotected "still to donate after fixed donations" figure that
-/// deliberately does not net out (ג) — see spec.md Assumptions. <c>NetTitheDue</c> is the fully
-/// protected obligation (nets out both ב and ג) used internally/by the Dashboard.
+/// drill-down, and (ד) the amount still to donate, which is the protected <c>NetTitheDue</c> (nets
+/// out both ב and ג). <c>StillToDonateAfterFixed</c> is retained only as an intermediate,
+/// unprotected figure (nets out ב only) — it must not be shown as (ד) or treated as the final
+/// obligation anywhere.
 /// </summary>
 public record TitheObligationView(
     decimal GrossTitheTarget,

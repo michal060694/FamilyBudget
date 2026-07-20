@@ -99,6 +99,17 @@ public class AnnualBudgetItem
         AmountAlreadySetAside += amount;
     }
 
+    public void SetTotalAmount(decimal amount, string? formula = null)
+    {
+        if (amount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), "TotalAmount must be strictly positive.");
+        }
+
+        TotalAmount = amount;
+        TotalAmountFormula = formula;
+    }
+
     public void SetAmountUsed(decimal amount, string? formula = null)
     {
         if (amount < 0)

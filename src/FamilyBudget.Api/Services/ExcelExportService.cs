@@ -164,7 +164,7 @@ public class ExcelExportService
         row++;
         row = WriteTransactionsTable(sheet, row, null, overview.PriorMonthSmallCharityDonations);
         sheet.Cell(row, 1).Value = "ד. תרומות לתרומה";
-        AmountCell(sheet, row, 2, obligation.StillToDonateAfterFixed);
+        AmountCell(sheet, row, 2, obligation.NetTitheDue);
         row += 2;
 
         row = WriteTransactionsTable(sheet, row, "הוצאות שצריך להביא מהקופה השנתית", overview.AnnualWithdrawalItems);

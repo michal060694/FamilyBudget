@@ -28,6 +28,8 @@ public record SetReserveRequest(decimal Amount, string? AmountFormula = null);
 
 public record SetUsageRequest(decimal Amount, string? AmountFormula = null);
 
+public record SetTotalAmountRequest(decimal Amount, string? AmountFormula = null);
+
 public record SetAnnualBudgetItemNotesRequest(string? Notes);
 
 public record CopyAnnualBudgetYearRequest(int SourceYear, int TargetYear);

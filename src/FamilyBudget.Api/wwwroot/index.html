@@ -316,7 +316,7 @@
   .badge.partial { background: var(--series-1); }
   .badge.critical { background: var(--status-critical); }
 
-  input.usage-input {
+  input.usage-input, input.annual-total-cell {
     font: inherit;
     font-variant-numeric: tabular-nums;
     text-align: left;
@@ -327,8 +327,8 @@
     background: transparent;
     color: var(--text-primary);
   }
-  input.usage-input:hover { border-color: var(--baseline); }
-  input.usage-input:focus {
+  input.usage-input:hover, input.annual-total-cell:hover { border-color: var(--baseline); }
+  input.usage-input:focus, input.annual-total-cell:focus {
     border-color: var(--series-1);
     background: var(--page-plane);
     outline: none;
@@ -411,6 +411,32 @@
   @media (prefers-reduced-motion: reduce) {
     button.notes-btn[data-tooltip]::after { transition: opacity 0.12s linear; }
   }
+
+  /* calc-trigger formula tooltips use a single JS-positioned element (position: fixed,
+     appended to <body>) instead of a CSS ::after popover, because most triggers live inside
+     a .card, and .card sets overflow-x: auto — which per spec forces overflow-y to auto too,
+     clipping any ::after that pops out past the card's edge. A fixed-position element outside
+     the card's DOM subtree (no ancestor here uses transform, so nothing re-scopes "fixed")
+     escapes that clipping entirely, regardless of how deep the trigger is nested. */
+  .calc-tooltip {
+    position: fixed;
+    width: max-content;
+    max-width: 280px;
+    padding: 8px 12px;
+    border: 1px solid var(--baseline);
+    border-radius: 8px;
+    background: var(--surface-1);
+    color: var(--text-primary);
+    font-size: 0.78rem;
+    font-weight: 400;
+    line-height: 1.4;
+    text-align: right;
+    white-space: pre-line;
+    box-shadow: var(--shadow-card);
+    pointer-events: none;
+    z-index: 1000;
+  }
+  .calc-tooltip[hidden] { display: none; }
 
   .row-actions {
     display: flex;
@@ -1337,12 +1363,19 @@
 
     // getSourceEls is called at click time (not once up front) so it always sees the current DOM,
     // since the tables/rows it points into are torn down and rebuilt on every refresh.
-    function wireCalcTrigger(trigger, getSourceEls) {
+    // formula, if given, is the Hebrew text of the calculation shown as a hover/focus tooltip
+    // (same popover used for row notes) alongside the click-to-highlight behavior.
+    function wireCalcTrigger(trigger, getSourceEls, formula) {
       if (!trigger) return;
       trigger.classList.add("calc-trigger");
       trigger.setAttribute("role", "button");
       trigger.setAttribute("tabindex", "0");
-      trigger.title = "לחצי כדי להדגיש את השדות שמרכיבים את הסכום הזה";
+      if (formula) {
+        trigger.dataset.tooltip = formula;
+        trigger.setAttribute("aria-label", `${formula}. לחצי כדי להדגיש את השדות שמרכיבים את הסכום הזה`);
+      } else {
+        trigger.title = "לחצי כדי להדגיש את השדות שמרכיבים את הסכום הזה";
+      }
       trigger.addEventListener("click", () => {
         const reopening = activeCalcTrigger === trigger;
         clearCalcHighlight();
@@ -1393,16 +1426,19 @@
     // Wired once (these tiles' ids are never rebuilt); the getters below re-query row cells fresh
     // on every click since the rows themselves are torn down and rebuilt on every refresh().
     wireCalcTrigger(document.getElementById("stat-total-budget"), () =>
-      byQuery("#monthly-rows .annual-total-cell", "#general-rows .annual-total-cell"));
+      byQuery("#monthly-rows .annual-total-cell", "#general-rows .annual-total-cell"),
+      'סה"כ תקציב שנתי = סכום הסכום הכולל של כל הקטגוריות (בטבלת החודשים ובטבלה הכללית)');
     wireCalcTrigger(document.getElementById("stat-not-covered"), () =>
       byQuery("#monthly-rows .annual-total-cell", "#general-rows .annual-total-cell",
-        "#monthly-rows .usage-input", "#general-rows .usage-input"));
-    wireCalcTrigger(document.getElementById("stat-monthly"), () => byId("stat-not-covered", "stat-reserve"));
+        "#monthly-rows .usage-input", "#general-rows .usage-input"),
+      'כמה עוד לא נוצל = סכום ההפרש (בערך מוחלט) בין הסכום הכולל לניצול בפועל, לכל קטגוריה');
+    wireCalcTrigger(document.getElementById("stat-monthly"), () => byId("stat-not-covered", "stat-reserve"),
+      'הפרשה נדרשת לחודש = (כמה עוד לא נוצל − כמה יש בקופה, לא פחות מאפס) ÷ מספר החודשים שנותרו עד סוף השנה');
 
     function itemRowHtml(item) {
       return `
         <td>${escapeHtml(item.name)}</td>
-        <td class="num annual-total-cell">${fmtMoney(item.totalAmount)}</td>
+        <td class="num"><input class="annual-total-cell" type="text" /></td>
         <td class="num"><input class="usage-input" type="text" /></td>
         <td class="num annual-remaining-cell">${fmtMoney(item.totalAmount - item.amountUsed)}</td>
         <td class="row-actions">${annualItemNotesButtonHtml(item)}<button class="delete-row" title="מחק שורה" aria-label="מחק את ${escapeHtml(item.name)}">✕</button></td>
@@ -1410,11 +1446,14 @@
     }
 
     function attachItemRowHandlers(row, item) {
+      attachFormulaInput(row.querySelector(".annual-total-cell"), item.totalAmount, item.totalAmountFormula,
+        (amount, formula) => saveTotalAmount(item, amount, formula), undefined, true);
       attachFormulaInput(row.querySelector(".usage-input"), item.amountUsed, item.amountUsedFormula,
         (amount, formula) => saveUsage(item, amount, formula));
       attachConfirmDelete(row.querySelector(".delete-row"), () => deleteItem(item.annualBudgetItemId));
       wireCalcTrigger(row.querySelector(".annual-remaining-cell"), () =>
-        [row.querySelector(".annual-total-cell"), row.querySelector(".usage-input")]);
+        [row.querySelector(".annual-total-cell"), row.querySelector(".usage-input")],
+        "יתרה = הסכום הכולל − הניצול בפועל");
       attachAnnualNotesHandler(row, item);
     }
 
@@ -1485,6 +1524,20 @@
       }
     }
 
+    async function saveTotalAmount(item, amount, formula) {
+      try {
+        await fetchJson(`/api/annual-budget-items/${item.annualBudgetItemId}/total-amount`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount, amountFormula: formula }),
+        });
+        clearError();
+        await refresh();
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
     async function saveUsage(item, amount, formula) {
       try {
         await fetchJson(`/api/annual-budget-items/${item.annualBudgetItemId}/usage`, {
@@ -1505,8 +1558,10 @@
       const tbody = document.getElementById("monthly-rows");
       tbody.innerHTML = "";
 
+      const itemsWithMonth = items.filter(i => i.targetMonth != null);
+
       for (let month = 1; month <= 12; month++) {
-        const monthItems = items.filter(i => i.targetMonth === month);
+        const monthItems = itemsWithMonth.filter(i => i.targetMonth === month);
         const hasItems = monthItems.length > 0;
 
         const headerRow = document.createElement("tr");
@@ -1912,7 +1967,7 @@
     // Turns a plain <input type="text"> into a formula-aware amount field: shows the computed
     // number while blurred, the raw formula (or plain number) while focused, and calls onCommit
     // with the new {amount, formula} pair only when the value actually changed.
-    function attachFormulaInput(input, amount, formula, onCommit, onError = ovShowError) {
+    function attachFormulaInput(input, amount, formula, onCommit, onError = ovShowError, requirePositive = false) {
       input.dataset.amount = amount;
       input.dataset.formula = formula || "";
       input.value = fmtNum(amount);
@@ -1950,8 +2005,8 @@
           return;
         }
 
-        if (!(newAmount >= 0)) {
-          onError("הסכום חייב להיות אי-שלילי.");
+        if (requirePositive ? !(newAmount > 0) : !(newAmount >= 0)) {
+          onError(requirePositive ? "הסכום חייב להיות גדול מאפס." : "הסכום חייב להיות אי-שלילי.");
           input.value = prevFormula || String(prevAmount);
           return;
         }
@@ -2447,7 +2502,8 @@
         const usedInput = row.querySelector(".used-input");
         const includeCheckbox = row.querySelector(".include-checkbox");
 
-        wireCalcTrigger(row.querySelector(".budget-remaining-cell"), () => [budgetedInput, usedInput]);
+        wireCalcTrigger(row.querySelector(".budget-remaining-cell"), () => [budgetedInput, usedInput],
+          "יתרה = הסכום שתוקצב − הסכום שנוצל");
 
         attachFormulaInput(budgetedInput, item.budgetedAmount, item.budgetedAmountFormula, (amount, formula) =>
           onSave(item, { budgetedAmount: amount, budgetedAmountFormula: formula }));
@@ -2624,7 +2680,7 @@
         document.getElementById("ov-gross-target").textContent = fmtMoney(overview.titheObligation.grossTitheTarget);
         document.getElementById("ov-fixed-donations").textContent = fmtMoney(overview.titheObligation.fixedDonationsThisMonth.total);
         document.getElementById("ov-carry-in").textContent = fmtMoney(overview.titheObligation.priorMonthSmallCharity.total);
-        document.getElementById("ov-still-to-donate").textContent = fmtMoney(overview.titheObligation.stillToDonateAfterFixed);
+        document.getElementById("ov-still-to-donate").textContent = fmtMoney(overview.titheObligation.netTitheDue);
 
         document.getElementById("ov-total-income").textContent = fmtMoney(overview.totalIncome);
         document.getElementById("ov-debt-summary").textContent = fmtMoney(overview.debtRepaymentsSummary);
@@ -2641,7 +2697,8 @@
     // Wired once (these tiles' ids are never rebuilt); the getters re-query row cells fresh on
     // every click since the tables they point into are torn down and rebuilt on every refresh.
     wireCalcTrigger(document.getElementById("ov-total-income"), () =>
-      byQuery("#ov-income-tithe .amount-input", "#ov-income-exempt .amount-input"));
+      byQuery("#ov-income-tithe .amount-input", "#ov-income-exempt .amount-input"),
+      'סה"כ הכנסות = סכום ההכנסות החייבות במעשר + סכום ההכנסות הפטורות ממעשר, לחודש זה');
     wireCalcTrigger(document.getElementById("ov-total-outflow"), () => [
       ...byId("ov-gross-target", "ov-debt-summary"),
       ...byQuery("#ov-fixed-expenses .budgeted-input", ".annual-withdrawal-amount"),
@@ -2649,11 +2706,14 @@
         .filter(tr => tr.querySelector(".include-checkbox")?.checked)
         .map(tr => tr.querySelector(".budgeted-input"))
         .filter(Boolean),
-    ]);
-    wireCalcTrigger(document.getElementById("ov-remaining-save"), () => byId("ov-total-income", "ov-total-outflow"));
+    ], 'סה"כ יוצא = מעשרות לתרומה (יעד גולמי) + הוצאות קבועות מתוקצבות + הוצאות משתנות מתוקצבות (המסומנות לכלול) + משיכות מהקרן לחודש זה + החזרי חובות (קצב פירעון)');
+    wireCalcTrigger(document.getElementById("ov-remaining-save"), () => byId("ov-total-income", "ov-total-outflow"),
+      'נשאר לחיסכון = סה"כ הכנסות − סה"כ יוצא');
     wireCalcTrigger(document.getElementById("ov-gross-target"), () =>
-      [...byId("ov-rate"), ...byQuery("#ov-income-tithe .amount-input")]);
-    wireCalcTrigger(document.getElementById("ov-still-to-donate"), () => byId("ov-gross-target", "ov-fixed-donations"));
+      [...byId("ov-rate"), ...byQuery("#ov-income-tithe .amount-input")],
+      "מעשרות לתרומה (יעד גולמי) = הכנסה חייבת במעשר × שיעור המעשר");
+    wireCalcTrigger(document.getElementById("ov-still-to-donate"), () => byId("ov-gross-target", "ov-fixed-donations", "ov-carry-in"),
+      "תרומות לתרומה = יעד המעשר הגולמי − תרומות קבועות בחודש − קיזוז שהועבר מחודש קודם (לא פחות מאפס)");
 
     document.getElementById("ov-refresh").addEventListener("click", refreshOverview);
 
@@ -3155,7 +3215,8 @@
           renderEarmarkRows(earmarksBody, fund.fundId, fund.earmarks);
 
           wireCalcTrigger(card.querySelector(".fund-earmarked-value"), () =>
-            Array.from(earmarksBody.querySelectorAll(".amount-input")));
+            Array.from(earmarksBody.querySelectorAll(".amount-input")),
+            'סה"כ מיועד = סכום כל הייעודים של הקרן');
 
           const saveFund = async () => {
             const name = nameInput.value.trim();

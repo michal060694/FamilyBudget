@@ -184,6 +184,60 @@ public class AnnualBudgetEndpointTests : IClassFixture<FamilyBudgetApiFactory>
     }
 
     [Fact]
+    public async Task SetTotalAmount_OverwritesToExactValue_UpdatesTotalAmountAndFormula()
+    {
+        const int year = 2035;
+        var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/annual-budget-items",
+            new CreateAnnualBudgetItemRequest(year, "Car Insurance", 1200m, null));
+        var created = await createResponse.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
+
+        var patch = await client.PatchAsJsonAsync(
+            $"/api/annual-budget-items/{created!.AnnualBudgetItemId}/total-amount",
+            new SetTotalAmountRequest(1500m, "1000+500"));
+        Assert.Equal(HttpStatusCode.OK, patch.StatusCode);
+        var patched = await patch.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
+        Assert.Equal(1500m, patched!.TotalAmount);
+        Assert.Equal("1000+500", patched.TotalAmountFormula);
+
+        var listResponse = await client.GetFromJsonAsync<AnnualBudgetResponse>($"/api/annual-budget?year={year}");
+        Assert.Equal(1500m, listResponse!.Items.Single(i => i.AnnualBudgetItemId == created.AnnualBudgetItemId).TotalAmount);
+    }
+
+    [Fact]
+    public async Task SetTotalAmount_UnknownId_ReturnsNotFound()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PatchAsJsonAsync(
+            $"/api/annual-budget-items/{Guid.NewGuid()}/total-amount", new SetTotalAmountRequest(50m));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SetTotalAmount_ZeroOrNegativeAmount_ReturnsBadRequest()
+    {
+        const int year = 2036;
+        var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/annual-budget-items",
+            new CreateAnnualBudgetItemRequest(year, "Something", 100m, null));
+        var created = await createResponse.Content.ReadFromJsonAsync<AnnualBudgetItemView>();
+
+        var zeroResponse = await client.PatchAsJsonAsync(
+            $"/api/annual-budget-items/{created!.AnnualBudgetItemId}/total-amount", new SetTotalAmountRequest(0m));
+        Assert.Equal(HttpStatusCode.BadRequest, zeroResponse.StatusCode);
+
+        var negativeResponse = await client.PatchAsJsonAsync(
+            $"/api/annual-budget-items/{created.AnnualBudgetItemId}/total-amount", new SetTotalAmountRequest(-1m));
+        Assert.Equal(HttpStatusCode.BadRequest, negativeResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task DeleteAnnualBudgetItem_RemovesItFromSubsequentGet()
     {
         const int year = 2034;

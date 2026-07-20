@@ -65,7 +65,8 @@ current calendar month, top to bottom: an income section split into tithe-applic
 non-tithe-applicable income; a "מעשרות" (tithes) section showing four figures — the gross tithe
 target, this month's active fixed-donation standing orders (drillable into a table the user can
 add/edit/delete), the immediately preceding month's ad-hoc/small-charity donations (also drillable
-and editable), and the amount still to donate after fixed donations; a read-only table of annual
+and editable), and the amount still to donate (the protected net tithe due, after both fixed
+donations and the prior-month offset); a read-only table of annual
 budget items whose target month is the current month (money that needs to be withdrawn from the
 annual reserve to cover them); budgeted-vs-used expense category tables (fixed/standing-order and
 regular); a debt-repayments summary line; and finally an overall summary of total outflow and the
@@ -79,7 +80,7 @@ labeled sections rather than one opaque total (Constitution Principle V).
 **Independent Test**: Can be fully tested by recording a mix of tithe-applicable income,
 non-tithe-applicable income, donations, fixed expenses, and regular expenses for a month, then
 verifying the screen shows each in its own section with correct subtotals, a "remaining to give"
-figure equal to the month's net tithe due minus donations already given, and a bottom summary that
+figure equal to the month's protected net tithe due (`NetTitheDue`), and a bottom summary that
 reconciles total income against total outflow and savings.
 
 **Acceptance Scenarios**:
@@ -91,8 +92,8 @@ reconciles total income against total outflow and savings.
 2. **Given** a month's active fixed-donation standing orders and its computed gross tithe target,
    **When** the user views the "מעשרות" section, **Then** it shows the gross target, the sum of
    this month's active standing orders, the sum of the immediately preceding month's ad-hoc/
-   small-charity donations, and the amount still to donate after fixed donations (gross target
-   minus standing orders only, not also netting out the prior-month amount).
+   small-charity donations, and the amount still to donate — the protected net tithe due (gross
+   target minus both this month's standing orders and the prior-month offset).
 3. **Given** the user clicks the fixed-donations or prior-month-donations figure, **When** the
    drill-down opens, **Then** it shows an editable table (name/description, amount, and — for
    standing orders — an optional end month) that the user can add to, edit, or delete from, and
@@ -212,21 +213,25 @@ as next month's prior-month offset, editable there.
 - **FR-011**: The system MUST NOT allow the protected tithe-due figure (`NetTitheDue`) to be
   presented or exported without both deductions applied — a gross (pre-deduction) figure MUST
   never be treated as the final tithe due wherever the protected obligation is required (e.g., the
-  Monthly Dashboard).
+  Monthly Dashboard, and the Monthly Overview screen's "amount still to donate" figure — see
+  FR-015).
 - **FR-012**: The system MUST display the tithe breakdown as separate, traceable components (gross
-  target, this month's fixed-donations total, the prior month's ad-hoc-donations total, the
-  unprotected "still to donate after fixed donations" figure, and the protected net due) rather
-  than a single opaque number.
+  target, this month's fixed-donations total, the prior month's ad-hoc-donations total, and the
+  protected net due shown as the "amount still to donate") rather than a single opaque number.
+  `StillToDonateAfterFixed` (gross minus this month's fixed donations only, not the prior-month
+  offset) is retained internally as an intermediate figure but MUST NOT be displayed or exported as
+  the "amount still to donate."
 - **FR-013**: The system MUST expose the computed monthly net tithe-due figure for consumption by
   the Monthly Dashboard (feature 001), replacing the previous placeholder assumption that this
   figure is an external input.
 - **FR-014**: The system MUST display a monthly overview screen with an income section containing
   two separate tables — tithe-applicable income and non-tithe-applicable income — each with its
   own subtotal.
-- **FR-015**: The system MUST display, on the monthly overview screen, an unprotected "still to
-  donate after fixed donations" figure equal to the gross tithe target minus this month's active
-  fixed-donation standing orders only (deliberately not also netting out the prior-month amount),
-  floored at zero — distinct from the protected `NetTitheDue` (FR-008/FR-009/FR-011).
+- **FR-015**: The system MUST display, on the monthly overview screen, an "amount still to donate"
+  figure equal to the protected `NetTitheDue` — the gross tithe target minus both this month's
+  active fixed-donation standing orders and the prior-month offset (FR-008/FR-009/FR-011), floored
+  at zero. (Superseded 2026-07-19, per explicit user direction: this figure previously omitted the
+  prior-month offset by design — see FR-011/FR-012.)
 - **FR-016**: The system MUST display, on the monthly overview screen, a Fixed/Standing-Order
   Expenses table and a separate Regular Monthly Expenses table, each listing that month's named
   expense budget categories with the amount budgeted for the month, the amount used so far, and
