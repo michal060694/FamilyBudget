@@ -81,7 +81,7 @@ public class MonthlyOverviewEndpointsTests : IClassFixture<FamilyBudgetApiFactor
         Assert.Equal(900m, response.AnnualWithdrawals.Total);
 
         var totalIncome = 1000m + 300m;
-        var totalOutflow = 200m + 400m + 200m + 900m; // gross tithe target + fixed budgeted + regular budgeted + annual withdrawals (+0 debt)
+        var totalOutflow = 200m + 400m + 200m + 900m - 30m; // gross tithe target + fixed budgeted + regular budgeted + annual withdrawals (+0 debt) - prior-month carry-in offset
         Assert.Equal(totalOutflow, response.TotalOutflow);
         Assert.Equal(totalIncome, response.TotalIncome);
         Assert.Equal(totalIncome - totalOutflow, response.RemainingToSave);
@@ -174,6 +174,69 @@ public class MonthlyOverviewEndpointsTests : IClassFixture<FamilyBudgetApiFactor
         var client = _factory.CreateClient();
 
         var response = await client.GetAsync("/api/monthly-overview?year=2050&month=0");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetMonthlyOverview_DefaultsCashFieldsToZero_AndExpectedBalanceEqualsTotalOutflow()
+    {
+        const int year = 2054;
+        const int month = 8;
+
+        var client = _factory.CreateClient();
+        var response = await client.GetFromJsonAsync<MonthlyOverviewResponse>(
+            $"/api/monthly-overview?year={year}&month={month}", JsonOptions);
+
+        Assert.NotNull(response);
+        Assert.Equal(0m, response!.CashInAccount);
+        Assert.Equal(0m, response.MoneyNotYetInAccount);
+        Assert.Equal(response.TotalOutflow, response.ExpectedAccountBalance);
+    }
+
+    [Fact]
+    public async Task SetCashInAccountAndMoneyNotYetInAccount_PersistAndComputeExpectedBalance()
+    {
+        const int year = 2055;
+        const int month = 9;
+
+        var client = _factory.CreateClient();
+
+        var setCashResponse = await client.PutAsJsonAsync(
+            $"/api/monthly-overview/cash-in-account?year={year}&month={month}", new SetCashInAccountRequest(1200m));
+        Assert.Equal(HttpStatusCode.OK, setCashResponse.StatusCode);
+
+        var setPendingResponse = await client.PutAsJsonAsync(
+            $"/api/monthly-overview/money-not-yet-in-account?year={year}&month={month}", new SetMoneyNotYetInAccountRequest(300m));
+        Assert.Equal(HttpStatusCode.OK, setPendingResponse.StatusCode);
+
+        var response = await client.GetFromJsonAsync<MonthlyOverviewResponse>(
+            $"/api/monthly-overview?year={year}&month={month}", JsonOptions);
+
+        Assert.NotNull(response);
+        Assert.Equal(1200m, response!.CashInAccount);
+        Assert.Equal(300m, response.MoneyNotYetInAccount);
+        Assert.Equal(response.TotalOutflow - 300m, response.ExpectedAccountBalance);
+    }
+
+    [Fact]
+    public async Task SetCashInAccount_NegativeAmount_ReturnsBadRequest()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PutAsJsonAsync(
+            "/api/monthly-overview/cash-in-account?year=2050&month=3", new SetCashInAccountRequest(-1m));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SetMoneyNotYetInAccount_NegativeAmount_ReturnsBadRequest()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PutAsJsonAsync(
+            "/api/monthly-overview/money-not-yet-in-account?year=2050&month=3", new SetMoneyNotYetInAccountRequest(-1m));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }

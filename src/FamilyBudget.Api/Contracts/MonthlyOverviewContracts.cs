@@ -12,7 +12,10 @@ public record MonthlyOverviewResponse(
     decimal DebtRepaymentsSummary,
     decimal TotalOutflow,
     decimal TotalIncome,
-    decimal RemainingToSave);
+    decimal RemainingToSave,
+    decimal CashInAccount,
+    decimal MoneyNotYetInAccount,
+    decimal ExpectedAccountBalance);
 
 public record IncomeSection(IReadOnlyList<TransactionResponse> Lines, decimal Subtotal);
 
@@ -42,3 +45,7 @@ public record AnnualWithdrawalSection(IReadOnlyList<TransactionResponse> Lines, 
 public record TitheSettingResponse(decimal Rate);
 
 public record SetTitheRateRequest(decimal Rate);
+
+public record SetCashInAccountRequest(decimal Amount);
+
+public record SetMoneyNotYetInAccountRequest(decimal Amount);

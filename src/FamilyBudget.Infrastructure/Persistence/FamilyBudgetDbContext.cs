@@ -32,6 +32,8 @@ public class FamilyBudgetDbContext : DbContext
 
     public DbSet<MonthlyActionItem> MonthlyActionItems => Set<MonthlyActionItem>();
 
+    public DbSet<MonthlyCashSnapshot> MonthlyCashSnapshots => Set<MonthlyCashSnapshot>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AnnualBudgetItem>(builder =>
@@ -174,6 +176,16 @@ public class FamilyBudgetDbContext : DbContext
             builder.Property(i => i.ReminderSentAt);
 
             builder.HasIndex(i => new { i.Year, i.Month });
+        });
+
+        modelBuilder.Entity<MonthlyCashSnapshot>(builder =>
+        {
+            builder.ToTable("MonthlyCashSnapshots");
+            builder.HasKey(s => new { s.Year, s.Month });
+            builder.Property(s => s.Year).ValueGeneratedNever();
+            builder.Property(s => s.Month).ValueGeneratedNever();
+            builder.Property(s => s.CashInAccount).HasColumnType("decimal(18,2)").IsRequired();
+            builder.Property(s => s.MoneyNotYetInAccount).HasColumnType("decimal(18,2)").IsRequired();
         });
     }
 }

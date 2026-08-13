@@ -10,6 +10,7 @@ public class MonthlyOverviewQueryService
     private readonly IMonthlyExpenseBudgetItemRepository _monthlyExpenseBudgetItemRepository;
     private readonly IFixedDonationStandingOrderRepository _standingOrderRepository;
     private readonly IDebtRepository _debtRepository;
+    private readonly IMonthlyCashSnapshotRepository _cashSnapshotRepository;
     private readonly TitheEngine _titheEngine;
 
     public MonthlyOverviewQueryService(
@@ -17,12 +18,14 @@ public class MonthlyOverviewQueryService
         IMonthlyExpenseBudgetItemRepository monthlyExpenseBudgetItemRepository,
         IFixedDonationStandingOrderRepository standingOrderRepository,
         IDebtRepository debtRepository,
+        IMonthlyCashSnapshotRepository cashSnapshotRepository,
         TitheEngine titheEngine)
     {
         _transactionRepository = transactionRepository;
         _monthlyExpenseBudgetItemRepository = monthlyExpenseBudgetItemRepository;
         _standingOrderRepository = standingOrderRepository;
         _debtRepository = debtRepository;
+        _cashSnapshotRepository = cashSnapshotRepository;
         _titheEngine = titheEngine;
     }
 
@@ -73,10 +76,16 @@ public class MonthlyOverviewQueryService
             .Where(d => d.Direction == DebtDirection.Payable && d.Status == DebtStatus.Open)
             .Sum(d => d.RepaymentRate ?? 0m);
 
+        // Net out last month's ad-hoc small-charity giving (bullet ג, "קיזוז שהועבר מחודש קודם") —
+        // it already counts toward this month's tithe obligation (see NetTitheDue), so it shouldn't
+        // also inflate how much still needs to go out this month.
         var totalOutflow = obligation.GrossTitheTarget + fixedExpenseBudgetedTotal + regularExpenseBudgetedTotal +
-            annualWithdrawalsTotal + debtRepaymentsSummary;
+            annualWithdrawalsTotal + debtRepaymentsSummary - obligation.PriorMonthSmallCharityTotal;
         var totalIncome = obligation.TitheApplicableIncome + obligation.NonTitheApplicableIncome;
         var remainingToSave = totalIncome - totalOutflow;
+
+        var cashSnapshot = await _cashSnapshotRepository.GetAsync(year, month, cancellationToken);
+        var expectedAccountBalance = totalOutflow - cashSnapshot.MoneyNotYetInAccount;
 
         return new MonthlyOverview(
             year, month,
@@ -87,7 +96,8 @@ public class MonthlyOverviewQueryService
             fixedExpenseItems, fixedExpenseUsedTotal,
             regularExpenseItems, regularExpenseUsedTotal,
             annualWithdrawalItems, annualWithdrawalsTotal,
-            debtRepaymentsSummary, totalOutflow, totalIncome, remainingToSave);
+            debtRepaymentsSummary, totalOutflow, totalIncome, remainingToSave,
+            cashSnapshot.CashInAccount, cashSnapshot.MoneyNotYetInAccount, expectedAccountBalance);
     }
 }
 
@@ -108,4 +118,7 @@ public record MonthlyOverview(
     decimal DebtRepaymentsSummary,
     decimal TotalOutflow,
     decimal TotalIncome,
-    decimal RemainingToSave);
+    decimal RemainingToSave,
+    decimal CashInAccount,
+    decimal MoneyNotYetInAccount,
+    decimal ExpectedAccountBalance);

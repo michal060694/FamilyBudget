@@ -251,6 +251,36 @@
   dialog.modal h3 { font-size: 1rem; margin: 0 0 12px; }
   dialog.modal .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 
+  dialog.calculator-modal { width: min(320px, 92vw); }
+  .calc-display {
+    font-size: 1.6rem;
+    font-variant-numeric: tabular-nums;
+    text-align: left;
+    background: var(--page-plane);
+    border: 1px solid var(--baseline);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  button.calc-btn {
+    padding: 12px 0;
+    font-size: 1.05rem;
+    border: 1px solid var(--baseline);
+    background: transparent;
+    color: var(--text-primary);
+  }
+  button.calc-btn:hover { filter: brightness(0.95); transform: none; }
+  button.calc-btn-muted { color: var(--text-muted); }
+  button.calc-btn-op {
+    background: color-mix(in srgb, var(--series-1) 12%, transparent);
+    color: var(--series-1);
+    border-color: transparent;
+  }
+  button.calc-btn-equals { background: var(--series-1); color: #fff; border-color: transparent; }
+
   table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
   .annual-table { table-layout: fixed; }
   .annual-table .col-num { width: 100px; }
@@ -580,8 +610,46 @@
       <button class="tab-btn" data-tab="actions">פעולות לביצוע</button>
     </div>
     <button class="secondary" id="export-excel-btn" title="מייצא את תקציב השנה (מהטאב 'תקציב שנתי') והחודש (מהטאב 'סקירה חודשית') הנבחרים, יחד עם הקרנות והחובות">📥 ייצוא לאקסל</button>
+    <button class="secondary" id="open-calculator-modal" title="מחשבון">🧮 מחשבון</button>
   </div>
   <div id="export-error" class="error" hidden></div>
+
+  <dialog id="modal-calculator" class="modal calculator-modal">
+    <h3>מחשבון</h3>
+    <div class="calculator" dir="ltr">
+      <div class="calc-display" id="calc-display">0</div>
+      <div class="calc-grid">
+        <button type="button" class="calc-btn calc-btn-muted" data-calc-action="clear">C</button>
+        <button type="button" class="calc-btn calc-btn-muted" data-calc-action="backspace">⌫</button>
+        <button type="button" class="calc-btn calc-btn-muted" data-calc-action="percent">%</button>
+        <button type="button" class="calc-btn calc-btn-op" data-calc-op="/">÷</button>
+
+        <button type="button" class="calc-btn" data-calc-digit="7">7</button>
+        <button type="button" class="calc-btn" data-calc-digit="8">8</button>
+        <button type="button" class="calc-btn" data-calc-digit="9">9</button>
+        <button type="button" class="calc-btn calc-btn-op" data-calc-op="*">×</button>
+
+        <button type="button" class="calc-btn" data-calc-digit="4">4</button>
+        <button type="button" class="calc-btn" data-calc-digit="5">5</button>
+        <button type="button" class="calc-btn" data-calc-digit="6">6</button>
+        <button type="button" class="calc-btn calc-btn-op" data-calc-op="-">−</button>
+
+        <button type="button" class="calc-btn" data-calc-digit="1">1</button>
+        <button type="button" class="calc-btn" data-calc-digit="2">2</button>
+        <button type="button" class="calc-btn" data-calc-digit="3">3</button>
+        <button type="button" class="calc-btn calc-btn-op" data-calc-op="+">+</button>
+
+        <button type="button" class="calc-btn calc-btn-muted" data-calc-action="negate">±</button>
+        <button type="button" class="calc-btn" data-calc-digit="0">0</button>
+        <button type="button" class="calc-btn" data-calc-action="decimal">.</button>
+        <button type="button" class="calc-btn calc-btn-equals" data-calc-action="equals">=</button>
+      </div>
+    </div>
+    <p class="hint" style="margin: 10px 0 0;">אפשר גם להקיש עם המקלדת: ספרות, סימני חשבון (+, -, * או /), Enter לתוצאה, Backspace למחיקה, Esc לסגירה.</p>
+    <div class="modal-actions">
+      <button class="secondary" id="close-calculator-modal">סגור</button>
+    </div>
+  </dialog>
 
   <div id="tab-annual" class="tab-panel">
     <div class="controls">
@@ -789,6 +857,28 @@
         <div class="stat-tile">
           <div class="label">נשאר לחיסכון</div>
           <div class="value accent" id="ov-remaining-save">—</div>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-tile">
+          <div class="label">מזומן בחשבון</div>
+          <div class="value" id="ov-cash-in-account">—</div>
+          <div class="edit-row">
+            <input id="cash-in-account-input" type="text" />
+            <button id="save-cash-in-account" class="secondary">שמור</button>
+          </div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">כסף שעוד לא נכנס לחשבון</div>
+          <div class="value" id="ov-money-not-in-account">—</div>
+          <div class="edit-row">
+            <input id="money-not-in-account-input" type="text" />
+            <button id="save-money-not-in-account" class="secondary">שמור</button>
+          </div>
+        </div>
+        <div class="stat-tile">
+          <div class="label">כמה כסף צריך להיות בחשבון</div>
+          <div class="value accent" id="ov-expected-balance">—</div>
         </div>
       </div>
     </div>
@@ -1394,6 +1484,19 @@
       return ids.map(id => document.getElementById(id));
     }
 
+    // On every page load, default the year/month pickers to the current calendar
+    // month/year rather than whatever was last hardcoded in the markup.
+    function setCurrentPeriodDefaults() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1;
+      document.getElementById("year").value = year;
+      document.getElementById("ov-year").value = year;
+      document.getElementById("ov-month").value = month;
+      document.getElementById("actions-year").value = year;
+      document.getElementById("actions-month").value = month;
+    }
+
     function byQuery(...selectors) {
       return selectors.flatMap(sel => Array.from(document.querySelectorAll(sel)));
     }
@@ -1836,6 +1939,7 @@
       reload: refresh,
     });
 
+    setCurrentPeriodDefaults();
     refresh();
 
     // ---- Tabs ----
@@ -1860,6 +1964,126 @@
         }
       });
     });
+
+    // ---- Calculator (click or keyboard) ----
+
+    (function () {
+      const modal = document.getElementById("modal-calculator");
+      const display = document.getElementById("calc-display");
+      let current = "0";
+      let previous = null;
+      let operator = null;
+      // True right after clear/an operator/equals: the next digit typed should start a
+      // fresh number instead of appending to whatever is still on the display (otherwise
+      // "7", "+", "3" appends onto the "7" and computes 7+73 instead of 7+3).
+      let resetOnNextDigit = true;
+
+      function render() { display.textContent = current; }
+
+      function inputDigit(d) {
+        if (resetOnNextDigit) { current = d; resetOnNextDigit = false; }
+        else { current = current === "0" ? d : current + d; }
+        render();
+      }
+
+      function inputDecimal() {
+        if (resetOnNextDigit) { current = "0"; resetOnNextDigit = false; }
+        if (!current.includes(".")) { current += "."; render(); }
+      }
+
+      function clear() {
+        current = "0"; previous = null; operator = null; resetOnNextDigit = true;
+        render();
+      }
+
+      function backspace() {
+        if (resetOnNextDigit) return;
+        current = current.length <= 1 || (current.length === 2 && current[0] === "-") ? "0" : current.slice(0, -1);
+        render();
+      }
+
+      function negate() {
+        if (current !== "0") current = current[0] === "-" ? current.slice(1) : "-" + current;
+        render();
+      }
+
+      function percent() {
+        current = trimResult(parseFloat(current) / 100);
+        render();
+      }
+
+      function compute(a, b, op) {
+        switch (op) {
+          case "+": return a + b;
+          case "-": return a - b;
+          case "*": return a * b;
+          case "/": return b === 0 ? NaN : a / b;
+          default: return b;
+        }
+      }
+
+      function trimResult(n) {
+        if (Number.isNaN(n)) return "שגיאה";
+        let s = n.toFixed(10);
+        if (s.includes(".")) s = s.replace(/0+$/, "").replace(/\.$/, "");
+        return s;
+      }
+
+      function applyOperator(op) {
+        const value = parseFloat(current);
+        if (operator && previous !== null && !resetOnNextDigit) {
+          previous = compute(previous, value, operator);
+          current = trimResult(previous);
+          render();
+        } else {
+          previous = value;
+        }
+        operator = op;
+        resetOnNextDigit = true;
+      }
+
+      function equals() {
+        if (operator === null || previous === null || current === "שגיאה") return;
+        current = trimResult(compute(previous, parseFloat(current), operator));
+        previous = null;
+        operator = null;
+        resetOnNextDigit = true;
+        render();
+      }
+
+      modal.querySelectorAll("[data-calc-digit]").forEach(btn => {
+        btn.addEventListener("click", () => inputDigit(btn.dataset.calcDigit));
+      });
+      modal.querySelectorAll("[data-calc-op]").forEach(btn => {
+        btn.addEventListener("click", () => applyOperator(btn.dataset.calcOp));
+      });
+      modal.querySelector('[data-calc-action="clear"]').addEventListener("click", clear);
+      modal.querySelector('[data-calc-action="backspace"]').addEventListener("click", backspace);
+      modal.querySelector('[data-calc-action="percent"]').addEventListener("click", percent);
+      modal.querySelector('[data-calc-action="negate"]').addEventListener("click", negate);
+      modal.querySelector('[data-calc-action="decimal"]').addEventListener("click", inputDecimal);
+      modal.querySelector('[data-calc-action="equals"]').addEventListener("click", equals);
+
+      document.getElementById("open-calculator-modal").addEventListener("click", () => {
+        clear();
+        modal.showModal();
+      });
+      document.getElementById("close-calculator-modal").addEventListener("click", () => modal.close());
+
+      // Listens on document (not the dialog) and gates on modal.open, rather than relying on
+      // focus landing inside the dialog — showModal()'s auto-focus target isn't guaranteed
+      // to keep receiving key events in every browser, so a dialog-scoped listener can go dead.
+      document.addEventListener("keydown", (e) => {
+        if (!modal.open) return;
+        if (e.key >= "0" && e.key <= "9") { inputDigit(e.key); e.preventDefault(); }
+        else if (e.key === ".") { inputDecimal(); e.preventDefault(); }
+        else if (e.key === "+" || e.key === "-" || e.key === "*" || e.key === "/") { applyOperator(e.key); e.preventDefault(); }
+        else if (e.key === "Enter" || e.key === "=") { equals(); e.preventDefault(); }
+        else if (e.key === "Backspace") { backspace(); e.preventDefault(); }
+        else if (e.key === "Delete" || e.key === "c" || e.key === "C") { clear(); e.preventDefault(); }
+        else if (e.key === "%") { percent(); e.preventDefault(); }
+      });
+    })();
 
     // ---- Monthly Overview (Transactions & Tithe) ----
 
@@ -2687,6 +2911,12 @@
         document.getElementById("ov-total-outflow").textContent = fmtMoney(overview.totalOutflow);
         document.getElementById("ov-remaining-save").textContent = fmtMoney(overview.remainingToSave);
 
+        document.getElementById("ov-cash-in-account").textContent = fmtMoney(overview.cashInAccount);
+        document.getElementById("cash-in-account-input").value = overview.cashInAccount;
+        document.getElementById("ov-money-not-in-account").textContent = fmtMoney(overview.moneyNotYetInAccount);
+        document.getElementById("money-not-in-account-input").value = overview.moneyNotYetInAccount;
+        document.getElementById("ov-expected-balance").textContent = fmtMoney(overview.expectedAccountBalance);
+
         document.getElementById("ov-rate").textContent = `${Math.round(titheSetting.rate * 100)}%`;
         document.getElementById("rate-input").value = titheSetting.rate;
       } catch (err) {
@@ -2700,15 +2930,17 @@
       byQuery("#ov-income-tithe .amount-input", "#ov-income-exempt .amount-input"),
       'סה"כ הכנסות = סכום ההכנסות החייבות במעשר + סכום ההכנסות הפטורות ממעשר, לחודש זה');
     wireCalcTrigger(document.getElementById("ov-total-outflow"), () => [
-      ...byId("ov-gross-target", "ov-debt-summary"),
+      ...byId("ov-gross-target", "ov-debt-summary", "ov-carry-in"),
       ...byQuery("#ov-fixed-expenses .budgeted-input", ".annual-withdrawal-amount"),
       ...Array.from(document.querySelectorAll("#ov-regular-expenses tr"))
         .filter(tr => tr.querySelector(".include-checkbox")?.checked)
         .map(tr => tr.querySelector(".budgeted-input"))
         .filter(Boolean),
-    ], 'סה"כ יוצא = מעשרות לתרומה (יעד גולמי) + הוצאות קבועות מתוקצבות + הוצאות משתנות מתוקצבות (המסומנות לכלול) + משיכות מהקרן לחודש זה + החזרי חובות (קצב פירעון)');
+    ], 'סה"כ יוצא = מעשרות לתרומה (יעד גולמי) + הוצאות קבועות מתוקצבות + הוצאות משתנות מתוקצבות (המסומנות לכלול) + משיכות מהקרן לחודש זה + החזרי חובות (קצב פירעון) − קיזוז שהועבר מחודש קודם');
     wireCalcTrigger(document.getElementById("ov-remaining-save"), () => byId("ov-total-income", "ov-total-outflow"),
       'נשאר לחיסכון = סה"כ הכנסות − סה"כ יוצא');
+    wireCalcTrigger(document.getElementById("ov-expected-balance"), () => byId("ov-total-outflow", "ov-money-not-in-account"),
+      'כמה כסף צריך להיות בחשבון = סה"כ יוצא − כסף שעוד לא נכנס לחשבון');
     wireCalcTrigger(document.getElementById("ov-gross-target"), () =>
       [...byId("ov-rate"), ...byQuery("#ov-income-tithe .amount-input")],
       "מעשרות לתרומה (יעד גולמי) = הכנסה חייבת במעשר × שיעור המעשר");
@@ -2728,6 +2960,44 @@
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ rate }),
+        });
+        ovClearError();
+        await refreshOverview();
+      } catch (err) {
+        ovShowError(err.message);
+      }
+    }));
+
+    document.getElementById("save-cash-in-account").addEventListener("click", (e) => withPending(e.currentTarget, async () => {
+      const amount = parseFloat(document.getElementById("cash-in-account-input").value);
+      if (!(amount >= 0)) {
+        ovShowError("מזומן בחשבון חייב להיות מספר אי-שלילי.");
+        return;
+      }
+      try {
+        await fetchJson(`/api/monthly-overview/cash-in-account?year=${ovYear()}&month=${ovMonth()}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount }),
+        });
+        ovClearError();
+        await refreshOverview();
+      } catch (err) {
+        ovShowError(err.message);
+      }
+    }));
+
+    document.getElementById("save-money-not-in-account").addEventListener("click", (e) => withPending(e.currentTarget, async () => {
+      const amount = parseFloat(document.getElementById("money-not-in-account-input").value);
+      if (!(amount >= 0)) {
+        ovShowError("כסף שעוד לא נכנס לחשבון חייב להיות מספר אי-שלילי.");
+        return;
+      }
+      try {
+        await fetchJson(`/api/monthly-overview/money-not-yet-in-account?year=${ovYear()}&month=${ovMonth()}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount }),
         });
         ovClearError();
         await refreshOverview();

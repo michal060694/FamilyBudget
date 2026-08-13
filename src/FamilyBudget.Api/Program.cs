@@ -30,6 +30,7 @@ builder.Services.AddScoped<IFundEarmarkRepository, FundEarmarkRepository>();
 builder.Services.AddScoped<IDebtRepository, DebtRepository>();
 builder.Services.AddScoped<IMonthlyTemplateItemRepository, MonthlyTemplateItemRepository>();
 builder.Services.AddScoped<IMonthlyActionItemRepository, MonthlyActionItemRepository>();
+builder.Services.AddScoped<IMonthlyCashSnapshotRepository, MonthlyCashSnapshotRepository>();
 builder.Services.AddSingleton<CalendarYearCycle>();
 builder.Services.AddScoped<BudgetSmoothingEngine>();
 builder.Services.AddScoped<AnnualBudgetQueryService>();

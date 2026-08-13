@@ -12,6 +12,8 @@ public static class MonthlyOverviewEndpoints
         app.MapGet("/api/monthly-overview", GetMonthlyOverview);
         app.MapGet("/api/tithe-setting", GetTitheSetting);
         app.MapPut("/api/tithe-setting", SetTitheSetting);
+        app.MapPut("/api/monthly-overview/cash-in-account", SetCashInAccount);
+        app.MapPut("/api/monthly-overview/money-not-yet-in-account", SetMoneyNotYetInAccount);
     }
 
     private static TransactionResponse ToResponse(Transaction transaction) => new(
@@ -76,7 +78,10 @@ public static class MonthlyOverviewEndpoints
             overview.DebtRepaymentsSummary,
             overview.TotalOutflow,
             overview.TotalIncome,
-            overview.RemainingToSave));
+            overview.RemainingToSave,
+            overview.CashInAccount,
+            overview.MoneyNotYetInAccount,
+            overview.ExpectedAccountBalance));
     }
 
     private static async Task<IResult> GetTitheSetting(ITitheSettingRepository repository)
@@ -94,5 +99,29 @@ public static class MonthlyOverviewEndpoints
 
         await repository.SetRateAsync(request.Rate);
         return Results.Ok(new TitheSettingResponse(request.Rate));
+    }
+
+    private static async Task<IResult> SetCashInAccount(
+        int year, int month, SetCashInAccountRequest request, IMonthlyCashSnapshotRepository repository)
+    {
+        if (request.Amount < 0)
+        {
+            return Results.BadRequest("amount must be >= 0.");
+        }
+
+        await repository.SetCashInAccountAsync(year, month, request.Amount);
+        return Results.Ok(new { year, month, amount = request.Amount });
+    }
+
+    private static async Task<IResult> SetMoneyNotYetInAccount(
+        int year, int month, SetMoneyNotYetInAccountRequest request, IMonthlyCashSnapshotRepository repository)
+    {
+        if (request.Amount < 0)
+        {
+            return Results.BadRequest("amount must be >= 0.");
+        }
+
+        await repository.SetMoneyNotYetInAccountAsync(year, month, request.Amount);
+        return Results.Ok(new { year, month, amount = request.Amount });
     }
 }
