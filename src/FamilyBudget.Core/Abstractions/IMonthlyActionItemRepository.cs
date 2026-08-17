@@ -11,6 +11,9 @@ public interface IMonthlyActionItemRepository
     /// <summary>Items with a deadline strictly before <paramref name="asOfDate"/>, not yet completed, and not yet reminded about — no year/month restriction, since a leftover item from an earlier month must still surface.</summary>
     Task<IReadOnlyList<MonthlyActionItem>> GetOverdueUncompletedWithoutReminderAsync(DateOnly asOfDate, CancellationToken cancellationToken = default);
 
+    /// <summary>All completed items across every year/month, most recently completed first — powers the history view.</summary>
+    Task<IReadOnlyList<MonthlyActionItem>> GetCompletedAsync(CancellationToken cancellationToken = default);
+
     Task AddAsync(MonthlyActionItem item, CancellationToken cancellationToken = default);
 
     /// <summary>Returns false if no item with the given id exists.</summary>

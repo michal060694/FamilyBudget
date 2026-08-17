@@ -173,6 +173,7 @@ public class FamilyBudgetDbContext : DbContext
             builder.Property(i => i.Amount).HasColumnType("decimal(18,2)");
             builder.Property(i => i.DeadlineDate);
             builder.Property(i => i.IsCompleted).IsRequired();
+            builder.Property(i => i.CompletedDate);
             builder.Property(i => i.ReminderSentAt);
 
             builder.HasIndex(i => new { i.Year, i.Month });

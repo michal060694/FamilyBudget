@@ -10,6 +10,7 @@ public static class MonthlyActionItemEndpoints
     public static void MapMonthlyActionItemEndpoints(this WebApplication app)
     {
         app.MapGet("/api/monthly-action-items", GetMonthlyActionItems);
+        app.MapGet("/api/monthly-action-items/history", GetMonthlyActionItemHistory);
         app.MapPost("/api/monthly-action-items", CreateMonthlyActionItem);
         app.MapPut("/api/monthly-action-items/{id:guid}", UpdateMonthlyActionItem);
         app.MapPatch("/api/monthly-action-items/{id:guid}/complete", SetComplete);
@@ -22,7 +23,7 @@ public static class MonthlyActionItemEndpoints
         var today = DateOnly.FromDateTime(DateTime.Now);
         var isOverdue = item.DeadlineDate is { } deadline && deadline < today && !item.IsCompleted;
 
-        return new MonthlyActionItemView(item.Id, item.Year, item.Month, item.Description, item.Amount, item.DeadlineDate, item.IsCompleted, isOverdue);
+        return new MonthlyActionItemView(item.Id, item.Year, item.Month, item.Description, item.Amount, item.DeadlineDate, item.IsCompleted, isOverdue, item.CompletedDate);
     }
 
     private static async Task<IResult> GetMonthlyActionItems(int year, int month, IMonthlyActionItemRepository repository)
@@ -34,6 +35,12 @@ public static class MonthlyActionItemEndpoints
 
         var items = await repository.GetByMonthAsync(year, month);
         return Results.Ok(new MonthlyActionItemListResponse(year, month, items.Select(ToView).ToList()));
+    }
+
+    private static async Task<IResult> GetMonthlyActionItemHistory(IMonthlyActionItemRepository repository)
+    {
+        var items = await repository.GetCompletedAsync();
+        return Results.Ok(new MonthlyActionItemHistoryResponse(items.Select(ToView).ToList()));
     }
 
     private static async Task<IResult> CreateMonthlyActionItem(
@@ -86,7 +93,8 @@ public static class MonthlyActionItemEndpoints
             return Results.NotFound();
         }
 
-        item.SetCompleted(request.IsCompleted);
+        var completedDate = request.IsCompleted ? DateOnly.FromDateTime(DateTime.Now) : (DateOnly?)null;
+        item.SetCompleted(request.IsCompleted, completedDate);
         await repository.SaveChangesAsync();
 
         return Results.Ok(ToView(item));

@@ -1170,9 +1170,27 @@
         <tfoot>
           <tr class="totals-row"><td></td><td>סה"כ</td><td class="num" id="action-items-body-total">—</td><td></td><td></td></tr>
           <tr><td colspan="5"><button class="icon" id="add-action-item-toggle">+ הוסף פעולה</button></td></tr>
+          <tr><td colspan="5"><button class="secondary" id="open-actions-history-btn">הצג היסטוריה</button></td></tr>
         </tfoot>
       </table>
     </div>
+
+    <dialog id="modal-actions-history" class="modal" style="width:min(640px,92vw);">
+      <h3>היסטוריית פעולות שבוצעו</h3>
+      <p class="hint" style="margin: 0 0 12px;">כל הפעולות שסומנו כבוצעו, ממוינות לפי תאריך האישור שלהן (מהחדש לישן).</p>
+      <div id="actions-history-error" class="error" hidden></div>
+      <div class="card" style="max-height: 60vh; overflow: auto;">
+        <table>
+          <thead>
+            <tr><th>תיאור</th><th class="num">סכום</th><th>דד-ליין</th><th>תאריך אישור</th></tr>
+          </thead>
+          <tbody id="actions-history-body"></tbody>
+        </table>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary" id="close-actions-history-modal">סגור</button>
+      </div>
+    </dialog>
   </div>
 
   <script>
@@ -3965,6 +3983,20 @@
       }
     }
 
+    async function completeActionItem(item) {
+      try {
+        await fetchJson(`/api/monthly-action-items/${item.id}/complete`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isCompleted: true }),
+        });
+        actionsClearError();
+        await refreshActionItems();
+      } catch (err) {
+        actionsShowError(err.message);
+      }
+    }
+
     function renderActionItemRows(tbody, items) {
       tbody.innerHTML = "";
       setTotalText(`${tbody.id}-total`, sumBy(items, i => i.amount));
@@ -4003,11 +4035,11 @@
         dateInput.addEventListener("change", () => guardedSave(dateInput, () =>
           saveActionItemPatch(item, { deadlineDate: dateInput.value || null })));
 
-        // Checking a task off removes it from the list entirely (there's no "undo" — once done, it's
-        // done) rather than leaving a struck-through completed row behind.
+        // Checking a task off marks it completed (with today's date) and removes it from this active
+        // list — it isn't deleted, so it still shows up later in the "היסטוריה" view.
         completedCheckbox.addEventListener("change", () => {
           if (completedCheckbox.checked) {
-            guardedSave(completedCheckbox, () => deleteActionItem(item));
+            guardedSave(completedCheckbox, () => completeActionItem(item));
           }
         });
 
@@ -4019,11 +4051,54 @@
       actionsClearError();
       try {
         const data = await fetchJson(`/api/monthly-action-items?year=${actionsYear()}&month=${actionsMonth()}`);
-        renderActionItemRows(document.getElementById("action-items-body"), data.items);
+        renderActionItemRows(document.getElementById("action-items-body"), data.items.filter(i => !i.isCompleted));
       } catch (err) {
         actionsShowError(err.message);
       }
     }
+
+    function formatHistoryDate(isoDate) {
+      if (!isoDate) return "—";
+      const [y, m, d] = isoDate.split("-");
+      return `${d}/${m}/${y}`;
+    }
+
+    function renderActionHistoryRows(tbody, items) {
+      tbody.innerHTML = "";
+      if (!items || items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color: var(--text-muted); font-style: italic;">אין עדיין פעולות שבוצעו.</td></tr>`;
+        return;
+      }
+      const sorted = [...items].sort((a, b) => (b.completedDate ?? "").localeCompare(a.completedDate ?? ""));
+      for (const item of sorted) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${escapeHtml(item.description)}</td>
+          <td class="num">${item.amount != null ? fmtMoney(item.amount) : "—"}</td>
+          <td>${formatHistoryDate(item.deadlineDate)}</td>
+          <td>${formatHistoryDate(item.completedDate)}</td>
+        `;
+        tbody.appendChild(row);
+      }
+    }
+
+    async function openActionsHistory() {
+      const errorEl = document.getElementById("actions-history-error");
+      errorEl.hidden = true;
+      try {
+        const data = await fetchJson("/api/monthly-action-items/history");
+        renderActionHistoryRows(document.getElementById("actions-history-body"), data.items);
+        document.getElementById("modal-actions-history").showModal();
+      } catch (err) {
+        errorEl.textContent = "שגיאה: " + err.message;
+        errorEl.hidden = false;
+      }
+    }
+
+    document.getElementById("open-actions-history-btn").addEventListener("click", openActionsHistory);
+    document.getElementById("close-actions-history-modal").addEventListener("click", () => {
+      document.getElementById("modal-actions-history").close();
+    });
 
     function toggleActionItemAddRow() {
       const tbody = document.getElementById("action-items-body");

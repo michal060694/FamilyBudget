@@ -77,6 +77,27 @@ public class MonthlyActionItemTests
     }
 
     [Fact]
+    public void SetCompleted_True_StoresCompletedDate()
+    {
+        var item = new MonthlyActionItem(Guid.NewGuid(), 2026, 7, "משהו");
+
+        item.SetCompleted(true, new DateOnly(2026, 7, 12));
+
+        Assert.Equal(new DateOnly(2026, 7, 12), item.CompletedDate);
+    }
+
+    [Fact]
+    public void SetCompleted_False_ClearsCompletedDate()
+    {
+        var item = new MonthlyActionItem(Guid.NewGuid(), 2026, 7, "משהו");
+        item.SetCompleted(true, new DateOnly(2026, 7, 12));
+
+        item.SetCompleted(false);
+
+        Assert.Null(item.CompletedDate);
+    }
+
+    [Fact]
     public void MarkReminderSent_SetsReminderSentAt()
     {
         var item = new MonthlyActionItem(Guid.NewGuid(), 2026, 7, "משהו", deadlineDate: new DateOnly(2026, 7, 1));

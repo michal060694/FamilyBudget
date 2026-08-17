@@ -15,6 +15,7 @@ public class MonthlyActionItem
     public decimal? Amount { get; private set; }
     public DateOnly? DeadlineDate { get; private set; }
     public bool IsCompleted { get; private set; }
+    public DateOnly? CompletedDate { get; private set; }
     public DateOnly? ReminderSentAt { get; private set; }
 
     private MonthlyActionItem()
@@ -35,6 +36,7 @@ public class MonthlyActionItem
         Amount = amount;
         DeadlineDate = deadlineDate;
         IsCompleted = false;
+        CompletedDate = null;
         ReminderSentAt = null;
     }
 
@@ -55,9 +57,15 @@ public class MonthlyActionItem
         DeadlineDate = deadlineDate;
     }
 
-    public void SetCompleted(bool isCompleted)
+    /// <summary>
+    /// <paramref name="completedDate"/> is the "approval"/completion date shown in the history view;
+    /// it is only kept while <paramref name="isCompleted"/> is true, and cleared when an item is
+    /// reopened.
+    /// </summary>
+    public void SetCompleted(bool isCompleted, DateOnly? completedDate = null)
     {
         IsCompleted = isCompleted;
+        CompletedDate = isCompleted ? completedDate : null;
     }
 
     public void MarkReminderSent(DateOnly asOfDate)

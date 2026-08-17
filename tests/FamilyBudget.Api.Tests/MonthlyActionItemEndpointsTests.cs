@@ -108,6 +108,41 @@ public class MonthlyActionItemEndpointsTests : IClassFixture<FamilyBudgetApiFact
         Assert.Equal(HttpStatusCode.OK, completeResponse.StatusCode);
         var completed = await completeResponse.Content.ReadFromJsonAsync<MonthlyActionItemView>(JsonOptions);
         Assert.True(completed!.IsCompleted);
+        Assert.NotNull(completed.CompletedDate);
+    }
+
+    [Fact]
+    public async Task GetActionItemHistory_CompletedItem_AppearsSortedByCompletedDateDescending()
+    {
+        var client = _factory.CreateClient();
+        var marker = Guid.NewGuid().ToString("N")[..8];
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/monthly-action-items", new CreateMonthlyActionItemRequest(2071, 8, $"היסטוריה {marker}"));
+        var created = await createResponse.Content.ReadFromJsonAsync<MonthlyActionItemView>(JsonOptions);
+
+        await client.PatchAsJsonAsync(
+            $"/api/monthly-action-items/{created!.Id}/complete", new SetMonthlyActionItemCompleteRequest(true));
+
+        var history = await client.GetFromJsonAsync<MonthlyActionItemHistoryResponse>(
+            "/api/monthly-action-items/history", JsonOptions);
+
+        var historyItem = Assert.Single(history!.Items, i => i.Id == created.Id);
+        Assert.True(historyItem.IsCompleted);
+        Assert.NotNull(historyItem.CompletedDate);
+    }
+
+    [Fact]
+    public async Task GetActionItemHistory_IncompleteItem_IsNotIncluded()
+    {
+        var client = _factory.CreateClient();
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/monthly-action-items", new CreateMonthlyActionItemRequest(2071, 9, "עוד לא בוצע"));
+        var created = await createResponse.Content.ReadFromJsonAsync<MonthlyActionItemView>(JsonOptions);
+
+        var history = await client.GetFromJsonAsync<MonthlyActionItemHistoryResponse>(
+            "/api/monthly-action-items/history", JsonOptions);
+
+        Assert.DoesNotContain(history!.Items, i => i.Id == created!.Id);
     }
 
     [Fact]

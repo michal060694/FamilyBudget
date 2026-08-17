@@ -37,6 +37,14 @@ public class MonthlyActionItemRepository : IMonthlyActionItemRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<MonthlyActionItem>> GetCompletedAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.MonthlyActionItems
+            .Where(i => i.IsCompleted)
+            .OrderByDescending(i => i.CompletedDate)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(MonthlyActionItem item, CancellationToken cancellationToken = default)
     {
         _dbContext.MonthlyActionItems.Add(item);
