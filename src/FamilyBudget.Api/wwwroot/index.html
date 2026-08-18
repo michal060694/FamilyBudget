@@ -1739,9 +1739,9 @@
         });
       });
 
-      setTotalText("monthly-total-amount", sumBy(items, i => i.totalAmount));
-      setTotalText("monthly-total-used", sumBy(items, i => i.amountUsed));
-      setTotalText("monthly-total-remaining", sumBy(items, i => i.totalAmount - i.amountUsed));
+      setTotalText("monthly-total-amount", sumBy(itemsWithMonth, i => i.totalAmount));
+      setTotalText("monthly-total-used", sumBy(itemsWithMonth, i => i.amountUsed));
+      setTotalText("monthly-total-remaining", sumBy(itemsWithMonth, i => i.totalAmount - i.amountUsed));
     }
 
     function toggleAddForm(tbody, month, anchorBtn) {
