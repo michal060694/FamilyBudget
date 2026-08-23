@@ -10,7 +10,8 @@ public record TransactionResponse(
     TransactionType Type,
     PaymentMethod PaymentMethod,
     bool? IsTitheApplicable,
-    string? Description);
+    string? Description,
+    bool TransferredToAnnual);
 
 public record TransactionListResponse(int Year, int Month, IReadOnlyList<TransactionResponse> Transactions);
 
@@ -21,4 +22,5 @@ public record CreateTransactionRequest(
     PaymentMethod PaymentMethod,
     bool? IsTitheApplicable,
     string? Description,
-    string? AmountFormula = null);
+    string? AmountFormula = null,
+    bool TransferredToAnnual = false);

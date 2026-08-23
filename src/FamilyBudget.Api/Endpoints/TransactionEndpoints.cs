@@ -22,7 +22,8 @@ public static class TransactionEndpoints
         transaction.Type,
         transaction.PaymentMethod,
         transaction.IsTitheApplicable,
-        transaction.Description);
+        transaction.Description,
+        transaction.TransferredToAnnual);
 
     private static string? ValidateRequest(CreateTransactionRequest request)
     {
@@ -60,7 +61,8 @@ public static class TransactionEndpoints
             request.PaymentMethod,
             request.IsTitheApplicable,
             request.Description,
-            request.AmountFormula);
+            request.AmountFormula,
+            request.TransferredToAnnual);
 
         await repository.AddAsync(transaction);
 
@@ -100,7 +102,7 @@ public static class TransactionEndpoints
 
         transaction.Update(
             request.Date, request.Amount, request.Type, request.PaymentMethod,
-            request.IsTitheApplicable, request.Description, request.AmountFormula);
+            request.IsTitheApplicable, request.Description, request.AmountFormula, request.TransferredToAnnual);
         await repository.SaveChangesAsync();
 
         return Results.Ok(ToResponse(transaction));

@@ -24,7 +24,8 @@ public static class MonthlyOverviewEndpoints
         transaction.Type,
         transaction.PaymentMethod,
         transaction.IsTitheApplicable,
-        transaction.Description);
+        transaction.Description,
+        transaction.TransferredToAnnual);
 
     private static MonthlyExpenseBudgetItemView ToView(MonthlyExpenseBudgetItem item) => new(
         item.Id,

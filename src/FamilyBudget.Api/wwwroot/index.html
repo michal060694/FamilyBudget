@@ -1007,11 +1007,11 @@
       <summary>משיכות מהקופה השנתית <span class="chevron">▾</span></summary>
       <p class="hint" style="margin: 0 0 12px;">רשמי כאן כל סכום שמשכת מהקופה השנתית החודש, כדי לעקוב אחרי הסה"כ.</p>
       <table>
-        <thead><tr><th>תאריך</th><th>תיאור</th><th class="num">סכום</th><th></th></tr></thead>
+        <thead><tr><th>תאריך</th><th>תיאור</th><th class="num">סכום</th><th title='האם הסכום כבר הועבר לטאב "תקציב שנתי"'>הועבר לשנתי?</th><th></th></tr></thead>
         <tbody id="ov-annual-withdrawals"></tbody>
         <tfoot>
-          <tr class="totals-row"><td colspan="2">סה"כ</td><td class="num" id="ov-annual-withdrawals-total">—</td><td></td></tr>
-          <tr><td colspan="4"><button class="icon" id="add-annual-withdrawal">+ הוסף משיכה</button></td></tr>
+          <tr class="totals-row"><td colspan="2">סה"כ</td><td class="num" id="ov-annual-withdrawals-total">—</td><td></td><td></td></tr>
+          <tr><td colspan="5"><button class="icon" id="add-annual-withdrawal">+ הוסף משיכה</button></td></tr>
         </tfoot>
       </table>
     </details>
@@ -2316,7 +2316,7 @@
       });
     }
 
-    function renderTransactionRows(tbodyId, lines, colCount, onSave, onDelete, extraCellHtml, enableDrag) {
+    function renderTransactionRows(tbodyId, lines, colCount, onSave, onDelete, extraCellHtml, enableDrag, checkboxColumn) {
       const tbody = document.getElementById(tbodyId);
       tbody.innerHTML = "";
       setTotalText(`${tbodyId}-total`, sumBy(lines, l => l.amount));
@@ -2333,6 +2333,7 @@
           <td><input class="desc-input" type="text" value="${escapeHtml(line.description ?? "")}" /></td>
           ${extraCellHtml ? extraCellHtml(line) : ""}
           <td class="num"><input class="amount-input usage-input" type="text" /></td>
+          ${checkboxColumn ? `<td style="text-align:center;"><input type="checkbox" class="checkbox-column" ${line[checkboxColumn.field] ? "checked" : ""} title="${escapeHtml(checkboxColumn.title)}" /></td>` : ""}
           <td><button class="delete-row" title="מחק" aria-label="מחק תנועה מ-${escapeHtml(line.date)}">✕</button></td>
         `;
         tbody.appendChild(row);
@@ -2354,6 +2355,13 @@
         });
         descInput.addEventListener("keydown", (e) => { if (e.key === "Enter") descInput.blur(); });
 
+        if (checkboxColumn) {
+          const checkbox = row.querySelector(".checkbox-column");
+          checkbox.addEventListener("change", () => {
+            guardedSave(checkbox, () => onSave(line, { [checkboxColumn.field]: checkbox.checked }));
+          });
+        }
+
         attachConfirmDelete(row.querySelector(".delete-row"), () => onDelete(line));
       }
     }
@@ -2371,6 +2379,7 @@
             isTitheApplicable: line.isTitheApplicable,
             description: line.description,
             amountFormula: line.amountFormula,
+            transferredToAnnual: line.transferredToAnnual,
             ...patch,
           }),
         });
@@ -2852,7 +2861,7 @@
 
     function toggleNewAnnualWithdrawalRow() {
       const tbody = document.getElementById("ov-annual-withdrawals");
-      const row = toggleAddRow(tbody, 4, `
+      const row = toggleAddRow(tbody, 5, `
         <input type="date" class="new-date" value="${dateInputValue()}" />
         <input type="text" class="new-desc" placeholder="תיאור" />
         <input type="text" class="new-amount" placeholder="סכום (או נוסחה)" />
@@ -2917,7 +2926,8 @@
         renderFixedExpenseRows("ov-fixed-expenses", overview.fixedExpenses.items, saveBudgetItemPatch, deleteBudgetItem);
         renderRegularExpenseRows("ov-regular-expenses", overview.regularExpenses.items, saveBudgetItemPatch, deleteBudgetItem);
 
-        renderTransactionRows("ov-annual-withdrawals", overview.annualWithdrawals.lines, 4, saveTransactionPatch, deleteTransaction);
+        renderTransactionRows("ov-annual-withdrawals", overview.annualWithdrawals.lines, 5, saveTransactionPatch, deleteTransaction, null, false,
+          { field: "transferredToAnnual", title: 'האם הסכום כבר הועבר לטאב "תקציב שנתי"' });
 
         document.getElementById("ov-gross-target").textContent = fmtMoney(overview.titheObligation.grossTitheTarget);
         document.getElementById("ov-fixed-donations").textContent = fmtMoney(overview.titheObligation.fixedDonationsThisMonth.total);

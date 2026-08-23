@@ -54,6 +54,13 @@ public class Transaction
 
     public string? Description { get; private set; }
 
+    /// <summary>
+    /// User-tracked flag for whether this transaction's amount has already been carried over into the
+    /// Annual Budget tab's item usage. Purely a manual bookkeeping aid (relevant mainly for
+    /// AnnualReserveWithdrawal rows) — not read by any calculation.
+    /// </summary>
+    public bool TransferredToAnnual { get; private set; }
+
     private Transaction()
     {
     }
@@ -66,7 +73,8 @@ public class Transaction
         PaymentMethod paymentMethod,
         bool? isTitheApplicable,
         string? description = null,
-        string? amountFormula = null)
+        string? amountFormula = null,
+        bool transferredToAnnual = false)
     {
         Validate(amount, type, isTitheApplicable);
 
@@ -78,6 +86,7 @@ public class Transaction
         PaymentMethod = paymentMethod;
         IsTitheApplicable = isTitheApplicable;
         Description = description;
+        TransferredToAnnual = transferredToAnnual;
     }
 
     public void Update(
@@ -87,7 +96,8 @@ public class Transaction
         PaymentMethod paymentMethod,
         bool? isTitheApplicable,
         string? description,
-        string? amountFormula = null)
+        string? amountFormula = null,
+        bool transferredToAnnual = false)
     {
         Validate(amount, type, isTitheApplicable);
 
@@ -98,6 +108,7 @@ public class Transaction
         PaymentMethod = paymentMethod;
         IsTitheApplicable = isTitheApplicable;
         Description = description;
+        TransferredToAnnual = transferredToAnnual;
     }
 
     private static void Validate(decimal amount, TransactionType type, bool? isTitheApplicable)
