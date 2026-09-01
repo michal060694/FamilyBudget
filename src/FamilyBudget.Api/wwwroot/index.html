@@ -1195,6 +1195,7 @@
 
   <script>
     const monthNames = ["", "תשרי", "חשוון", "כסלו", "טבת", "שבט", "אדר", "ניסן", "אייר", "סיוון", "תמוז", "אב", "אלול"];
+    const expandedMonths = new Set();
 
     function fmtMoney(n) {
       return new Intl.NumberFormat("he-IL", { maximumFractionDigits: 0 }).format(n) + " ₪";
@@ -1685,13 +1686,15 @@
         const monthItems = itemsWithMonth.filter(i => i.targetMonth === month);
         const hasItems = monthItems.length > 0;
 
+        const isExpanded = expandedMonths.has(month);
+
         const headerRow = document.createElement("tr");
         headerRow.className = "month-header";
         headerRow.dataset.month = month;
         headerRow.innerHTML = `
           <td colspan="5">
             <div class="month-name">
-              <button class="month-toggle" data-month="${month}" aria-expanded="false">
+              <button class="month-toggle" data-month="${month}" aria-expanded="${isExpanded}">
                 <span class="chevron">▾</span> ${monthNames[month]}
                 ${hasItems ? `<span class="hint">(${monthItems.length})</span>` : ""}
               </button>
@@ -1706,14 +1709,14 @@
           const hintRow = document.createElement("tr");
           hintRow.className = "empty-hint";
           hintRow.innerHTML = `<td colspan="5">אין הוצאות מוגדרות לחודש זה עדיין.</td>`;
-          hintRow.hidden = true;
+          hintRow.hidden = !isExpanded;
           tbody.appendChild(hintRow);
           contentRows.push(hintRow);
         } else {
           for (const item of monthItems) {
             const row = document.createElement("tr");
             row.innerHTML = itemRowHtml(item);
-            row.hidden = true;
+            row.hidden = !isExpanded;
             tbody.appendChild(row);
             attachItemRowHandlers(row, item);
             contentRows.push(row);
@@ -1725,6 +1728,11 @@
           const expanded = btn.getAttribute("aria-expanded") === "true";
           btn.setAttribute("aria-expanded", String(!expanded));
           contentRows.forEach(r => { r.hidden = expanded; });
+          if (expanded) {
+            expandedMonths.delete(month);
+          } else {
+            expandedMonths.add(month);
+          }
         });
       }
 
