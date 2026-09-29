@@ -17,7 +17,12 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddDbContext<FamilyBudgetDbContext>(options =>
-    options.UseNpgsql(NormalizeConnectionString(builder.Configuration.GetConnectionString("FamilyBudget"))));
+    options.UseNpgsql(
+        NormalizeConnectionString(builder.Configuration.GetConnectionString("FamilyBudget")),
+        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorCodesToAdd: null)));
 
 builder.Services.AddScoped<IAnnualBudgetItemRepository, AnnualBudgetItemRepository>();
 builder.Services.AddScoped<IAnnualReserveRepository, AnnualReserveRepository>();
@@ -31,6 +36,7 @@ builder.Services.AddScoped<IDebtRepository, DebtRepository>();
 builder.Services.AddScoped<IMonthlyTemplateItemRepository, MonthlyTemplateItemRepository>();
 builder.Services.AddScoped<IMonthlyActionItemRepository, MonthlyActionItemRepository>();
 builder.Services.AddScoped<IMonthlyCashSnapshotRepository, MonthlyCashSnapshotRepository>();
+builder.Services.AddScoped<IMonthEndItemRepository, MonthEndItemRepository>();
 builder.Services.AddSingleton<CalendarYearCycle>();
 builder.Services.AddScoped<BudgetSmoothingEngine>();
 builder.Services.AddScoped<AnnualBudgetQueryService>();
@@ -121,6 +127,7 @@ app.MapMonthlyTemplateEndpoints();
 app.MapExportEndpoints();
 app.MapImportEndpoints();
 app.MapMonthlyActionItemEndpoints();
+app.MapMonthEndEndpoints();
 
 app.Run();
 

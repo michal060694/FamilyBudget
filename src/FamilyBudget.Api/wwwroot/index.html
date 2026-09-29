@@ -145,6 +145,27 @@
     outline: 2px solid var(--series-1);
     outline-offset: 2px;
   }
+  details.month-end-toggle > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 14px 20px;
+    border-radius: 10px;
+    background: var(--series-1);
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+  }
+  details.month-end-toggle > summary::-webkit-details-marker { display: none; }
+  details.month-end-toggle:not([open]) > summary { margin-bottom: 0; }
+  details.month-end-toggle > summary:focus-visible {
+    outline: 2px solid var(--series-1);
+    outline-offset: 2px;
+  }
   .chevron { display: inline-block; font-weight: 400; transition: transform 0.15s ease-out; }
   details[open] > summary .chevron { transform: rotate(180deg); }
   @media (prefers-reduced-motion: reduce) {
@@ -636,6 +657,10 @@
   .tab-btn.active:hover { filter: brightness(0.95); }
   .tab-panel[hidden] { display: none; }
 
+  .month-end-result { margin-top: 16px; }
+  .month-end-result.covered .value { color: var(--status-good); }
+  .month-end-result.shortfall #month-end-gap { color: var(--status-critical); }
+
   .overview-columns { display: flex; gap: 16px; flex-wrap: wrap; }
   .overview-columns > div,
   .overview-columns > .card { flex: 1; min-width: 280px; }
@@ -860,6 +885,7 @@
         </table>
       </details>
     </div>
+
   </div>
 
   <div id="tab-overview" class="tab-panel" hidden>
@@ -907,8 +933,8 @@
       </div>
     </details>
 
-    <div class="card">
-      <h2>סיכום חודשי</h2>
+    <details class="card" open>
+      <summary>סיכום חודשי <span class="chevron">▾</span></summary>
       <div class="stat-row">
         <div class="stat-tile">
           <div class="label">סה"כ הכנסות</div>
@@ -949,7 +975,7 @@
           <div class="value accent" id="ov-expected-balance">—</div>
         </div>
       </div>
-    </div>
+    </details>
 
     <details class="card card-sage">
       <summary>מעשרות <span class="chevron">▾</span></summary>
@@ -1118,6 +1144,54 @@
         </table>
       </details>
     </div>
+
+    <details class="month-end-toggle" open>
+      <summary>סוף חודש <span class="chevron">▾</span></summary>
+      <div id="month-end-error" class="error" hidden></div>
+      <div class="overview-columns">
+        <div class="card card-sage">
+          <h2>כסף שיש לנו</h2>
+          <table>
+            <thead><tr><th>מקור</th><th class="num">סכום</th><th></th></tr></thead>
+            <tbody id="month-end-assets"></tbody>
+            <tfoot>
+              <tr class="totals-row"><td>סה"כ</td><td class="num" id="month-end-assets-total">—</td><td></td></tr>
+              <tr><td colspan="3"><button class="icon" id="month-end-add-asset">+ הוסף יתרה</button></td></tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="card card-berry">
+          <h2>כסף שעתיד לצאת</h2>
+          <table>
+            <thead><tr><th>חיוב / התחייבות</th><th class="num">סכום צפוי</th><th></th></tr></thead>
+            <tbody id="month-end-liabilities"></tbody>
+            <tfoot>
+              <tr class="totals-row"><td>סה"כ</td><td class="num" id="month-end-liabilities-total">—</td><td></td></tr>
+              <tr><td colspan="3"><button class="icon" id="month-end-add-liability">+ הוסף התחייבות</button></td></tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <div class="card month-end-result" id="month-end-result" aria-live="polite">
+        <h2>בדיקת כיסוי</h2>
+        <div class="stat-row">
+          <div class="stat-tile">
+            <div class="label">יש לנו</div>
+            <div class="value" id="month-end-summary-assets">—</div>
+          </div>
+          <div class="stat-tile">
+            <div class="label">צפוי לצאת</div>
+            <div class="value" id="month-end-summary-liabilities">—</div>
+          </div>
+          <div class="stat-tile">
+            <div class="label" id="month-end-gap-label">יתרה לאחר כיסוי</div>
+            <div class="value accent" id="month-end-gap">—</div>
+            <div class="hint" id="month-end-status"></div>
+          </div>
+        </div>
+      </div>
+    </details>
   </div>
 
   <div id="tab-funds" class="tab-panel" hidden>
@@ -3237,6 +3311,7 @@
 
         document.getElementById("ov-rate").textContent = `${Math.round(titheSetting.rate * 100)}%`;
         document.getElementById("rate-input").value = titheSetting.rate;
+        await refreshMonthEnd();
       } catch (err) {
         ovShowError(err.message);
       }
@@ -4167,6 +4242,158 @@
         debtsShowError(err.message);
       }
     }
+
+    function monthEndYear() {
+      return Number(ovYear());
+    }
+
+    function monthEndMonth() {
+      return Number(ovMonth());
+    }
+
+    function monthEndShowError(message) {
+      const errorEl = document.getElementById("month-end-error");
+      errorEl.textContent = "שגיאה: " + message;
+      errorEl.hidden = false;
+    }
+
+    function monthEndClearError() {
+      document.getElementById("month-end-error").hidden = true;
+    }
+
+    function renderMonthEndRows(tbody, items) {
+      tbody.innerHTML = "";
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" class="hint">אין עדיין רשומות לחודש זה.</td></tr>`;
+        return;
+      }
+
+      for (const item of items) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td><input class="month-end-name" type="text" value="${escapeHtml(item.name)}" aria-label="שם הרשומה" /></td>
+          <td class="num"><input class="month-end-amount usage-input" type="number" min="0.01" step="0.01" value="${item.amount}" aria-label="סכום" /></td>
+          <td class="row-actions"><button class="delete-row" title="מחק" aria-label="מחק ${escapeHtml(item.name)}">✕</button></td>
+        `;
+        tbody.appendChild(row);
+
+        const save = async () => {
+          const name = row.querySelector(".month-end-name").value.trim();
+          const amount = Number(row.querySelector(".month-end-amount").value);
+          if (!name || !(amount > 0)) {
+            monthEndShowError("יש להזין שם וסכום חיובי.");
+            return;
+          }
+          if (name === item.name && amount === item.amount) return;
+
+          try {
+            await fetchJson(`/api/month-end/${item.id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name, amount }),
+            });
+            monthEndClearError();
+            await refreshMonthEnd();
+          } catch (err) {
+            monthEndShowError(err.message);
+          }
+        };
+
+        row.querySelector(".month-end-name").addEventListener("blur", save);
+        row.querySelector(".month-end-amount").addEventListener("blur", save);
+        attachConfirmDelete(row.querySelector(".delete-row"), async () => {
+          try {
+            await fetchJson(`/api/month-end/${item.id}`, { method: "DELETE" });
+            monthEndClearError();
+            await refreshMonthEnd();
+          } catch (err) {
+            monthEndShowError(err.message);
+          }
+        });
+      }
+    }
+
+    function updateMonthEndSummary(items) {
+      const assets = sumBy(items.filter(item => item.direction === "Asset"), item => item.amount);
+      const liabilities = sumBy(items.filter(item => item.direction === "Liability"), item => item.amount);
+      const difference = assets - liabilities;
+      const result = document.getElementById("month-end-result");
+
+      document.getElementById("month-end-assets-total").textContent = fmtMoney(assets);
+      document.getElementById("month-end-liabilities-total").textContent = fmtMoney(liabilities);
+      document.getElementById("month-end-summary-assets").textContent = fmtMoney(assets);
+      document.getElementById("month-end-summary-liabilities").textContent = fmtMoney(liabilities);
+      document.getElementById("month-end-gap-label").textContent = difference < 0 ? "חוסר לכיסוי" : "יתרה לאחר כיסוי";
+      document.getElementById("month-end-gap").textContent = fmtMoney(Math.abs(difference));
+      document.getElementById("month-end-status").textContent = difference < 0
+        ? "הסכום שיש לנו אינו מכסה את החיובים הצפויים."
+        : difference === 0
+          ? "הסכום שיש לנו מכסה את החיובים בדיוק."
+          : "הסכום שיש לנו מכסה את החיובים הצפויים.";
+      result.classList.toggle("shortfall", difference < 0);
+      result.classList.toggle("covered", difference >= 0);
+    }
+
+    async function refreshMonthEnd() {
+      monthEndClearError();
+      try {
+        const items = await fetchJson(`/api/month-end?year=${monthEndYear()}&month=${monthEndMonth()}`);
+        renderMonthEndRows(document.getElementById("month-end-assets"), items.filter(item => item.direction === "Asset"));
+        renderMonthEndRows(document.getElementById("month-end-liabilities"), items.filter(item => item.direction === "Liability"));
+        updateMonthEndSummary(items);
+      } catch (err) {
+        monthEndShowError(err.message);
+      }
+    }
+
+    function toggleMonthEndAddRow(tbody, direction, placeholder) {
+      const existing = tbody.querySelector("tr.month-end-add-form");
+      if (existing) {
+        existing.remove();
+        return;
+      }
+
+      const row = document.createElement("tr");
+      row.className = "month-end-add-form";
+      row.innerHTML = `
+        <td colspan="3">
+          <div class="add-form-fields">
+            <input class="month-end-new-name" type="text" placeholder="${placeholder}" />
+            <input class="month-end-new-amount" type="number" min="0.01" step="0.01" placeholder="סכום" />
+            <button class="save-btn">שמור</button>
+            <button class="secondary cancel-btn">ביטול</button>
+          </div>
+        </td>
+      `;
+      tbody.prepend(row);
+      row.querySelector(".cancel-btn").addEventListener("click", () => row.remove());
+      const saveButton = row.querySelector(".save-btn");
+      saveButton.addEventListener("click", () => withPending(saveButton, async () => {
+        const name = row.querySelector(".month-end-new-name").value.trim();
+        const amount = Number(row.querySelector(".month-end-new-amount").value);
+        if (!name || !(amount > 0)) {
+          monthEndShowError("יש להזין שם וסכום חיובי.");
+          return;
+        }
+
+        try {
+          await fetchJson("/api/month-end", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ year: monthEndYear(), month: monthEndMonth(), direction, name, amount }),
+          });
+          monthEndClearError();
+          await refreshMonthEnd();
+        } catch (err) {
+          monthEndShowError(err.message);
+        }
+      }));
+    }
+
+    document.getElementById("month-end-add-asset").addEventListener("click", () =>
+      toggleMonthEndAddRow(document.getElementById("month-end-assets"), "Asset", "למשל: חשבון בנק, מזומן, חייבים לנו"));
+    document.getElementById("month-end-add-liability").addEventListener("click", () =>
+      toggleMonthEndAddRow(document.getElementById("month-end-liabilities"), "Liability", "למשל: אשראי, חשבון לתשלום, חוב"));
 
     document.getElementById("debts-refresh").addEventListener("click", refreshDebts);
 
