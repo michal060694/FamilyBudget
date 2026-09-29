@@ -1967,23 +1967,29 @@
     });
 
     const reserveInput = document.getElementById("reserve-input");
-    reserveInput.addEventListener("focus", () => {
-      if (reserveInput.dataset.openFormulaEditor === "true") return;
-      openFormulaEditor(reserveInput, async (amount, formula) => {
-        try {
-          await fetchJson(`/api/reserve?year=${currentYear()}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ amount, amountFormula: formula }),
-          });
-          clearError();
-          await refresh();
-        } catch (err) {
-          showError(err.message);
-        }
-      }, showError, true);
-      reserveInput.blur();
-    });
+    const reserveFormulaBtn = document.createElement("button");
+    reserveFormulaBtn.type = "button";
+    reserveFormulaBtn.className = "formula-list-trigger";
+    reserveFormulaBtn.title = "פתח רשימת הוצאות וסכום מצטבר";
+    reserveFormulaBtn.textContent = "⋯";
+    reserveFormulaBtn.addEventListener("click", () => openFormulaEditor(reserveInput, async (amount, formula) => {
+      try {
+        await fetchJson(`/api/reserve?year=${currentYear()}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount, amountFormula: formula }),
+        });
+        clearError();
+        await refresh();
+      } catch (err) {
+        showError(err.message);
+      }
+    }, showError, true));
+    const reserveWrap = document.createElement("span");
+    reserveWrap.className = "formula-field-wrap";
+    reserveInput.parentNode.insertBefore(reserveWrap, reserveInput);
+    reserveWrap.appendChild(reserveInput);
+    reserveWrap.appendChild(reserveFormulaBtn);
 
     document.getElementById("save-reserve").addEventListener("click", (e) => withPending(e.currentTarget, async () => {
       const text = reserveInput.value.trim();
@@ -2478,9 +2484,8 @@
       fieldWrap.appendChild(listBtn);
 
       input.addEventListener("focus", () => {
-        if (input.dataset.openFormulaEditor === "true") return;
-        openFormulaEditor(input, onCommit, onError, requirePositive);
-        input.blur();
+        // Keep formula editing opt-in: the user may type a plain number or a formula directly,
+        // and can open the richer list editor explicitly via the small side button when needed.
       });
 
       input.addEventListener("keydown", (e) => {
