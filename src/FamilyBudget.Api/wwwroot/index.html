@@ -567,6 +567,58 @@
     border: 1px solid var(--border);
     border-radius: 999px;
   }
+  .formula-field-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+  }
+  .formula-list-trigger {
+    border: 1px solid var(--border);
+    background: var(--page-plane);
+    color: var(--text-primary);
+    border-radius: 8px;
+    min-width: 30px;
+    height: 30px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 8px;
+  }
+  .formula-list-trigger:hover {
+    border-color: var(--series-1);
+    color: var(--series-1);
+  }
+  .formula-list-editor {
+    display: grid;
+    gap: 12px;
+  }
+  .formula-list-editor .rows {
+    display: grid;
+    gap: 8px;
+    max-height: 220px;
+    overflow: auto;
+  }
+  .formula-row {
+    display: grid;
+    grid-template-columns: minmax(110px, 1.2fr) minmax(100px, 0.8fr) auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .formula-row input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .formula-editor-total {
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .formula-row-remove {
+    border: 1px solid var(--border);
+    background: transparent;
+    border-radius: 8px;
+    padding: 6px 8px;
+    cursor: pointer;
+  }
   .tab-btn {
     background: transparent;
     color: var(--text-secondary);
@@ -648,6 +700,22 @@
     <p class="hint" style="margin: 10px 0 0;">אפשר גם להקיש עם המקלדת: ספרות, סימני חשבון (+, -, * או /), Enter לתוצאה, Backspace למחיקה, Esc לסגירה.</p>
     <div class="modal-actions">
       <button class="secondary" id="close-calculator-modal">סגור</button>
+    </div>
+  </dialog>
+
+  <dialog id="modal-formula-editor" class="modal" style="width:min(520px,92vw);">
+    <h3>הוספת הוצאות לסכום</h3>
+    <div class="formula-list-editor">
+      <div id="formula-editor-rows" class="rows"></div>
+      <div class="modal-actions" style="justify-content: space-between; align-items: center;">
+        <button type="button" class="secondary" id="formula-editor-add-row">+ הוסף שורה</button>
+        <div class="formula-editor-total">סה&quot;כ: <span id="formula-editor-total-value">0</span></div>
+      </div>
+      <div id="formula-editor-error" class="error" hidden></div>
+      <div class="modal-actions">
+        <button type="button" class="secondary" id="close-formula-editor">ביטול</button>
+        <button type="button" id="save-formula-editor">שמור</button>
+      </div>
     </div>
   </dialog>
 
@@ -1198,11 +1266,11 @@
     const expandedMonths = new Set();
 
     function fmtMoney(n) {
-      return new Intl.NumberFormat("he-IL", { maximumFractionDigits: 0 }).format(n) + " ₪";
+      return new Intl.NumberFormat("he-IL", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n) + " ₪";
     }
 
     function fmtNum(n) {
-      return new Intl.NumberFormat("he-IL", { maximumFractionDigits: 0 }).format(n);
+      return new Intl.NumberFormat("he-IL", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n);
     }
 
     // Sums a numeric field across a list of items for table totals-row footers; tolerates
@@ -1898,8 +1966,27 @@
       });
     });
 
+    const reserveInput = document.getElementById("reserve-input");
+    reserveInput.addEventListener("focus", () => {
+      if (reserveInput.dataset.openFormulaEditor === "true") return;
+      openFormulaEditor(reserveInput, async (amount, formula) => {
+        try {
+          await fetchJson(`/api/reserve?year=${currentYear()}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount, amountFormula: formula }),
+          });
+          clearError();
+          await refresh();
+        } catch (err) {
+          showError(err.message);
+        }
+      }, showError, true);
+      reserveInput.blur();
+    });
+
     document.getElementById("save-reserve").addEventListener("click", (e) => withPending(e.currentTarget, async () => {
-      const text = document.getElementById("reserve-input").value.trim();
+      const text = reserveInput.value.trim();
       let parsed;
       try {
         parsed = parseAmountText(text);
@@ -2214,6 +2301,159 @@
       return result;
     }
 
+    function parseFormulaRowSeed(rawText) {
+      const cleaned = (rawText || "").trim().replace(/^=/, "").replace(/\s+/g, "");
+      if (!cleaned) return [];
+
+      const matches = cleaned.match(/[+-]?(?:\d+\.?\d*|\.\d+)/g) || [];
+      if (matches.length > 0) {
+        return matches.map((token, index) => ({
+          label: `הוצאה ${index + 1}`,
+          amount: String(parseFloat(token)),
+        }));
+      }
+
+      try {
+        const computed = evaluateFormula(rawText);
+        if (Number.isFinite(computed)) {
+          return [{ label: "הוצאה 1", amount: String(computed) }];
+        }
+      } catch (err) {
+        // Fall through to a blank row if the current formula is not parseable as a list.
+      }
+
+      return [];
+    }
+
+    function loadFormulaRows(input) {
+      const savedRows = input.dataset.rows;
+      if (savedRows) {
+        try {
+          const parsed = JSON.parse(savedRows);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.map((row, index) => ({
+              label: row.label || `הוצאה ${index + 1}`,
+              amount: row.amount ?? "",
+            }));
+          }
+        } catch (err) {
+          // Ignore invalid saved JSON and fall back to current formula.
+        }
+      }
+
+      const formulaSeed = parseFormulaRowSeed(input.dataset.formula || "");
+      if (formulaSeed.length > 0) {
+        return formulaSeed;
+      }
+
+      const existingAmount = parseFloat(input.dataset.amount || "");
+      if (Number.isFinite(existingAmount)) {
+        return [{ label: "הוצאה 1", amount: String(existingAmount) }];
+      }
+
+      return [{ label: "הוצאה 1", amount: "" }];
+    }
+
+    function updateFormulaEditorTotal(rowsEl) {
+      const rows = Array.from(rowsEl.querySelectorAll(".formula-editor-row"));
+      const total = rows.reduce((sum, rowEl) => {
+        const raw = rowEl.querySelector(".formula-editor-amount").value.trim();
+        if (!raw) return sum;
+        const parsed = Number.parseFloat(raw);
+        return Number.isFinite(parsed) ? sum + parsed : sum;
+      }, 0);
+      document.getElementById("formula-editor-total-value").textContent = fmtMoney(total);
+    }
+
+    function openFormulaEditor(input, onCommit, onError = ovShowError, requirePositive = false) {
+      const modal = document.getElementById("modal-formula-editor");
+      const rowsEl = document.getElementById("formula-editor-rows");
+      const errorEl = document.getElementById("formula-editor-error");
+
+      function addRow(label = "הוצאה", val = "") {
+        const row = document.createElement("div");
+        row.className = "formula-row formula-editor-row";
+        row.innerHTML = `
+          <input type="text" class="formula-editor-label" placeholder="סוג ההוצאה" value="${escapeHtml(label)}" />
+          <input type="number" step="0.01" class="formula-editor-amount" placeholder="סכום" value="${escapeHtml(val)}" />
+          <button type="button" class="formula-row-remove" title="מחק שורה">✕</button>
+        `;
+        row.querySelector(".formula-row-remove").addEventListener("click", () => {
+          row.remove();
+          updateFormulaEditorTotal(rowsEl);
+        });
+        row.querySelector(".formula-editor-label").addEventListener("input", () => updateFormulaEditorTotal(rowsEl));
+        row.querySelector(".formula-editor-amount").addEventListener("input", () => updateFormulaEditorTotal(rowsEl));
+        rowsEl.appendChild(row);
+      }
+
+      rowsEl.innerHTML = "";
+      const seedRows = loadFormulaRows(input);
+      seedRows.forEach(row => addRow(row.label, row.amount));
+      if (!seedRows.length) addRow();
+      updateFormulaEditorTotal(rowsEl);
+      errorEl.hidden = true;
+      errorEl.textContent = "";
+
+      document.getElementById("formula-editor-add-row").onclick = () => addRow();
+      document.getElementById("close-formula-editor").onclick = () => {
+        modal.close();
+        delete input.dataset.openFormulaEditor;
+      };
+      document.getElementById("save-formula-editor").onclick = async () => {
+        const rowEls = Array.from(rowsEl.querySelectorAll(".formula-editor-row"));
+        const rows = [];
+        for (const rowEl of rowEls) {
+          const labelInput = rowEl.querySelector(".formula-editor-label");
+          const amountInput = rowEl.querySelector(".formula-editor-amount");
+          const raw = amountInput.value.trim();
+          if (!raw) continue;
+          const number = parseFloat(raw);
+          if (!Number.isFinite(number)) {
+            errorEl.textContent = "סכום שורה חייב להיות מספר תקין.";
+            errorEl.hidden = false;
+            return;
+          }
+          rows.push({
+            label: labelInput.value.trim() || `הוצאה ${rows.length + 1}`,
+            amount: String(number),
+          });
+        }
+
+        if (rows.length === 0) {
+          errorEl.textContent = "יש להוסיף לפחות שורה אחת עם סכום.";
+          errorEl.hidden = false;
+          return;
+        }
+
+          const total = rows.reduce((sum, row) => {
+          const value = Number.parseFloat(row.amount);
+          return Number.isFinite(value) ? sum + value : sum;
+        }, 0);
+        if (requirePositive ? !(total > 0) : !(total >= 0)) {
+          onError(requirePositive ? "הסכום חייב להיות גדול מאפס." : "הסכום חייב להיות אי-שלילי.");
+          return;
+        }
+
+        const formula = rows.map(row => row.amount).join("+");
+        const prevAmount = parseFloat(input.dataset.amount || 0);
+        const prevFormula = input.dataset.formula || null;
+
+        input.dataset.rows = JSON.stringify(rows);
+        input.dataset.amount = total;
+        input.dataset.formula = formula;
+        input.value = fmtNum(total);
+        modal.close();
+        delete input.dataset.openFormulaEditor;
+
+        if (total === prevAmount && formula === prevFormula) return;
+        await guardedSave(input, () => onCommit(total, formula));
+      };
+
+      input.dataset.openFormulaEditor = "true";
+      modal.showModal();
+    }
+
     // Turns a plain <input type="text"> into a formula-aware amount field: shows the computed
     // number while blurred, the raw formula (or plain number) while focused, and calls onCommit
     // with the new {amount, formula} pair only when the value actually changed.
@@ -2222,8 +2462,25 @@
       input.dataset.formula = formula || "";
       input.value = fmtNum(amount);
 
+      const fieldWrap = document.createElement("span");
+      fieldWrap.className = "formula-field-wrap";
+      if (input.parentNode) {
+        input.parentNode.insertBefore(fieldWrap, input);
+        fieldWrap.appendChild(input);
+      }
+
+      const listBtn = document.createElement("button");
+      listBtn.type = "button";
+      listBtn.className = "formula-list-trigger";
+      listBtn.title = "פתח רשימת הוצאות וסכום מצטבר";
+      listBtn.textContent = "⋯";
+      listBtn.addEventListener("click", () => openFormulaEditor(input, onCommit, onError, requirePositive));
+      fieldWrap.appendChild(listBtn);
+
       input.addEventListener("focus", () => {
-        input.value = input.dataset.formula || String(parseFloat(input.dataset.amount));
+        if (input.dataset.openFormulaEditor === "true") return;
+        openFormulaEditor(input, onCommit, onError, requirePositive);
+        input.blur();
       });
 
       input.addEventListener("keydown", (e) => {
@@ -2231,6 +2488,10 @@
       });
 
       input.addEventListener("blur", async () => {
+        if (input.dataset.openFormulaEditor === "true") {
+          return;
+        }
+
         const text = input.value.trim();
         const prevAmount = parseFloat(input.dataset.amount);
         const prevFormula = input.dataset.formula || null;
