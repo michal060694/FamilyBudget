@@ -2308,9 +2308,24 @@
     }
 
     function parseFormulaRowSeed(rawText) {
-      const cleaned = (rawText || "").trim().replace(/^=/, "").replace(/\s+/g, "");
-      if (!cleaned) return [];
+      const text = (rawText || "").trim();
+      if (!text) return [];
 
+      if (text.startsWith("rows:")) {
+        try {
+          const rows = JSON.parse(text.slice("rows:".length));
+          if (Array.isArray(rows) && rows.length > 0) {
+            return rows.map((row, index) => ({
+              label: row.label || `הוצאה ${index + 1}`,
+              amount: String(row.amount ?? ""),
+            }));
+          }
+        } catch (err) {
+          // Ignore malformed stored row data and fall through to the plain-number parser.
+        }
+      }
+
+      const cleaned = text.replace(/^=/, "").replace(/\s+/g, "");
       const matches = cleaned.match(/[+-]?(?:\d+\.?\d*|\.\d+)/g) || [];
       if (matches.length > 0) {
         return matches.map((token, index) => ({
@@ -2320,7 +2335,7 @@
       }
 
       try {
-        const computed = evaluateFormula(rawText);
+        const computed = evaluateFormula(text);
         if (Number.isFinite(computed)) {
           return [{ label: "הוצאה 1", amount: String(computed) }];
         }
@@ -2444,16 +2459,17 @@
         const formula = rows.map(row => row.amount).join("+");
         const prevAmount = parseFloat(input.dataset.amount || 0);
         const prevFormula = input.dataset.formula || null;
+        const serializedRows = `rows:${JSON.stringify(rows)}`;
 
         input.dataset.rows = JSON.stringify(rows);
         input.dataset.amount = total;
-        input.dataset.formula = formula;
+        input.dataset.formula = serializedRows;
         input.value = fmtNum(total);
         modal.close();
         delete input.dataset.openFormulaEditor;
 
         if (total === prevAmount && formula === prevFormula) return;
-        await guardedSave(input, () => onCommit(total, formula));
+        await guardedSave(input, () => onCommit(total, serializedRows, rows));
       };
 
       input.dataset.openFormulaEditor = "true";
@@ -2533,8 +2549,8 @@
         }
 
         input.dataset.amount = newAmount;
-        input.dataset.formula = newFormula || "";
-        await guardedSave(input, () => onCommit(newAmount, newFormula));
+        input.dataset.formula = newFormula ? newFormula : (input.dataset.rows ? `rows:${input.dataset.rows}` : "");
+        await guardedSave(input, () => onCommit(newAmount, input.dataset.formula || newFormula || "", JSON.parse(input.dataset.rows || "[]")));
       });
     }
 
